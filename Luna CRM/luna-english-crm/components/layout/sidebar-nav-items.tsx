@@ -3,7 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { NavItem } from "@/lib/constants/navigation";
+import type { NavItem, NavIconName } from "@/lib/constants/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  Bell,
+  GraduationCap,
+  BarChart3,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
+
+const ICON_MAP: Record<NavIconName, LucideIcon> = {
+  LayoutDashboard,
+  Users,
+  Bell,
+  GraduationCap,
+  BarChart3,
+  Settings,
+};
 
 interface SidebarNavItemsProps {
   items: NavItem[];
@@ -16,7 +34,7 @@ export function SidebarNavItems({ items, collapsed }: SidebarNavItemsProps) {
   return (
     <nav className="flex flex-col gap-1 px-3">
       {items.map((item) => {
-        const Icon = item.icon;
+        const Icon = ICON_MAP[item.iconName];
         const isActive = pathname.startsWith(item.href);
 
         return (

@@ -25,6 +25,7 @@ export function useRealtimeNotifications(userId: string) {
   }, [userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount + subscribe
     fetchNotifications();
 
     const supabase = createClient();

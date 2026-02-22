@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Luna English CRM",
   description:
-    "He thong quan ly tuyen sinh va cham soc hoc sinh Luna English",
+    "Hệ thống quản lý tuyển sinh và chăm sóc học sinh Luna English",
 };
 
 export default function RootLayout({

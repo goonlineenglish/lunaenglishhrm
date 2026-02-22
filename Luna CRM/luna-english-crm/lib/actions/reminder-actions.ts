@@ -15,7 +15,7 @@ export async function createReminder(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { error: "Chua dang nhap" };
+  if (!user) return { error: "Chưa đăng nhập" };
 
   const { error } = await supabase.from("follow_up_reminders").insert({
     lead_id: leadId,
@@ -37,7 +37,7 @@ export async function completeReminder(id: string, note?: string) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { error: "Chua dang nhap" };
+  if (!user) return { error: "Chưa đăng nhập" };
 
   const { data: reminder, error: fetchError } = await supabase
     .from("follow_up_reminders")
@@ -45,7 +45,7 @@ export async function completeReminder(id: string, note?: string) {
     .eq("id", id)
     .single();
 
-  if (fetchError || !reminder) return { error: "Khong tim thay nhac nho" };
+  if (fetchError || !reminder) return { error: "Không tìm thấy nhắc nhở" };
 
   const { error } = await supabase
     .from("follow_up_reminders")
@@ -67,7 +67,7 @@ export async function completeReminder(id: string, note?: string) {
       remind_at: nextRemindAt.toISOString(),
       type: "follow_up" as ReminderType,
       assigned_to: reminder.assigned_to,
-      note: "Tu dong tao - follow-up tiep theo",
+      note: "Tự động tạo - follow-up tiếp theo",
     });
   }
 
@@ -81,7 +81,7 @@ export async function skipReminder(id: string, reason?: string) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { error: "Chua dang nhap" };
+  if (!user) return { error: "Chưa đăng nhập" };
 
   const { error } = await supabase
     .from("follow_up_reminders")
@@ -156,11 +156,17 @@ export async function getReminders(
 export async function searchLeads(searchTerm: string) {
   const supabase = await createClient();
 
+  // Escape special characters for Supabase ilike filter
+  const escaped = searchTerm
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+
   const { data, error } = await supabase
     .from("leads")
     .select("id, parent_name, student_name, parent_phone")
     .or(
-      `parent_name.ilike.%${searchTerm}%,student_name.ilike.%${searchTerm}%,parent_phone.ilike.%${searchTerm}%`
+      `parent_name.ilike.%${escaped}%,student_name.ilike.%${escaped}%,parent_phone.ilike.%${escaped}%`
     )
     .limit(10);
 

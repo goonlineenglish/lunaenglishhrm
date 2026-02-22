@@ -39,7 +39,6 @@ export function PipelineView({
   initialLeads,
   advisors,
   userRole,
-  userId,
 }: PipelineViewProps) {
   const { leads, setLeads } = useRealtimeLeads(initialLeads);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");

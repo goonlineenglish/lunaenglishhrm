@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth/login-form";
+
+export const metadata: Metadata = {
+  title: "Đăng nhập | Luna English CRM",
+  description: "Đăng nhập vào hệ thống quản lý tuyển sinh Luna English",
+};
 
 export default async function LoginPage() {
   const supabase = await createClient();

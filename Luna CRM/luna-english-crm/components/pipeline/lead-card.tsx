@@ -18,15 +18,6 @@ const SOURCE_ICONS: Record<string, React.ElementType> = {
   referral: Share2,
 };
 
-const SOURCE_LABELS: Record<string, string> = {
-  facebook: "Facebook",
-  zalo: "Zalo",
-  walk_in: "Walk-in",
-  website: "Website",
-  phone: "Điện thoại",
-  referral: "Giới thiệu",
-};
-
 const PROGRAM_LABELS: Record<string, string> = {
   buttercup: "Buttercup",
   primary_success: "Primary Success",

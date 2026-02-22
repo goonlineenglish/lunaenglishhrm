@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -40,8 +40,8 @@ export async function GET(request: Request) {
 
       return {
         user_id: reminder.assigned_to,
-        title: `Nhac nho qua han: ${leadName}`,
-        message: `Ban co nhac nho da qua han cho ${leadName}`,
+        title: `Nhắc nhở quá hạn: ${leadName}`,
+        message: `Bạn có nhắc nhở đã quá hạn cho ${leadName}`,
         type: "reminder" as const,
         is_read: false,
         link: "/reminders",

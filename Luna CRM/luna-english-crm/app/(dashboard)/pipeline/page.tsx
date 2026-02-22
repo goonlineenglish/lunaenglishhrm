@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import type { UserRole } from "@/lib/types/users";
 import { PipelineView } from "@/components/pipeline/pipeline-view";
 import type { LeadWithAssignee } from "@/lib/hooks/use-realtime-leads";
+
+export const metadata: Metadata = {
+  title: "Pipeline | Luna English CRM",
+  description: "Quản lý pipeline tuyển sinh - theo dõi leads qua các giai đoạn",
+};
 
 export default async function PipelinePage() {
   const supabase = await createClient();

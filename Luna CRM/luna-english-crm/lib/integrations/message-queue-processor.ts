@@ -88,7 +88,7 @@ export async function processQueue(): Promise<{
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error";
       const newAttempts = msg.attempts + 1;
-      const newStatus = newAttempts >= msg.max_attempts ? "failed" : "failed";
+      const newStatus = newAttempts >= msg.max_attempts ? "failed" : "pending";
       const delaySec = getNextRetryDelay(newAttempts - 1);
       const nextRetry = new Date(Date.now() + delaySec * 1000).toISOString();
 

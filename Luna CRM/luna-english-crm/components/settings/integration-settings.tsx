@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZaloConnectionCard } from "@/components/settings/zalo-connection-card";
 import { FacebookConnectionCard } from "@/components/settings/facebook-connection-card";
@@ -24,16 +24,17 @@ export function IntegrationSettings({
   const [events, setEvents] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     const result = await getWebhookEvents(undefined, 100);
     if (result.data) setEvents(result.data);
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+    loadEvents();
+  }, [loadEvents]);
 
   const zaloEvents = events.filter((e) => e.provider === "zalo");
   const fbEvents = events.filter((e) => e.provider === "facebook");

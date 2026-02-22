@@ -141,6 +141,17 @@ npm run dev
 npm run build
 ```
 
+## Documentation
+All engineering docs in `docs/`:
+- `project-overview-pdr.md` — Business context, features, target users
+- `system-architecture.md` — Stack, architecture diagram, DB schema
+- `code-standards.md` — TypeScript, component, styling conventions
+- `design-guidelines.md` — Brand colors, typography, layout
+- `deployment-guide.md` — Supabase, Vercel, local dev setup
+- `codebase-summary.md` — File index, key modules, stats
+- `development-roadmap.md` — Phase tracking with checkboxes
+- `project-changelog.md` — Version history
+
 ## Luna Brand Colors
 - Primary: `#3E1A51` (deep purple) → oklch(0.28 0.12 310)
 - Secondary: `#3FA5DC` (blue) → oklch(0.65 0.14 230)

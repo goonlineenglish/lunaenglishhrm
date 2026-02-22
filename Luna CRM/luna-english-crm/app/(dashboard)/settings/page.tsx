@@ -1,7 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import type { UserRole } from "@/lib/types/users";
 import { IntegrationSettings } from "@/components/settings/integration-settings";
+
+export const metadata: Metadata = {
+  title: "Cài đặt | Luna English CRM",
+  description: "Cấu hình tích hợp Zalo OA và Facebook cho hệ thống CRM",
+};
 
 export default async function SettingsPage() {
   const supabase = await createClient();

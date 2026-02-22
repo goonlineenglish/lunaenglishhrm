@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getActivities } from "@/lib/actions/activity-actions";
 import { AddActivityForm } from "@/components/pipeline/add-activity-form";
 import type { LeadActivity } from "@/lib/types/leads";
@@ -35,18 +35,19 @@ export function LeadDetailActivities({ leadId }: LeadDetailActivitiesProps) {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadActivities();
-  }, [leadId]);
-
-  async function loadActivities() {
+  const loadActivities = useCallback(async () => {
     setLoading(true);
     const result = await getActivities(leadId);
     if (result.data) {
       setActivities(result.data);
     }
     setLoading(false);
-  }
+  }, [leadId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+    loadActivities();
+  }, [loadActivities]);
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);

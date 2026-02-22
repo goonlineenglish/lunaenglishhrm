@@ -26,7 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { StudentStatus } from "@/lib/types/users";
 
 interface Props {
   data: StudentWithLead[];

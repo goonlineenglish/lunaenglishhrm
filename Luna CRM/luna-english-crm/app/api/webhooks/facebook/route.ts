@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  // Return 200 immediately per Facebook requirements
+  // Process webhook events synchronously, return 200 after completion
   const response = NextResponse.json({ received: true }, { status: 200 });
 
   const supabase = getAdminClient();

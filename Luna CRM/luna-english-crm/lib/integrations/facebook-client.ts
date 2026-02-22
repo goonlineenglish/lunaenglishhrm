@@ -65,8 +65,11 @@ export async function fetchLeadData(
   leadgenId: string
 ): Promise<FacebookLeadData | null> {
   const res = await fetch(
-    `https://graph.facebook.com/v19.0/${leadgenId}?access_token=${accessToken}`,
-    { method: "GET" }
+    `https://graph.facebook.com/v19.0/${leadgenId}`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
   );
 
   if (!res.ok) return null;

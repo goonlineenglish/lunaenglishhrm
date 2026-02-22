@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
 import {
   verifyWebhook,
   verifyPayloadSignature,
 } from "@/lib/integrations/facebook-client";
 import { handleLeadgen } from "@/lib/integrations/facebook-webhook-handler";
-
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { getAdminClient } from "@/lib/supabase/admin";
 
 /**
  * GET: Facebook webhook verification (hub.mode, hub.verify_token, hub.challenge)

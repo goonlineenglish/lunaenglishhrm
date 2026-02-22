@@ -1,12 +1,5 @@
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { fetchLeadData, mapLeadFieldsToSchema } from "./facebook-client";
-
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 interface FacebookLeadgenEntry {
   id: string;
@@ -60,6 +53,14 @@ export async function handleLeadgen(
 
     // Map fields to CRM schema
     const mapped = mapLeadFieldsToSchema(leadData.field_data);
+
+    // Sanitize mapped fields to prevent stored XSS
+    const sanitize = (v: string | null, maxLen = 200) =>
+      v ? v.slice(0, maxLen).replace(/[<>]/g, "") : v;
+    mapped.parent_name = sanitize(mapped.parent_name);
+    mapped.parent_phone = sanitize(mapped.parent_phone);
+    mapped.parent_email = sanitize(mapped.parent_email);
+    mapped.student_name = sanitize(mapped.student_name);
 
     // Check for duplicate by phone
     if (mapped.parent_phone) {

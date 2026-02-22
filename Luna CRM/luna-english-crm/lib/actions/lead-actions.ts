@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Lead, LeadSource, LeadStage, ProgramType } from "@/lib/types/leads";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface CreateLeadInput {
   parent_name: string;
   parent_phone: string;
@@ -61,7 +63,8 @@ export async function createLead(input: CreateLeadInput) {
     .single();
 
   if (error) {
-    return { error: error.message };
+    console.error("createLead error:", error.message);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
 
   revalidatePath("/pipeline");
@@ -69,6 +72,7 @@ export async function createLead(input: CreateLeadInput) {
 }
 
 export async function updateLead(leadId: string, input: UpdateLeadInput) {
+  if (!UUID_RE.test(leadId)) return { error: "ID không hợp lệ" };
   const supabase = await createClient();
 
   const {
@@ -95,7 +99,8 @@ export async function updateLead(leadId: string, input: UpdateLeadInput) {
     .single();
 
   if (error) {
-    return { error: error.message };
+    console.error("updateLead error:", error.message);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
 
   revalidatePath("/pipeline");
@@ -107,6 +112,7 @@ export async function updateLeadStage(
   newStage: LeadStage,
   lostReason?: string
 ) {
+  if (!UUID_RE.test(leadId)) return { error: "ID không hợp lệ" };
   const supabase = await createClient();
 
   const {
@@ -146,7 +152,8 @@ export async function updateLeadStage(
     .single();
 
   if (error) {
-    return { error: error.message };
+    console.error("updateLeadStage error:", error.message);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
 
   // Auto-log stage_change activity
@@ -163,6 +170,7 @@ export async function updateLeadStage(
 }
 
 export async function deleteLead(leadId: string) {
+  if (!UUID_RE.test(leadId)) return { error: "ID không hợp lệ" };
   const supabase = await createClient();
 
   const {
@@ -176,7 +184,8 @@ export async function deleteLead(leadId: string) {
   const { error } = await supabase.from("leads").delete().eq("id", leadId);
 
   if (error) {
-    return { error: error.message };
+    console.error("deleteLead error:", error.message);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
 
   revalidatePath("/pipeline");
@@ -184,6 +193,7 @@ export async function deleteLead(leadId: string) {
 }
 
 export async function assignLead(leadId: string, advisorId: string | null) {
+  if (!UUID_RE.test(leadId)) return { error: "ID không hợp lệ" };
   const supabase = await createClient();
 
   const {
@@ -205,7 +215,8 @@ export async function assignLead(leadId: string, advisorId: string | null) {
     .single();
 
   if (error) {
-    return { error: error.message };
+    console.error("assignLead error:", error.message);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
 
   revalidatePath("/pipeline");

@@ -1,12 +1,5 @@
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { getFollowerProfile } from "./zalo-client";
-
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 interface ZaloEvent {
   event_name: string;
@@ -77,6 +70,7 @@ async function handleUserSendText(event: ZaloEvent): Promise<void> {
     }
 
     // Create new lead
+    const sanitizedText = (event.message?.text ?? "").slice(0, 500).replace(/[<>]/g, "");
     const { data: newLead } = await supabase
       .from("leads")
       .insert({
@@ -84,7 +78,7 @@ async function handleUserSendText(event: ZaloEvent): Promise<void> {
         parent_phone: "",
         source: "zalo",
         current_stage: "moi_tiep_nhan",
-        notes: `Tin nhắn từ Zalo: ${event.message?.text ?? ""}`,
+        notes: `Tin nhắn từ Zalo: ${sanitizedText}`,
       })
       .select("id")
       .single();
@@ -106,10 +100,11 @@ async function handleUserSendText(event: ZaloEvent): Promise<void> {
 
   // Log activity on the lead
   if (leadId) {
+    const sanitizedContent = (event.message?.text ?? "(Zalo message)").slice(0, 500).replace(/[<>]/g, "");
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
       type: "message",
-      content: event.message?.text ?? "(Zalo message)",
+      content: sanitizedContent,
       metadata: { source: "zalo", zalo_user_id: zaloUserId },
     });
   }

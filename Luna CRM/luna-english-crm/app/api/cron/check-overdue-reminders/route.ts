@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -9,9 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = getAdminClient();
 
   // Find overdue pending reminders
   const { data: overdueReminders, error: fetchError } = await supabase

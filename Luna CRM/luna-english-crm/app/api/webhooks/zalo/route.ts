@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { verifySignature } from "@/lib/integrations/zalo-client";
 import { processEvent } from "@/lib/integrations/zalo-webhook-handler";
-
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { getAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -28,9 +21,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  // Process webhook event, then return 200
-  const response = NextResponse.json({ received: true }, { status: 200 });
-
   // Parse and log webhook event
   const supabase = getAdminClient();
   try {
@@ -49,27 +39,27 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
 
-    // Process asynchronously (best-effort within edge runtime)
-    processEvent(event)
-      .then(async () => {
-        if (eventRecord?.id) {
-          await supabase
-            .from("webhook_events")
-            .update({ status: "processed", processed_at: new Date().toISOString() })
-            .eq("id", eventRecord.id);
-        }
-      })
-      .catch(async (err: Error) => {
-        if (eventRecord?.id) {
-          await supabase
-            .from("webhook_events")
-            .update({ status: "failed", error_message: err.message })
-            .eq("id", eventRecord.id);
-        }
-      });
+    // Await processing before returning
+    try {
+      await processEvent(event);
+      if (eventRecord?.id) {
+        await supabase
+          .from("webhook_events")
+          .update({ status: "processed", processed_at: new Date().toISOString() })
+          .eq("id", eventRecord.id);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      if (eventRecord?.id) {
+        await supabase
+          .from("webhook_events")
+          .update({ status: "failed", error_message: errorMessage })
+          .eq("id", eventRecord.id);
+      }
+    }
   } catch {
     // Still return 200 even if processing fails
   }
 
-  return response;
+  return NextResponse.json({ received: true }, { status: 200 });
 }

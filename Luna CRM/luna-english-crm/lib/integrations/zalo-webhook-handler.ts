@@ -98,14 +98,29 @@ async function handleUserSendText(event: ZaloEvent): Promise<void> {
     }
   }
 
-  // Log activity on the lead
+  // Log activity on the lead (with msg_id for dedup)
   if (leadId) {
+    const msgId = event.message?.msg_id;
     const sanitizedContent = (event.message?.text ?? "(Zalo message)").slice(0, 500).replace(/[<>]/g, "");
+
+    // Skip if activity with this msg_id already exists
+    if (msgId) {
+      const { data: existingActivity } = await supabase
+        .from("lead_activities")
+        .select("id")
+        .eq("lead_id", leadId)
+        .eq("metadata->>msg_id", msgId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingActivity) return;
+    }
+
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
       type: "message",
       content: sanitizedContent,
-      metadata: { source: "zalo", zalo_user_id: zaloUserId },
+      metadata: { source: "zalo", zalo_user_id: zaloUserId, msg_id: msgId ?? null },
     });
   }
 }

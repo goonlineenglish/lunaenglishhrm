@@ -47,6 +47,21 @@ export async function POST(request: NextRequest) {
     for (const entry of entries) {
       const eventType =
         entry.changes?.[0]?.field ?? "unknown";
+      const entryId = String(entry.id ?? "");
+
+      // Idempotency: skip if this entry was already processed
+      if (entryId) {
+        const { data: existing } = await supabase
+          .from("webhook_events")
+          .select("id, status")
+          .eq("provider", "facebook")
+          .eq("payload->>id", entryId)
+          .in("status", ["processed"])
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) continue;
+      }
 
       // Log to webhook_events
       const { data: eventRecord } = await supabase
@@ -84,7 +99,7 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch {
-    // Still return 200 even if processing fails
+    // Still return 200 — Facebook requires 200 to stop retrying
   }
 
   return response;

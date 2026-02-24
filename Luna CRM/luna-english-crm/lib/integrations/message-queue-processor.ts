@@ -18,7 +18,8 @@ function getNextRetryDelay(attempts: number): number {
 
 /**
  * Process pending/failed messages from the message_queue table.
- * Uses exponential backoff for retries, max 5 attempts.
+ * Uses atomic claim to prevent race conditions when multiple workers run.
+ * Exponential backoff for retries, max 5 attempts.
  */
 export async function processQueue(): Promise<{
   processed: number;
@@ -42,11 +43,17 @@ export async function processQueue(): Promise<{
   if (!messages?.length) return { processed: 0, failed: 0 };
 
   for (const msg of messages) {
-    // Mark as processing
-    await supabase
+    // Atomic claim: only update if status hasn't changed (prevents race condition)
+    const { data: claimed } = await supabase
       .from("message_queue")
       .update({ status: "processing" })
-      .eq("id", msg.id);
+      .eq("id", msg.id)
+      .in("status", ["pending", "failed"])
+      .select("id")
+      .single();
+
+    // Another worker already claimed this message — skip
+    if (!claimed) continue;
 
     try {
       if (msg.provider === "zalo") {

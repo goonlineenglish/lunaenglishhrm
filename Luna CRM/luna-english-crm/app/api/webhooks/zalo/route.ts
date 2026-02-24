@@ -26,6 +26,23 @@ export async function POST(request: NextRequest) {
   try {
     const event = JSON.parse(body);
     const eventType = event.event_name ?? "unknown";
+    const msgId = event.message?.msg_id ?? event.timestamp ?? "";
+
+    // Idempotency: skip if this event was already processed
+    if (msgId) {
+      const { data: existing } = await supabase
+        .from("webhook_events")
+        .select("id, status")
+        .eq("provider", "zalo")
+        .eq("payload->>msg_id", String(msgId))
+        .in("status", ["processed"])
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+    }
 
     // Log to webhook_events and capture the inserted record ID
     const { data: eventRecord } = await supabase
@@ -58,7 +75,7 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch {
-    // Still return 200 even if processing fails
+    // Still return 200 — Zalo requires 200 to stop retrying
   }
 
   return NextResponse.json({ received: true }, { status: 200 });

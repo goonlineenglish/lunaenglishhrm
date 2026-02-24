@@ -31,6 +31,16 @@ export async function handleLeadgen(
     const leadgenId = change.value.leadgen_id;
     if (!leadgenId) continue;
 
+    // Idempotency: skip if this leadgen_id was already processed
+    const { data: existingByLeadgenId } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("notes", `Facebook Lead Ads ID: ${leadgenId}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingByLeadgenId) continue;
+
     // Get Facebook access token
     const { data: tokenRow } = await supabase
       .from("integration_tokens")

@@ -84,16 +84,26 @@ export async function GET(request: Request) {
   }
 
   if (notifications.length > 0) {
-    // Use upsert with onConflict to prevent race-condition duplicates
-    // Since we can't use a DB unique index on metadata->>reminder_id easily,
-    // we rely on the batch-check above + single atomic insert batch
-    const { error: insertError } = await supabase
-      .from("notifications")
-      .insert(notifications);
+    // Insert one-by-one to skip duplicates if cron overlaps.
+    // Batch pre-check above handles the common case; this handles the race.
+    for (const notif of notifications) {
+      // Re-check right before insert (atomic window is small)
+      const { data: alreadyExists } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("metadata->>reminder_id", notif.metadata.reminder_id)
+        .limit(1)
+        .maybeSingle();
 
-    if (insertError) {
-      console.error("Failed to insert overdue notifications:", insertError.message);
-      return NextResponse.json({ error: "Không thể tạo thông báo" }, { status: 500 });
+      if (alreadyExists) continue;
+
+      const { error: insertError } = await supabase
+        .from("notifications")
+        .insert(notif);
+
+      if (insertError) {
+        console.error("Failed to insert notification:", insertError.message);
+      }
     }
   }
 
@@ -269,7 +279,18 @@ export async function GET(request: Request) {
     }
 
     if (activityNotifications.length > 0) {
-      await supabase.from("notifications").insert(activityNotifications);
+      for (const notif of activityNotifications) {
+        const { data: alreadyExists } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("metadata->>activity_id", notif.metadata.activity_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (alreadyExists) continue;
+
+        await supabase.from("notifications").insert(notif);
+      }
     }
     activityDeadlineCount = activityNotifications.length;
   }

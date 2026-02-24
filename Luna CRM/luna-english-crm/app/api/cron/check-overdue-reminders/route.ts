@@ -83,26 +83,21 @@ export async function GET(request: Request) {
     });
   }
 
+  let reminderNotifCount = 0;
   if (notifications.length > 0) {
-    // Insert one-by-one to skip duplicates if cron overlaps.
-    // Batch pre-check above handles the common case; this handles the race.
+    // Unique index idx_notifications_unique_reminder_id (migration 022)
+    // handles true atomic dedup. Insert individually, skip on conflict.
     for (const notif of notifications) {
-      // Re-check right before insert (atomic window is small)
-      const { data: alreadyExists } = await supabase
-        .from("notifications")
-        .select("id")
-        .eq("metadata->>reminder_id", notif.metadata.reminder_id)
-        .limit(1)
-        .maybeSingle();
-
-      if (alreadyExists) continue;
-
       const { error: insertError } = await supabase
         .from("notifications")
         .insert(notif);
 
       if (insertError) {
-        console.error("Failed to insert notification:", insertError.message);
+        if (!insertError.message.includes("duplicate key")) {
+          console.error("Failed to insert notification:", insertError.message);
+        }
+      } else {
+        reminderNotifCount++;
       }
     }
   }
@@ -279,20 +274,21 @@ export async function GET(request: Request) {
     }
 
     if (activityNotifications.length > 0) {
+      // Unique index idx_notifications_unique_activity_id (migration 022)
       for (const notif of activityNotifications) {
-        const { data: alreadyExists } = await supabase
+        const { error: insertError } = await supabase
           .from("notifications")
-          .select("id")
-          .eq("metadata->>activity_id", notif.metadata.activity_id)
-          .limit(1)
-          .maybeSingle();
+          .insert(notif);
 
-        if (alreadyExists) continue;
-
-        await supabase.from("notifications").insert(notif);
+        if (insertError) {
+          if (!insertError.message.includes("duplicate key")) {
+            console.error("Failed to insert activity notification:", insertError.message);
+          }
+        } else {
+          activityDeadlineCount++;
+        }
       }
     }
-    activityDeadlineCount = activityNotifications.length;
   }
 
   // --- Section 3: Stale lead detection ---
@@ -330,7 +326,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     message: "Processed overdue reminders",
-    count: notifications.length,
+    count: reminderNotifCount,
     zalo_reminders_sent: zaloRemindersSent,
     activity_deadline_notifications: activityDeadlineCount,
     stale_lead_notifications: staleLeadCount,

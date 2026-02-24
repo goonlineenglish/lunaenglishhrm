@@ -4,6 +4,7 @@ import {
   verifyPayloadSignature,
 } from "@/lib/integrations/facebook-client";
 import { handleLeadgen } from "@/lib/integrations/facebook-webhook-handler";
+import { getFacebookIdempotencyFields } from "@/lib/integrations/webhook-idempotency";
 import { getAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -47,16 +48,19 @@ export async function POST(request: NextRequest) {
     for (const entry of entries) {
       const eventType =
         entry.changes?.[0]?.field ?? "unknown";
-      const entryId = String(entry.id ?? "");
 
-      // Idempotency: skip if this entry was already processed
-      if (entryId) {
+      const idempotency = getFacebookIdempotencyFields(entry);
+
+      // Idempotency: skip if this exact event was already processed
+      if (idempotency) {
         const { data: existing } = await supabase
           .from("webhook_events")
-          .select("id, status")
+          .select("id")
           .eq("provider", "facebook")
-          .eq("payload->>id", entryId)
-          .in("status", ["processed"])
+          .eq("event_type", eventType)
+          .eq("status", "processed")
+          .eq("payload->>id", idempotency.entryId)
+          .eq("payload->>time", idempotency.entryTime)
           .limit(1)
           .maybeSingle();
 

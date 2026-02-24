@@ -1,5 +1,6 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { sendTextMessage } from "./zalo-client";
+import { getNextRetryDelay } from "./message-queue-backoff";
 
 function getAdminClient() {
   return createAdminClient(
@@ -8,17 +9,10 @@ function getAdminClient() {
   );
 }
 
-/** Exponential backoff delays in seconds: 1s, 5s, 30s, 5min, 1h */
-const BACKOFF_DELAYS = [1, 5, 30, 300, 3600];
-
-function getNextRetryDelay(attempts: number): number {
-  const index = Math.min(attempts, BACKOFF_DELAYS.length - 1);
-  return BACKOFF_DELAYS[index];
-}
-
 /**
  * Process pending/failed messages from the message_queue table.
  * Uses atomic claim to prevent race conditions when multiple workers run.
+ * Reclaims stuck "processing" messages older than 5 minutes.
  * Exponential backoff for retries, max 5 attempts.
  */
 export async function processQueue(): Promise<{
@@ -28,6 +22,14 @@ export async function processQueue(): Promise<{
   const supabase = getAdminClient();
   let processed = 0;
   let failed = 0;
+
+  // Reclaim stuck messages: reset "processing" with claimed_at older than 5min
+  const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  await supabase
+    .from("message_queue")
+    .update({ status: "pending", claimed_at: null })
+    .eq("status", "processing")
+    .lt("claimed_at", staleThreshold);
 
   // Fetch messages ready for processing
   const now = new Date().toISOString();
@@ -46,7 +48,7 @@ export async function processQueue(): Promise<{
     // Atomic claim: only update if status hasn't changed (prevents race condition)
     const { data: claimed } = await supabase
       .from("message_queue")
-      .update({ status: "processing" })
+      .update({ status: "processing", claimed_at: new Date().toISOString() })
       .eq("id", msg.id)
       .in("status", ["pending", "failed"])
       .select("id")

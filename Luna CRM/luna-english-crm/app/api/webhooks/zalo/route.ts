@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySignature } from "@/lib/integrations/zalo-client";
+import { getZaloMessageId } from "@/lib/integrations/webhook-idempotency";
 import { processEvent } from "@/lib/integrations/zalo-webhook-handler";
 import { getAdminClient } from "@/lib/supabase/admin";
 
@@ -26,16 +27,17 @@ export async function POST(request: NextRequest) {
   try {
     const event = JSON.parse(body);
     const eventType = event.event_name ?? "unknown";
-    const msgId = event.message?.msg_id ?? event.timestamp ?? "";
+    const msgId = getZaloMessageId(event);
 
     // Idempotency: skip if this event was already processed
+    // msg_id is stored in payload.message.msg_id (nested), so query accordingly
     if (msgId) {
       const { data: existing } = await supabase
         .from("webhook_events")
-        .select("id, status")
+        .select("id")
         .eq("provider", "zalo")
-        .eq("payload->>msg_id", String(msgId))
-        .in("status", ["processed"])
+        .eq("status", "processed")
+        .eq("payload->message->>msg_id", msgId)
         .limit(1)
         .maybeSingle();
 

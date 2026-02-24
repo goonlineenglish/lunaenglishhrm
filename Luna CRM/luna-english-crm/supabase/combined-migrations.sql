@@ -1003,3 +1003,42 @@ INSERT INTO public.leads (student_name, student_dob, parent_name, parent_phone, 
   ('Bùi Thanh Tùng', '2016-04-18', 'Bùi Thị Hạnh', '0989012345', NULL, '89 Giải Phóng, Đống Đa, HN', 'zalo', 'primary_success', 'da_dang_ky', 'Đăng ký thành công, lớp Primary Success T4-T7'),
   ('Ngô Quang Huy', '2017-08-25', 'Ngô Văn Phong', '0990123456', 'phong.ngo@email.com', '12 Bạch Mai, Hai Bà Trưng, HN', 'walk_in', 'secondary', 'mat_lead', 'PH chọn trung tâm khác gần nhà hơn'),
   ('Đinh Phương Anh', '2015-02-14', 'Đinh Thị Tuyết', '0901234567', NULL, '45 Kim Ngưu, Hai Bà Trưng, HN', 'phone', 'ielts', 'mat_lead', 'PH thấy học phí cao, sẽ cân nhắc sau');
+
+-- ========================================
+-- Migration 022: 022_add-notification-dedup-index.sql
+-- ========================================
+
+-- Clean up existing duplicate notifications before adding unique constraints.
+DELETE FROM public.notifications a
+  USING public.notifications b
+  WHERE a.metadata->>'reminder_id' IS NOT NULL
+    AND a.metadata->>'reminder_id' = b.metadata->>'reminder_id'
+    AND a.created_at > b.created_at;
+
+DELETE FROM public.notifications a
+  USING public.notifications b
+  WHERE a.metadata->>'activity_id' IS NOT NULL
+    AND a.metadata->>'activity_id' = b.metadata->>'activity_id'
+    AND a.created_at > b.created_at;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_unique_reminder_id
+  ON public.notifications ((metadata->>'reminder_id'))
+  WHERE metadata->>'reminder_id' IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_unique_activity_id
+  ON public.notifications ((metadata->>'activity_id'))
+  WHERE metadata->>'activity_id' IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_events_fb_idempotency
+  ON public.webhook_events (provider, event_type, (payload->>'id'), (payload->>'time'))
+  WHERE provider = 'facebook' AND status = 'processed';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_events_zalo_idempotency
+  ON public.webhook_events (provider, (payload->'message'->>'msg_id'))
+  WHERE provider = 'zalo' AND status = 'processed' AND payload->'message'->>'msg_id' IS NOT NULL;
+
+-- ========================================
+-- Migration 023: 023_add-message-queue-claimed-at.sql
+-- ========================================
+
+ALTER TABLE public.message_queue ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;

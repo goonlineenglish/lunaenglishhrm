@@ -58,7 +58,7 @@ export function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{lead.parent_name}</p>
+          <p className="truncate text-sm font-medium">{lead.student_name || lead.parent_name}</p>
           <p className="truncate text-xs text-muted-foreground">
             {lead.parent_phone}
           </p>
@@ -72,9 +72,9 @@ export function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps) {
         </Badge>
       )}
 
-      {lead.student_name && (
+      {lead.parent_name && (
         <p className="mt-1 truncate text-xs text-muted-foreground">
-          HS: {lead.student_name}
+          PH: {lead.parent_name}
         </p>
       )}
 

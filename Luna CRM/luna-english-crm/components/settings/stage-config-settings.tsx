@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getStageConfigs, updateStageNextStepsConfig } from "@/lib/actions/checklist-actions";
 import type { StageNextStepConfig, StageNextStep, LeadStage } from "@/lib/types/leads";
 import { PIPELINE_STAGES } from "@/lib/constants/pipeline-stages";
@@ -16,17 +16,20 @@ export function StageConfigSettings() {
   const [editingStage, setEditingStage] = useState<LeadStage | null>(null);
   const [editSteps, setEditSteps] = useState<StageNextStep[]>([]);
   const [saving, setSaving] = useState(false);
-
-  const loadConfigs = useCallback(async () => {
-    setLoading(true);
-    const result = await getStageConfigs();
-    if (result.data) setConfigs(result.data);
-    setLoading(false);
-  }, []);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
+    let ignore = false;
+    async function fetchConfigs() {
+      setLoading(true);
+      const result = await getStageConfigs();
+      if (ignore) return;
+      if (result.data) setConfigs(result.data);
+      setLoading(false);
+    }
+    fetchConfigs();
+    return () => { ignore = true; };
+  }, [refreshKey]);
 
   function handleEdit(config: StageNextStepConfig) {
     setEditingStage(config.stage);
@@ -75,7 +78,7 @@ export function StageConfigSettings() {
 
     toast.success("Đã lưu cấu hình");
     setEditingStage(null);
-    loadConfigs();
+    setRefreshKey((k) => k + 1);
   }
 
   if (loading) {
@@ -174,7 +177,7 @@ export function StageConfigSettings() {
                 </div>
               ) : (
                 <ul className="space-y-1">
-                  {steps
+                  {[...steps]
                     .sort((a, b) => a.order - b.order)
                     .map((step) => (
                       <li key={step.id} className="text-sm text-muted-foreground">

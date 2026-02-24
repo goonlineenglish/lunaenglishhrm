@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getActivities } from "@/lib/actions/activity-actions";
 import { AddScheduledActivityDialog } from "@/components/pipeline/add-scheduled-activity-dialog";
 import { ScheduledActivityList } from "@/components/pipeline/scheduled-activity-list";
@@ -16,30 +16,36 @@ interface LeadDetailActivitiesProps {
 export function LeadDetailActivities({ leadId, currentStage }: LeadDetailActivitiesProps) {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const loadActivities = useCallback(async () => {
-    setLoading(true);
-    const result = await getActivities(leadId);
-    if (result.data) {
-      // Filter out checklist items — shown separately
-      setActivities(result.data.filter((a) => a.type !== "checklist"));
-    }
-    setLoading(false);
-  }, [leadId]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    loadActivities();
-  }, [loadActivities]);
+    let ignore = false;
+    async function fetchActivities() {
+      setLoading(true);
+      const result = await getActivities(leadId);
+      if (ignore) return;
+      if (result.data) {
+        setActivities(result.data.filter((a) => a.type !== "checklist"));
+      }
+      setLoading(false);
+    }
+    fetchActivities();
+    return () => { ignore = true; };
+  }, [leadId, refreshKey]);
+
+  function triggerRefresh() {
+    setRefreshKey((k) => k + 1);
+  }
 
   return (
     <div className="space-y-4">
       <StageNextStepsChecklist
         leadId={leadId}
         currentStage={currentStage}
-        onChecklistChanged={loadActivities}
+        onChecklistChanged={triggerRefresh}
       />
 
-      <AddScheduledActivityDialog leadId={leadId} onActivityAdded={loadActivities} />
+      <AddScheduledActivityDialog leadId={leadId} onActivityAdded={triggerRefresh} />
       <Separator />
 
       {loading ? (
@@ -51,7 +57,7 @@ export function LeadDetailActivities({ leadId, currentStage }: LeadDetailActivit
       ) : (
         <ScheduledActivityList
           activities={activities}
-          onStatusChanged={loadActivities}
+          onStatusChanged={triggerRefresh}
         />
       )}
     </div>

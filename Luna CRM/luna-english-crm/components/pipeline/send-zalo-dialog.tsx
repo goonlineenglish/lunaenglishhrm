@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -49,22 +49,23 @@ export function SendZaloDialog({
   const [sending, setSending] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-  const loadTemplates = useCallback(async () => {
-    setLoadingTemplates(true);
-    const result = await getZaloTemplates(currentStage);
-    if (result.data) {
-      setTemplates(result.data);
-    }
-    setLoadingTemplates(false);
-  }, [currentStage]);
-
   useEffect(() => {
-    if (open) {
-      loadTemplates();
+    if (!open) return;
+    let ignore = false;
+    async function fetchTemplates() {
       setSelectedKey("");
       setMessageBody("");
+      setLoadingTemplates(true);
+      const result = await getZaloTemplates(currentStage);
+      if (ignore) return;
+      if (result.data) {
+        setTemplates(result.data);
+      }
+      setLoadingTemplates(false);
     }
-  }, [open, loadTemplates]);
+    fetchTemplates();
+    return () => { ignore = true; };
+  }, [open, currentStage]);
 
   // Render template with lead vars when template is selected
   function onTemplateSelect(key: string) {

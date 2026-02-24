@@ -20,44 +20,80 @@ export async function GET(request: Request) {
     .lt("remind_at", new Date().toISOString());
 
   if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    console.error("Failed to fetch overdue reminders:", fetchError.message);
+    return NextResponse.json({ error: "Không thể tải nhắc nhở" }, { status: 500 });
   }
 
   if (!overdueReminders || overdueReminders.length === 0) {
     return NextResponse.json({ message: "No overdue reminders", count: 0 });
   }
 
-  // Create notifications for each overdue reminder
-  const notifications = overdueReminders
+  // Batch-fetch existing notifications for all reminder IDs to avoid N+1
+  const reminderIds = overdueReminders
     .filter((r) => r.assigned_to)
-    .map((reminder) => {
-      const lead = reminder.leads as unknown as {
-        parent_name: string;
-        student_name: string | null;
-      };
-      const leadName = lead?.student_name || lead?.parent_name || "Lead";
+    .map((r) => r.id);
 
-      return {
-        user_id: reminder.assigned_to,
-        title: `Nhắc nhở quá hạn: ${leadName}`,
-        message: `Bạn có nhắc nhở đã quá hạn cho ${leadName}`,
-        type: "reminder" as const,
-        is_read: false,
-        link: "/reminders",
-        metadata: {
-          reminder_id: reminder.id,
-          lead_id: reminder.lead_id,
-        },
-      };
+  const { data: existingNotifications } = reminderIds.length > 0
+    ? await supabase
+        .from("notifications")
+        .select("metadata")
+        .in("metadata->>reminder_id", reminderIds)
+    : { data: [] };
+
+  const existingReminderIds = new Set(
+    (existingNotifications ?? []).map(
+      (n) => (n.metadata as Record<string, string>)?.reminder_id
+    )
+  );
+
+  // Create notifications for each overdue reminder (with dedup)
+  const notifications: Array<{
+    user_id: string;
+    title: string;
+    message: string;
+    type: "reminder";
+    is_read: boolean;
+    link: string;
+    metadata: { reminder_id: string; lead_id: string };
+  }> = [];
+
+  for (const reminder of overdueReminders) {
+    if (!reminder.assigned_to) continue;
+
+    // Skip if notification already exists for this reminder
+    if (existingReminderIds.has(reminder.id)) continue;
+
+    const lead = reminder.leads as unknown as {
+      parent_name: string;
+      student_name: string | null;
+    };
+    const leadName = lead?.student_name || lead?.parent_name || "Lead";
+
+    notifications.push({
+      user_id: reminder.assigned_to,
+      title: `Nhắc nhở quá hạn: ${leadName}`,
+      message: `Bạn có nhắc nhở đã quá hạn cho ${leadName}`,
+      type: "reminder" as const,
+      is_read: false,
+      link: "/reminders",
+      metadata: {
+        reminder_id: reminder.id,
+        lead_id: reminder.lead_id,
+      },
     });
+  }
 
   if (notifications.length > 0) {
+    // Use upsert with onConflict to prevent race-condition duplicates
+    // Since we can't use a DB unique index on metadata->>reminder_id easily,
+    // we rely on the batch-check above + single atomic insert batch
     const { error: insertError } = await supabase
       .from("notifications")
       .insert(notifications);
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      console.error("Failed to insert overdue notifications:", insertError.message);
+      return NextResponse.json({ error: "Không thể tạo thông báo" }, { status: 500 });
     }
   }
 
@@ -181,6 +217,29 @@ export async function GET(request: Request) {
     .gt("schedule_to", new Date().toISOString());
 
   if (upcomingActivities?.length) {
+    // Batch-fetch existing notifications for all activity IDs to avoid N+1
+    const activityIds = upcomingActivities.map((a) => a.id);
+    const { data: existingActivityNotifs } = await supabase
+      .from("notifications")
+      .select("metadata")
+      .in("metadata->>activity_id", activityIds);
+
+    const existingActivityIds = new Set(
+      (existingActivityNotifs ?? []).map(
+        (n) => (n.metadata as Record<string, string>)?.activity_id
+      )
+    );
+
+    const activityNotifications: Array<{
+      user_id: string;
+      title: string;
+      message: string;
+      type: "reminder";
+      is_read: boolean;
+      link: string;
+      metadata: { activity_id: string; lead_id: string };
+    }> = [];
+
     for (const activity of upcomingActivities) {
       const lead = activity.leads as unknown as {
         parent_name: string;
@@ -189,19 +248,13 @@ export async function GET(request: Request) {
       };
       if (!lead?.assigned_to) continue;
 
-      // Prevent duplicate notifications for the same activity
-      const { data: existing } = await supabase
-        .from("notifications")
-        .select("id")
-        .eq("metadata->>activity_id", activity.id)
-        .limit(1);
-
-      if (existing && existing.length > 0) continue;
+      // Skip if notification already exists for this activity
+      if (existingActivityIds.has(activity.id)) continue;
 
       const leadName = lead.student_name || lead.parent_name || "Lead";
       const activityTitle = activity.title || activity.type;
 
-      await supabase.from("notifications").insert({
+      activityNotifications.push({
         user_id: lead.assigned_to,
         title: `Hoạt động sắp đến hạn: ${activityTitle}`,
         message: `Hoạt động "${activityTitle}" cho ${leadName} sắp đến hạn`,
@@ -213,8 +266,12 @@ export async function GET(request: Request) {
           lead_id: activity.lead_id,
         },
       });
-      activityDeadlineCount++;
     }
+
+    if (activityNotifications.length > 0) {
+      await supabase.from("notifications").insert(activityNotifications);
+    }
+    activityDeadlineCount = activityNotifications.length;
   }
 
   // --- Section 3: Stale lead detection ---
@@ -225,24 +282,28 @@ export async function GET(request: Request) {
   });
 
   if (staleLeads?.length) {
-    for (const staleLead of staleLeads) {
-      const leadName =
-        staleLead.student_name || staleLead.parent_name || "Lead";
-
-      await supabase.from("notifications").insert({
-        user_id: staleLead.assigned_to,
-        title: `Lead không hoạt động: ${leadName}`,
-        message: `${leadName} đã ở giai đoạn hiện tại ${staleLead.days_inactive} ngày mà không có hoạt động nào`,
-        type: "reminder",
-        is_read: false,
-        link: "/pipeline",
-        metadata: {
-          lead_id: staleLead.lead_id,
-          stale_detection: true,
-          days_inactive: staleLead.days_inactive,
-        },
+    const staleNotifications = staleLeads
+      .filter((s: { assigned_to: string | null }) => s.assigned_to)
+      .map((staleLead: { assigned_to: string; student_name: string | null; parent_name: string; days_inactive: number; lead_id: string }) => {
+        const leadName = staleLead.student_name || staleLead.parent_name || "Lead";
+        return {
+          user_id: staleLead.assigned_to,
+          title: `Lead không hoạt động: ${leadName}`,
+          message: `${leadName} đã ở giai đoạn hiện tại ${staleLead.days_inactive} ngày mà không có hoạt động nào`,
+          type: "reminder" as const,
+          is_read: false,
+          link: "/pipeline",
+          metadata: {
+            lead_id: staleLead.lead_id,
+            stale_detection: true,
+            days_inactive: staleLead.days_inactive,
+          },
+        };
       });
-      staleLeadCount++;
+
+    if (staleNotifications.length > 0) {
+      await supabase.from("notifications").insert(staleNotifications);
+      staleLeadCount = staleNotifications.length;
     }
   }
 

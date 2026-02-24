@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { checkZaloConnection } from "@/lib/actions/zalo-message-actions";
@@ -23,14 +23,16 @@ export function LeadDetailZalo({
   const [connected, setConnected] = useState<boolean | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const checkConnection = useCallback(async () => {
-    const result = await checkZaloConnection(leadId);
-    setConnected(result.connected);
-  }, [leadId]);
-
   useEffect(() => {
-    checkConnection();
-  }, [checkConnection]);
+    let ignore = false;
+    async function fetchConnection() {
+      const result = await checkZaloConnection(leadId);
+      if (ignore) return;
+      setConnected(result.connected);
+    }
+    fetchConnection();
+    return () => { ignore = true; };
+  }, [leadId]);
 
   // Loading state
   if (connected === null) {

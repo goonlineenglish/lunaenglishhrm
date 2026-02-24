@@ -24,32 +24,34 @@ export function LeadStageNotesPanel({ leadId, currentStage }: Props) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const stageConfig = getStageConfig(currentStage);
 
   useEffect(() => {
-    loadNotes();
-  }, [leadId]);
-
-  async function loadNotes() {
-    setLoading(true);
-    const res = await getStageNotes(leadId);
-    if (res.data) {
-      setNotes(res.data);
-      // Pre-fill with latest note for current stage
-      const current = res.data.find((n) => n.stage === currentStage);
-      if (current) {
-        setNote(current.note ?? "");
-        setResult(current.result ?? "");
-        setNextSteps(current.next_steps ?? "");
-      } else {
-        setNote("");
-        setResult("");
-        setNextSteps("");
+    let ignore = false;
+    async function fetchNotes() {
+      setLoading(true);
+      const res = await getStageNotes(leadId);
+      if (ignore) return;
+      if (res.data) {
+        setNotes(res.data);
+        const current = res.data.find((n) => n.stage === currentStage);
+        if (current) {
+          setNote(current.note ?? "");
+          setResult(current.result ?? "");
+          setNextSteps(current.next_steps ?? "");
+        } else {
+          setNote("");
+          setResult("");
+          setNextSteps("");
+        }
       }
+      setLoading(false);
     }
-    setLoading(false);
-  }
+    fetchNotes();
+    return () => { ignore = true; };
+  }, [leadId, currentStage, refreshKey]);
 
   async function handleSave() {
     setSaving(true);
@@ -65,7 +67,7 @@ export function LeadStageNotesPanel({ leadId, currentStage }: Props) {
       return;
     }
     toast.success("Đã lưu ghi chú");
-    await loadNotes();
+    setRefreshKey((k) => k + 1);
   }
 
   const historyNotes = notes.filter((n) => n.stage !== currentStage);

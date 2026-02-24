@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getStageChecklist, toggleChecklistItem } from "@/lib/actions/activity-actions";
 import type { LeadActivity } from "@/lib/types/leads";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,18 +22,20 @@ export function StageNextStepsChecklist({
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const loadChecklist = useCallback(async () => {
-    setLoading(true);
-    const result = await getStageChecklist(leadId, currentStage);
-    if (result.data) {
-      setItems(result.data);
-    }
-    setLoading(false);
-  }, [leadId, currentStage]);
-
   useEffect(() => {
-    loadChecklist();
-  }, [loadChecklist]);
+    let ignore = false;
+    async function fetchChecklist() {
+      setLoading(true);
+      const result = await getStageChecklist(leadId, currentStage);
+      if (ignore) return;
+      if (result.data) {
+        setItems(result.data);
+      }
+      setLoading(false);
+    }
+    fetchChecklist();
+    return () => { ignore = true; };
+  }, [leadId, currentStage]);
 
   async function handleToggle(activityId: string, currentCompleted: boolean) {
     setUpdatingId(activityId);

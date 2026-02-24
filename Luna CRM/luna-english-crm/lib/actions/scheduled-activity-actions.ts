@@ -58,14 +58,18 @@ export async function createScheduledActivity(
   }
 
   // Convert Vietnam local time to UTC for storage
-  const scheduleFromUtc = fromZonedTime(
-    new Date(data.scheduleFrom),
-    VN_TZ
-  ).toISOString();
-  const scheduleToUtc = fromZonedTime(
-    new Date(data.scheduleTo),
-    VN_TZ
-  ).toISOString();
+  const parsedFrom = new Date(data.scheduleFrom);
+  const parsedTo = new Date(data.scheduleTo);
+
+  if (isNaN(parsedFrom.getTime()) || isNaN(parsedTo.getTime())) {
+    return { success: false, error: "Ngày giờ không hợp lệ" };
+  }
+  if (parsedFrom >= parsedTo) {
+    return { success: false, error: "Thời gian bắt đầu phải trước thời gian kết thúc" };
+  }
+
+  const scheduleFromUtc = fromZonedTime(parsedFrom, VN_TZ).toISOString();
+  const scheduleToUtc = fromZonedTime(parsedTo, VN_TZ).toISOString();
 
   const recurrence = data.recurrencePattern ?? "once";
 

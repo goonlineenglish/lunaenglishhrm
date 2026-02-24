@@ -1,8 +1,8 @@
 # Deployment Guide
 
 ## Current State
-- **Supabase Cloud**: Deployed (Singapore region)
-- **Vercel**: Not yet deployed
+- **Supabase Cloud**: Deployed (Singapore)
+- **Vercel**: Ready to deploy
 - **Local dev**: Working
 
 ## Infrastructure
@@ -15,21 +15,28 @@
 
 ### Environment Variables
 ```
+# Supabase (public)
 NEXT_PUBLIC_SUPABASE_URL=https://vgxpucmwivhlgvlzzkju.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+NEXT_PUBLIC_SUPABASE_ANON_KEY={anon-key}
+
+# Cron Auth
+CRON_SECRET={random-secret-32-chars}
+
+# Integrations (optional)
+ZALO_OA_TOKEN={token}
+ZALO_OA_SECRET={secret}
+FACEBOOK_APP_ID={app-id}
+FACEBOOK_APP_SECRET={secret}
+FACEBOOK_ACCESS_TOKEN={token}
+FACEBOOK_VERIFY_TOKEN={token}
 ```
 
 ## Local Development
 
-### Prerequisites
-- Node.js >= 20
-- npm >= 10
-
 ### Setup
 ```bash
-cd luna-english-crm
 npm install
-# Create .env.local with Supabase credentials
+# Create .env.local with Supabase credentials from project settings
 npm run dev
 ```
 
@@ -40,26 +47,32 @@ rm -rf .next
 npm run dev
 ```
 
-## Vercel Deployment (Planned)
+## Vercel Deployment
 
 ### Steps
 1. Connect GitHub repo `goonlineenglish/luna-english-crm` to Vercel
-2. Set environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+2. Set environment variables (all 8 above in Vercel dashboard)
 3. Framework: Next.js (auto-detected)
 4. Build command: `npm run build`
 5. Output directory: `.next`
+6. Deploy!
 
 ### Post-Deploy
-- Configure custom domain (if applicable)
-- Set up Vercel Cron for scheduled tasks:
-  - `/api/cron/check-overdue-reminders` — every 15 min
-  - `/api/cron/refresh-tokens` — daily
-  - `/api/cron/process-message-queue` — every 5 min
-  - `/api/cron/weekly-report` — weekly
+- Custom domain configuration (if applicable)
+- Vercel Cron verification via `vercel.json`:
+  - `/api/cron/check-overdue-reminders` — every 15min
+  - `/api/cron/refresh-tokens` — daily (6h)
+  - `/api/cron/process-message-queue` — every 5min
+  - `/api/cron/weekly-report` — weekly (Mon 8am)
 
-## Known Issues
-- Middleware deprecation: Next.js 16 recommends proxy over middleware
-- Port 3000 ghost processes on Windows — kill before restart
-- Some routes not yet browser-tested: `/reminders`, `/students`, `/reports`, `/settings`
+All cron routes fail-closed: deny without CRON_SECRET header.
+
+## Local Build Test
+```bash
+npm run build
+npm run start
+```
+
+## Troubleshooting
+- **Windows port 3000 ghost process**: `taskkill /f /im node.exe`
+- **Middleware deprecation warning**: Migrate to proxy convention (optional, next iteration)

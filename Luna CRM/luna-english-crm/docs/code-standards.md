@@ -1,7 +1,7 @@
 # Code Standards
 
 ## TypeScript
-- Strict mode enabled
+- Strict mode enabled (`tsconfig.json`)
 - Path alias: `@/` maps to project root
 - Prefer explicit types over `any`
 - Use `interface` for object shapes, `type` for unions/intersections
@@ -22,7 +22,7 @@
 ### Data Fetching
 - Server Components: direct Supabase queries via `createClient()` from `lib/supabase/server.ts`
 - Client mutations: Server Actions in `lib/actions/`
-- Realtime: custom hooks in `lib/hooks/` using Supabase realtime subscriptions
+- Realtime: custom hooks in `lib/hooks/` using Supabase subscriptions
 
 ### Next.js 16 Patterns
 - `await cookies()` — cookies is async in Next.js 16
@@ -46,6 +46,15 @@
 - Server actions: return `{ success: boolean, error?: string }`
 - Client: use Sonner `toast.success()` / `toast.error()` (not shadcn toast)
 - Wrap Supabase calls in try/catch
+- Generic error messages in server actions (no sensitive info leak)
+
+## Security Practices
+- UUID validation on all server action ID parameters
+- HMAC-SHA256 verification on webhook signatures (Zalo + Facebook)
+- Cron auth fail-closed: deny access when `CRON_SECRET` env var missing
+- Input sanitization: escape `%`, `\`, `_` in ilike filters
+- No credentials in error responses (use generic messages)
+- Centralized admin client (`lib/supabase/admin.ts`) — no duplication
 
 ## Imports
 - Use `@/` path alias for all imports

@@ -6,6 +6,7 @@ import { ZaloConnectionCard } from "@/components/settings/zalo-connection-card";
 import { FacebookConnectionCard } from "@/components/settings/facebook-connection-card";
 import { WebhookStatusCard } from "@/components/settings/webhook-status-card";
 import { WebhookEventsTable } from "@/components/settings/webhook-events-table";
+import { StageConfigSettings } from "@/components/settings/stage-config-settings";
 import { getWebhookEvents } from "@/lib/actions/integration-actions";
 
 interface ConnectionInfo {
@@ -44,6 +45,7 @@ export function IntegrationSettings({
       <TabsList>
         <TabsTrigger value="connections">Kết nối</TabsTrigger>
         <TabsTrigger value="webhooks">Webhook Events</TabsTrigger>
+        <TabsTrigger value="stage-config">Pipeline</TabsTrigger>
       </TabsList>
 
       <TabsContent value="connections" className="space-y-6">
@@ -65,6 +67,10 @@ export function IntegrationSettings({
 
       <TabsContent value="webhooks">
         <WebhookEventsTable events={events} loading={loading} />
+      </TabsContent>
+
+      <TabsContent value="stage-config">
+        <StageConfigSettings />
       </TabsContent>
     </Tabs>
   );

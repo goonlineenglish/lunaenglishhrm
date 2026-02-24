@@ -4,6 +4,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import type { LeadWithAssignee } from "@/lib/hooks/use-realtime-leads";
 import { LeadCardSlaTimer } from "@/components/pipeline/lead-card-sla-timer";
+import { AddScheduledActivityDialog } from "@/components/pipeline/add-scheduled-activity-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -78,10 +79,19 @@ export function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps) {
       )}
 
       <div className="mt-2 flex items-center justify-between">
-        <LeadCardSlaTimer
-          stage={lead.current_stage}
-          createdAt={lead.created_at}
-        />
+        <div className="flex items-center gap-1">
+          <LeadCardSlaTimer
+            stage={lead.current_stage}
+            createdAt={lead.created_at}
+          />
+          <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+            <AddScheduledActivityDialog
+              leadId={lead.id}
+              onActivityAdded={() => {}}
+              triggerVariant="icon"
+            />
+          </div>
+        </div>
         {lead.users?.full_name ? (
           <Avatar className="size-6">
             <AvatarFallback className="text-[10px]">

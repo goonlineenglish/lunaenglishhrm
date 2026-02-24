@@ -24,7 +24,7 @@ interface Advisor {
 export interface Filters {
   source: LeadSource | "all";
   program: ProgramType | "all";
-  stage: LeadStage | "all";
+  stages: LeadStage[];
   assignee: string | "all";
 }
 
@@ -45,7 +45,7 @@ export function PipelineView({
   const [filters, setFilters] = useState<Filters>({
     source: "all",
     program: "all",
-    stage: "all",
+    stages: [],
     assignee: "all",
   });
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -62,7 +62,7 @@ export function PipelineView({
         lead.program_interest !== filters.program
       )
         return false;
-      if (filters.stage !== "all" && lead.current_stage !== filters.stage)
+      if (filters.stages.length > 0 && !filters.stages.includes(lead.current_stage))
         return false;
       if (filters.assignee !== "all" && lead.assigned_to !== filters.assignee)
         return false;

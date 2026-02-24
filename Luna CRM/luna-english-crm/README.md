@@ -1,69 +1,84 @@
 # Luna English CRM
 
-Hệ thống quản lý tuyển sinh và chăm sóc học sinh Luna English (cơ sở Tân Mai).
+Hệ thống quản lý tuyển sinh và chăm sóc học sinh Luna English (cơ sở Tân Mai). All 9 phases complete. Deployed to Supabase Cloud, ready for Vercel.
 
 ## Tech Stack
 
-- **Next.js 16** (App Router, TypeScript)
-- **Supabase** (PostgreSQL, Auth, Realtime, Edge Functions)
-- **shadcn/ui** + Tailwind CSS v4
-- **@dnd-kit** (Kanban drag-and-drop)
-- **Recharts** (Dashboard charts)
+- **Framework**: Next.js 16.1.6 (App Router, TypeScript strict, Turbopack)
+- **Styling**: Tailwind CSS v4 (CSS-first config)
+- **Database**: Supabase (PostgreSQL, Auth, Realtime, RLS)
+- **UI**: shadcn/ui, Sonner toasts, @tanstack/react-table
+- **Interactions**: @dnd-kit (drag-drop), Recharts (charts), cmdk (search)
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js >= 20
-- npm >= 10
-- Docker (for Supabase local dev)
-
-### Setup
+## Quick Start
 
 ```bash
-cd luna-english-crm
-
-# Install dependencies
 npm install
-
-# Copy env file and fill in Supabase credentials
-cp .env.local.example .env.local
-
-# Start Supabase local (requires Docker)
-npx supabase start
-
-# Apply migrations
-npx supabase db reset
-
-# Generate TypeScript types from DB
-npx supabase gen types typescript --local > lib/types/database.ts
-
-# Start dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000 → Login with test admin account.
+
+**Windows cleanup:**
+```bash
+taskkill /f /im node.exe && rm -rf .next && npm run dev
+```
 
 ## Project Structure
 
 ```
-luna-english-crm/
-├── app/                    # Next.js App Router pages
-│   ├── login/              # Login page (Phase 2)
-│   ├── layout.tsx          # Root layout (Vietnamese, Sonner toasts)
-│   └── page.tsx            # Redirect to /login
-├── components/ui/          # shadcn/ui components
-├── lib/
-│   ├── supabase/           # Supabase server/client/middleware helpers
-│   ├── constants/          # Pipeline stages, roles
-│   ├── types/              # TypeScript types (leads, users, database)
-│   └── utils/              # Formatters (date, phone)
-├── supabase/
-│   ├── migrations/         # 9 SQL migration files
-│   └── seed.sql            # Sample data (10 leads)
-└── middleware.ts            # Auth session refresh
+app/
+├── (auth)/login/           # Login page
+├── (dashboard)/            # Protected routes (sidebar + header)
+│   ├── pipeline/           # Kanban board (8 stages)
+│   ├── reminders/          # Follow-up reminders
+│   ├── students/           # Enrollment management
+│   ├── reports/            # KPI dashboard
+│   └── settings/           # Integration config
+├── api/
+│   ├── webhooks/           # Zalo + Facebook inbound
+│   └── cron/               # 4 scheduled tasks (15min-weekly)
+└── globals.css             # Tailwind v4 theme
+
+components/
+├── ui/                     # 13 shadcn/ui base components
+├── pipeline/               # 14 Kanban components
+├── students/               # 10 enrollment components
+├── dashboard/              # 7 KPI + chart components
+├── reminders/              # 4 reminder components
+├── settings/               # 4 integration components
+├── layout/                 # 7 sidebar/header components
+└── auth/                   # 1 login component
+
+lib/
+├── actions/                # 9 server actions
+├── hooks/                  # 3 realtime + optimistic hooks
+├── integrations/           # Zalo/Facebook clients + handlers
+├── supabase/               # Client + server helpers
+├── constants/              # Navigation, stages, roles
+├── types/                  # TypeScript interfaces
+└── utils/                  # Formatters, CSV parser
+
+supabase/
+├── migrations/             # 15 SQL files (001-015)
+└── seed.sql                # 10 sample leads
+
+docs/
+├── project-overview-pdr.md # Business context, features
+├── codebase-summary.md     # File index, counts
+├── system-architecture.md  # Stack, DB schema, data flow
+├── code-standards.md       # TypeScript, components, styling
+├── development-roadmap.md  # 9 phases + validation
+├── deployment-guide.md     # Supabase + Vercel setup
+├── design-guidelines.md    # Colors, typography, layout
+└── project-changelog.md    # Version history
 ```
 
-## Implementation Plan
+## Development
 
-See [plans/](../plans/260218-1505-luna-english-crm-internal-pipeline-management/plan.md) for the 7-phase implementation plan.
+- **All 9 phases complete**: Setup, Auth, Pipeline, Reminders, Students, Dashboard, Integrations, Deployment, Testing
+- **Supabase Cloud deployed** (Singapore): vgxpucmwivhlgvlzzkju.supabase.co
+- **GitHub**: goonlineenglish/luna-english-crm (main branch)
+- **Vercel**: Planned (connect repo + set env vars)
+
+See `docs/development-roadmap.md` for phase details and `docs/deployment-guide.md` for Vercel steps.

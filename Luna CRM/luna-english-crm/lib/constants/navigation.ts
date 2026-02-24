@@ -4,6 +4,7 @@ export type NavIconName =
   | "LayoutDashboard"
   | "Users"
   | "Bell"
+  | "CalendarCheck"
   | "GraduationCap"
   | "BarChart3"
   | "Settings";
@@ -32,6 +33,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Nhac nho",
     href: "/reminders",
     iconName: "Bell",
+    roles: ["admin", "advisor"],
+  },
+  {
+    label: "Hoat dong",
+    href: "/activities",
+    iconName: "CalendarCheck",
     roles: ["admin", "advisor"],
   },
   {

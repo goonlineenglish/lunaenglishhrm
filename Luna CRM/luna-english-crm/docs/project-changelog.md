@@ -4,10 +4,41 @@
 
 ### Planned
 - Vercel deployment (connect GitHub, set env vars, verify cron)
-- Custom domain configuration
-- Middleware → proxy migration (Next.js 16 deprecation)
-- Production build verification
-- Manual smoke tests (all routes)
+- Custom domain configuration (if applicable)
+- (Optional) Middleware → proxy migration (Next.js 16 deprecation warning)
+- Apply DB migrations 016-021 to Supabase Cloud
+- Set RESEND_API_KEY + EMAIL_FROM env vars in production
+
+---
+
+## [0.3.0] - 2026-02-24
+
+### Added — Enhanced Activities & Communication
+- **Stage Notes**: Per-stage notes/results/next-steps fields on lead detail sheet ("Ghi chu stage" tab). History preserved across stage changes.
+- **Scheduled Activities**: Full activity scheduling with date range, participants, recurrence support. New `/activities` route with global view + filters.
+- **Smart Stage Checklists**: Auto-generated checklists per pipeline stage (configurable via Settings). Tracks completion progress per lead.
+- **Stale Lead Detection**: `find_stale_leads()` RPC + cron integration to flag leads idle too long in a stage.
+- **Email Communication**: Send emails from lead detail sheet using Resend SDK. Template selection with {{var}} placeholder substitution + live preview.
+- **Zalo OA Messaging**: Send Zalo messages from lead detail sheet. Template-based messaging. Removed `source === 'zalo'` gating; now uses `zalo_followers` record check.
+- **Trial Class Auto-Reminder**: Cron sends Zalo reminder 24h before scheduled trial class.
+- **Quick Activity Button**: "Them Activity" button on lead cards for fast scheduling.
+
+### Database
+- 6 new migrations (016-021): `lead_stage_notes`, `stage_next_step_configs`, `email_templates`, `zalo_message_templates` tables + scheduling columns on `lead_activities` + RLS + triggers + `find_stale_leads()` RPC
+- 4 new activity_type enum values: `scheduled_call`, `trial_class`, `consultation`, `checklist`
+- Seed data: 7 stage configs, sample email/Zalo templates
+
+### New Files (22 created, 8 modified)
+- 5 server actions: stage-notes, scheduled-activity, checklist, email, zalo-message
+- 7 UI components: lead-stage-notes-panel, add-scheduled-activity-dialog, scheduled-activity-list, activities-page-view, stage-next-steps-checklist, send-email-dialog, send-zalo-dialog
+- 1 settings component: stage-config-settings
+- 1 route: `/activities`
+- 1 utility: template-renderer
+- 2 type files: email-templates, zalo-templates
+
+### Dependencies
+- `resend` (email provider SDK)
+- `date-fns-tz` (timezone conversion: UTC <-> Asia/Ho_Chi_Minh)
 
 ---
 

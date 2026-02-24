@@ -28,7 +28,11 @@ export type LeadActivityType =
   | "meeting"
   | "note"
   | "stage_change"
-  | "trial_booked";
+  | "trial_booked"
+  | "scheduled_call"
+  | "trial_class"
+  | "consultation"
+  | "checklist";
 
 export type ReminderType =
   | "follow_up"
@@ -58,6 +62,9 @@ export interface Lead {
   updated_at: string;
 }
 
+export type ActivityStatus = "pending" | "completed" | "cancelled";
+export type RecurrencePattern = "once" | "weekly";
+
 export interface LeadActivity {
   id: string;
   lead_id: string;
@@ -66,6 +73,41 @@ export interface LeadActivity {
   created_by: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
+  title: string | null;
+  schedule_from: string | null;
+  schedule_to: string | null;
+  location: string | null;
+  participant_ids: string[];
+  status: ActivityStatus;
+  recurrence_pattern: RecurrencePattern;
+  recurrence_day_of_week: number | null;
+  parent_activity_id: string | null;
+}
+
+export interface StageNote {
+  id: string;
+  lead_id: string;
+  stage: LeadStage;
+  note: string | null;
+  result: string | null;
+  next_steps: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StageNextStepConfig {
+  id: string;
+  stage: LeadStage;
+  steps: StageNextStep[];
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export interface StageNextStep {
+  id: string;
+  label: string;
+  order: number;
 }
 
 export interface FollowUpReminder {

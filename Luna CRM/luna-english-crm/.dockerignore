@@ -1,0 +1,13 @@
+.git
+.next
+node_modules
+.env*
+!.env.production.template
+*.md
+docs/
+plans/
+tests/
+supabase/
+.claude/
+.opencode/
+NUL

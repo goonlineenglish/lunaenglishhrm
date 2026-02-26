@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { ReminderType, ReminderStatus } from "@/lib/types/leads";
+import { ensureUserProfile } from "./ensure-user-profile";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function createReminder(
   leadId: string,
@@ -10,91 +14,127 @@ export async function createReminder(
   type: ReminderType,
   note?: string
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!UUID_REGEX.test(leadId)) return { error: "ID không hợp lệ" };
 
-  if (!user) return { error: "Chưa đăng nhập" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("follow_up_reminders").insert({
-    lead_id: leadId,
-    remind_at: remindAt,
-    type,
-    note: note || null,
-    assigned_to: user.id,
-  });
+    if (!user) return { error: "Chưa đăng nhập" };
 
-  if (error) return { error: error.message };
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { error: profileResult.error };
+    }
 
-  revalidatePath("/reminders");
-  return { success: true };
+    const { error } = await supabase.from("follow_up_reminders").insert({
+      lead_id: leadId,
+      remind_at: remindAt,
+      type,
+      note: note || null,
+      assigned_to: user.id,
+    });
+
+    if (error) return { error: "Không thể tạo nhắc nhở" };
+
+    revalidatePath("/reminders");
+    return { success: true };
+  } catch (err) {
+    console.error("createReminder error:", err);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
+  }
 }
 
 export async function completeReminder(id: string, note?: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!UUID_REGEX.test(id)) return { error: "ID không hợp lệ" };
 
-  if (!user) return { error: "Chưa đăng nhập" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { data: reminder, error: fetchError } = await supabase
-    .from("follow_up_reminders")
-    .select("*")
-    .eq("id", id)
-    .single();
+    if (!user) return { error: "Chưa đăng nhập" };
 
-  if (fetchError || !reminder) return { error: "Không tìm thấy nhắc nhở" };
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { error: profileResult.error };
+    }
 
-  const { error } = await supabase
-    .from("follow_up_reminders")
-    .update({
-      status: "done" as ReminderStatus,
-      note: note || reminder.note,
-    })
-    .eq("id", id);
+    const { data: reminder, error: fetchError } = await supabase
+      .from("follow_up_reminders")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  if (error) return { error: error.message };
+    if (fetchError || !reminder) return { error: "Không tìm thấy nhắc nhở" };
 
-  // If nurture type (follow_up on nurturing lead), auto-create next 7-day reminder
-  if (reminder.type === "follow_up") {
-    const nextRemindAt = new Date();
-    nextRemindAt.setDate(nextRemindAt.getDate() + 7);
+    const { error } = await supabase
+      .from("follow_up_reminders")
+      .update({
+        status: "done" as ReminderStatus,
+        note: note || reminder.note,
+      })
+      .eq("id", id);
 
-    await supabase.from("follow_up_reminders").insert({
-      lead_id: reminder.lead_id,
-      remind_at: nextRemindAt.toISOString(),
-      type: "follow_up" as ReminderType,
-      assigned_to: reminder.assigned_to,
-      note: "Tự động tạo - follow-up tiếp theo",
-    });
+    if (error) return { error: "Không thể cập nhật nhắc nhở" };
+
+    // If nurture type (follow_up on nurturing lead), auto-create next 7-day reminder
+    if (reminder.type === "follow_up") {
+      const nextRemindAt = new Date();
+      nextRemindAt.setDate(nextRemindAt.getDate() + 7);
+
+      await supabase.from("follow_up_reminders").insert({
+        lead_id: reminder.lead_id,
+        remind_at: nextRemindAt.toISOString(),
+        type: "follow_up" as ReminderType,
+        assigned_to: reminder.assigned_to,
+        note: "Tự động tạo - follow-up tiếp theo",
+      });
+    }
+
+    revalidatePath("/reminders");
+    return { success: true };
+  } catch (err) {
+    console.error("completeReminder error:", err);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
-
-  revalidatePath("/reminders");
-  return { success: true };
 }
 
 export async function skipReminder(id: string, reason?: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!UUID_REGEX.test(id)) return { error: "ID không hợp lệ" };
 
-  if (!user) return { error: "Chưa đăng nhập" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { error } = await supabase
-    .from("follow_up_reminders")
-    .update({
-      status: "skipped" as ReminderStatus,
-      note: reason || null,
-    })
-    .eq("id", id);
+    if (!user) return { error: "Chưa đăng nhập" };
 
-  if (error) return { error: error.message };
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { error: profileResult.error };
+    }
 
-  revalidatePath("/reminders");
-  return { success: true };
+    const { error } = await supabase
+      .from("follow_up_reminders")
+      .update({
+        status: "skipped" as ReminderStatus,
+        note: reason || null,
+      })
+      .eq("id", id);
+
+    if (error) return { error: "Không thể bỏ qua nhắc nhở" };
+
+    revalidatePath("/reminders");
+    return { success: true };
+  } catch (err) {
+    console.error("skipReminder error:", err);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
+  }
 }
 
 export interface ReminderFilter {

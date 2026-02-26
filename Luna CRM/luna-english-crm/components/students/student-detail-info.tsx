@@ -31,12 +31,16 @@ export function StudentDetailInfo({ student, onUpdated }: Props) {
   async function handleSave() {
     setSaving(true);
     try {
-      await updateStudent(student.id, {
+      const result = await updateStudent(student.id, {
         student_code: formData.student_code || null,
         current_class: formData.current_class || null,
         current_level: formData.current_level || null,
         level_end_date: formData.level_end_date || null,
       });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Đã cập nhật thông tin");
       setEditing(false);
       onUpdated();

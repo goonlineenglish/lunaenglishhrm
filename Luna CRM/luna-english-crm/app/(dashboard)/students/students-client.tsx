@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { StudentWithLead } from "@/lib/actions/student-actions";
 import { getStudents } from "@/lib/actions/student-actions";
 import { Plus, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   initialStudents: StudentWithLead[];
@@ -22,6 +23,9 @@ export function StudentsClient({ initialStudents, initialCount }: Props) {
 
   const refresh = useCallback(async () => {
     const result = await getStudents();
+    if (result.error) {
+      toast.error(result.error);
+    }
     setStudents(result.data);
     setCount(result.count);
   }, []);

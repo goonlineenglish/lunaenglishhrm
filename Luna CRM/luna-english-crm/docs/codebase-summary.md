@@ -2,31 +2,31 @@
 
 ## Stats
 - **Framework**: Next.js 16.1.6 (App Router, TypeScript strict)
-- **Components**: 75 files (13 UI base + 62 feature)
-- **Pages**: 7 (login, pipeline, reminders, students, reports, settings, activities)
-- **API Routes**: 4 webhooks (Zalo, Facebook) + 4 cron endpoints
+- **Components**: 83 files (14 UI base + 69 feature)
+- **Pages**: 10 (login, pipeline, leads redirect, reminders, students, reports, settings, activities)
+- **API Routes**: 6 routes (2 webhooks for Zalo/Facebook + 4 cron endpoints)
 - **Server Actions**: 14 files (auth, lead, reminder, student, activity, notification, dashboard, integration, message, stage-notes, scheduled-activity, checklist, email, zalo-message)
 - **Hooks**: 3 (use-realtime-leads, use-optimistic-kanban, use-realtime-notifications)
 - **Integrations**: 5 (Zalo/Facebook clients, webhook handlers, message queue processor)
-- **Database**: 21 SQL migrations (001-021), seed data, RLS policies
+- **Database**: 23 SQL migrations (001-023), seed data, RLS policies
 - **Dashboard Views**: 4 (lead_funnel, lead_source_breakdown, advisor_performance, monthly_lead_trend)
 
 ## File Inventory
 
-### Components (75 files)
-**UI Base (13)**: button, badge, card, input, label, textarea, sheet, dialog, table, dropdown-menu, separator, avatar, scroll-area, select, tabs, popover, calendar, command
+### Components (83 files)
+**UI Base (14)**: button, badge, card, input, label, textarea, sheet, dialog, table, dropdown-menu, separator, avatar, scroll-area, select, tabs, popover, calendar, command, checkbox
 
 **Pipeline (21)**: kanban-board, kanban-column, lead-card, lead-card-sla-timer, lead-detail-sheet, lead-detail-info, lead-detail-activities, lead-detail-reminders, lead-detail-zalo, quick-add-lead-sheet, filter-bar, command-search, lead-list-view, assign-advisor-select, pipeline-view, add-activity-form, lead-stage-notes-panel, add-scheduled-activity-dialog, scheduled-activity-list, activities-page-view, stage-next-steps-checklist, send-email-dialog, send-zalo-dialog
 
-**Students (10)**: student-data-table, student-columns, student-detail-sheet, student-detail-info, student-status-badge, student-status-transition, renewal-countdown, csv-import-dialog, csv-column-mapper, csv-preview-table, create-student-dialog
+**Students (11)**: student-data-table, student-columns, student-detail-sheet, student-detail-info, student-status-badge, student-status-transition, renewal-countdown, csv-import-dialog, csv-column-mapper, csv-preview-table, create-student-dialog
 
 **Dashboard (7)**: dashboard-view, kpi-card, kpi-cards-row, date-range-filter, pipeline-funnel-chart, leads-by-source-chart, monthly-trend-chart, advisor-performance-table
 
 **Reminders (4)**: reminder-dashboard, reminder-section, reminder-card, create-reminder-dialog
 
-**Settings (5)**: integration-settings, zalo-connection-card, facebook-connection-card, webhook-status-card, webhook-events-table, stage-config-settings
+**Settings (6)**: integration-settings, zalo-connection-card, facebook-connection-card, webhook-status-card, webhook-events-table, stage-config-settings
 
-**Layout (7)**: sidebar, sidebar-nav-items, sidebar-mobile, header, user-menu, notification-bell, notification-dropdown, notification-item
+**Layout (8)**: sidebar, sidebar-nav-items, sidebar-mobile, header, user-menu, notification-bell, notification-dropdown, notification-item
 
 **Auth (1)**: login-form
 

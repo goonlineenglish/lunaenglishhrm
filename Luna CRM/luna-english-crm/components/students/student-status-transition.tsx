@@ -51,7 +51,11 @@ export function StudentStatusTransition({ studentId, currentStatus, onStatusChan
     if (!selectedStatus) return;
     setLoading(true);
     try {
-      await changeStudentStatus(studentId, selectedStatus, reason || undefined);
+      const result = await changeStudentStatus(studentId, selectedStatus, reason || undefined);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Đã cập nhật trạng thái");
       setSelectedStatus("");
       setReason("");

@@ -74,7 +74,7 @@ export function CreateStudentDialog({ open, onClose, onCreated }: Props) {
     }
     setLoading(true);
     try {
-      await createStudent({
+      const result = await createStudent({
         lead_id: form.lead_id || undefined,
         student_code: form.student_code || undefined,
         current_class: form.current_class,
@@ -82,6 +82,10 @@ export function CreateStudentDialog({ open, onClose, onCreated }: Props) {
         enrollment_date: form.enrollment_date,
         level_end_date: form.level_end_date || undefined,
       });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Đã tạo học sinh mới");
       resetForm();
       onCreated();

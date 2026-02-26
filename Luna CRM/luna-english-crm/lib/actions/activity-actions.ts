@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { LeadActivity, LeadActivityType } from "@/lib/types/leads";
+import { ensureUserProfile } from "./ensure-user-profile";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,6 +28,11 @@ export async function createActivity(
 
   if (!user) {
     return { error: "Chưa đăng nhập" };
+  }
+
+  const profileResult = await ensureUserProfile(supabase, user);
+  if ("error" in profileResult) {
+    return { error: profileResult.error };
   }
 
   const { data, error } = await supabase

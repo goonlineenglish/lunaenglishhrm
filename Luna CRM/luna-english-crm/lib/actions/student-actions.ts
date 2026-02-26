@@ -1,7 +1,11 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import type { Student, StudentStatus, RenewalStatus } from "@/lib/types/users";
+import { ensureUserProfile } from "./ensure-user-profile";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface StudentFilters {
   status?: StudentStatus;
@@ -24,6 +28,7 @@ export interface StudentWithLead extends Student {
 export interface PaginatedStudents {
   data: StudentWithLead[];
   count: number;
+  error?: string;
 }
 
 export async function getStudents(
@@ -53,7 +58,8 @@ export async function getStudents(
   const { data, error, count } = await query;
 
   if (error) {
-    throw new Error(`Lỗi tải danh sách học sinh: ${error.message}`);
+    console.error("getStudents error:", error.message);
+    return { data: [], count: 0, error: "Không thể tải danh sách học sinh" };
   }
 
   // Handle search client-side since it spans joined table
@@ -82,49 +88,90 @@ export async function createStudent(data: {
   current_level: string;
   enrollment_date: string;
   level_end_date?: string;
-}): Promise<Student> {
-  const supabase = await createClient();
+}) {
+  try {
+    const supabase = await createClient();
 
-  const { data: student, error } = await supabase
-    .from("students")
-    .insert({
-      lead_id: data.lead_id || null,
-      student_code: data.student_code || null,
-      current_class: data.current_class,
-      current_level: data.current_level,
-      enrollment_date: data.enrollment_date,
-      level_end_date: data.level_end_date || null,
-      status: "active" as StudentStatus,
-      renewal_status: "pending" as RenewalStatus,
-    })
-    .select()
-    .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (error) {
-    throw new Error(`Lỗi tạo học sinh: ${error.message}`);
+    if (!user) {
+      return { error: "Chưa đăng nhập" };
+    }
+
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { error: profileResult.error };
+    }
+
+    const { data: student, error } = await supabase
+      .from("students")
+      .insert({
+        lead_id: data.lead_id || null,
+        student_code: data.student_code || null,
+        current_class: data.current_class,
+        current_level: data.current_level,
+        enrollment_date: data.enrollment_date,
+        level_end_date: data.level_end_date || null,
+        status: "active" as StudentStatus,
+        renewal_status: "pending" as RenewalStatus,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("createStudent error:", error.message);
+      return { error: "Đã xảy ra lỗi khi tạo học sinh. Vui lòng thử lại." };
+    }
+
+    revalidatePath("/students");
+    return { data: student as Student };
+  } catch (error) {
+    console.error("createStudent unexpected error:", error);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
-
-  return student;
 }
 
 export async function updateStudent(
   id: string,
   data: Partial<Pick<Student, "student_code" | "current_class" | "current_level" | "enrollment_date" | "level_end_date" | "renewal_status">>
-): Promise<Student> {
-  const supabase = await createClient();
+) {
+  if (!UUID_RE.test(id)) return { error: "ID không hợp lệ" };
+  try {
+    const supabase = await createClient();
 
-  const { data: student, error } = await supabase
-    .from("students")
-    .update(data)
-    .eq("id", id)
-    .select()
-    .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (error) {
-    throw new Error(`Lỗi cập nhật học sinh: ${error.message}`);
+    if (!user) {
+      return { error: "Chưa đăng nhập" };
+    }
+
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { error: profileResult.error };
+    }
+
+    const { data: student, error } = await supabase
+      .from("students")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("updateStudent error:", error.message);
+      return { error: "Đã xảy ra lỗi khi cập nhật. Vui lòng thử lại." };
+    }
+
+    revalidatePath("/students");
+    return { data: student as Student };
+  } catch (error) {
+    console.error("updateStudent unexpected error:", error);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
-
-  return student;
 }
 
 const VALID_TRANSITIONS: Record<StudentStatus, StudentStatus[]> = {
@@ -138,45 +185,67 @@ export async function changeStudentStatus(
   id: string,
   newStatus: StudentStatus,
   reason?: string
-): Promise<Student> {
-  const supabase = await createClient();
+) {
+  if (!UUID_RE.test(id)) return { error: "ID không hợp lệ" };
+  try {
+    const supabase = await createClient();
 
-  // Get current status
-  const { data: current, error: fetchError } = await supabase
-    .from("students")
-    .select("status")
-    .eq("id", id)
-    .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (fetchError) {
-    throw new Error(`Không tìm thấy học sinh: ${fetchError.message}`);
+    if (!user) {
+      return { error: "Chưa đăng nhập" };
+    }
+
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { error: profileResult.error };
+    }
+
+    // Get current status
+    const { data: current, error: fetchError } = await supabase
+      .from("students")
+      .select("status")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !current) {
+      return { error: "Không tìm thấy học sinh" };
+    }
+
+    const currentStatus = current.status as StudentStatus;
+    const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
+    if (!allowed.includes(newStatus)) {
+      return { error: `Không thể chuyển từ "${currentStatus}" sang "${newStatus}"` };
+    }
+
+    // Require reason for paused and dropped
+    if ((newStatus === "paused" || newStatus === "dropped") && !reason) {
+      return { error: "Cần có lý do khi bảo lưu hoặc nghỉ học" };
+    }
+
+    const { data: student, error } = await supabase
+      .from("students")
+      .update({ status: newStatus })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("changeStudentStatus error:", error.message, error.code);
+      if (error.code === "42501") {
+        return { error: "Bạn không có quyền thay đổi trạng thái học sinh." };
+      }
+      return { error: "Đã xảy ra lỗi khi chuyển trạng thái. Vui lòng thử lại." };
+    }
+
+    revalidatePath("/students");
+    return { data: student as Student };
+  } catch (error) {
+    console.error("changeStudentStatus unexpected error:", error);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
-
-  const currentStatus = current.status as StudentStatus;
-  const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
-  if (!allowed.includes(newStatus)) {
-    throw new Error(
-      `Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`
-    );
-  }
-
-  // Require reason for paused and dropped
-  if ((newStatus === "paused" || newStatus === "dropped") && !reason) {
-    throw new Error("Cần có lý do khi bảo lưu hoặc nghỉ học");
-  }
-
-  const { data: student, error } = await supabase
-    .from("students")
-    .update({ status: newStatus })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Lỗi chuyển trạng thái: ${error.message}`);
-  }
-
-  return student;
 }
 
 export async function importStudentsCSV(
@@ -190,6 +259,20 @@ export async function importStudentsCSV(
   }>
 ): Promise<{ success: number; failed: number; errors: string[] }> {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: 0, failed: rows.length, errors: ["Chưa đăng nhập"] };
+  }
+
+  const profileResult = await ensureUserProfile(supabase, user);
+  if ("error" in profileResult) {
+    return { success: 0, failed: rows.length, errors: [profileResult.error] };
+  }
+
   let success = 0;
   let failed = 0;
   const errors: string[] = [];
@@ -215,5 +298,6 @@ export async function importStudentsCSV(
     }
   }
 
+  revalidatePath("/students");
   return { success, failed, errors };
 }

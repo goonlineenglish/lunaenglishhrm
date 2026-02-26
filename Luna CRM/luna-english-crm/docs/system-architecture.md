@@ -92,11 +92,11 @@ lib/
 └── utils/                  # Format, CSV, referral codes, template renderer
 
 supabase/
-├── migrations/             # 21 SQL files (001-021)
+├── migrations/             # 23 SQL files (001-023)
 └── seed.sql                # 10 sample leads
 ```
 
-## Database Schema (21 migrations)
+## Database Schema (23 migrations)
 
 ### Core Tables (8)
 | Table | Rows | RLS | Trigger |
@@ -113,15 +113,18 @@ supabase/
 ### Activity & Communication Tables (4)
 | Table | Purpose | RLS |
 |-------|---------|-----|
-| lead_stage_notes | Per-stage notes/results/next-steps per lead | advisor=own, admin=all |
-| stage_next_step_configs | Configurable checklists per pipeline stage (7 stages seeded) | admin=write, all=read |
-| email_templates | Email templates with {{var}} placeholders | admin=write, all=read |
-| zalo_message_templates | Zalo OA message templates with placeholders | admin=write, all=read |
+| lead_stage_notes | Per-stage notes/results/next-steps per lead (migrations 016) | advisor=own, admin=all |
+| stage_next_step_configs | Configurable checklists per pipeline stage (migration 017, 7 stages seeded) | admin=write, all=read |
+| email_templates | Email templates with {{var}} placeholders (migration 018) | admin=write, all=read |
+| zalo_message_templates | Zalo OA message templates with placeholders (migration 019) | admin=write, all=read |
 
-### Support Tables (7)
+### Support Tables (7+)
 - message_queue -- outbound messages (retry logic, exponential backoff)
 - zalo_followers -- Zalo OA follower mapping
 - reports -- periodic report storage
+- claimed_at -- Migration 020 (lead claim tracking for dedup)
+- migration 021 -- Template/checklist refinements
+- migration 022-023 -- Additional schema enhancements for scheduling/automation
 
 ### Enums & Views
 **Enums**: lead_stage (8), lead_source (5), program_type (3), activity_type (10: +scheduled_call, trial_class, consultation, checklist), reminder_type (4), reminder_status (3), student_status (3), renewal_status (3)

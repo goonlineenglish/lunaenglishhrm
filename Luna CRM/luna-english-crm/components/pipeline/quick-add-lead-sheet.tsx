@@ -38,27 +38,32 @@ export function QuickAddLeadSheet({
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const result = await createLead({
-      parent_name: formData.get("parent_name") as string,
-      parent_phone: formData.get("parent_phone") as string,
-      source: formData.get("source") as LeadSource,
-      program_interest:
-        (formData.get("program_interest") as ProgramType) || null,
-      student_name: (formData.get("student_name") as string) || null,
-      notes: (formData.get("notes") as string) || null,
-    });
+    try {
+      const formData = new FormData(e.currentTarget);
+      const result = await createLead({
+        parent_name: formData.get("parent_name") as string,
+        parent_phone: formData.get("parent_phone") as string,
+        source: formData.get("source") as LeadSource,
+        program_interest:
+          (formData.get("program_interest") as ProgramType) || null,
+        student_name: (formData.get("student_name") as string) || null,
+        notes: (formData.get("notes") as string) || null,
+      });
 
-    setLoading(false);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
 
-    if (result.error) {
-      toast.error(result.error);
-      return;
+      toast.success("Tạo lead thành công");
+      onOpenChange(false);
+      e.currentTarget.reset();
+    } catch (error) {
+      console.error("QuickAddLeadSheet.handleSubmit error:", error);
+      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
     }
-
-    toast.success("Đã thêm lead mới");
-    onOpenChange(false);
-    (e.target as HTMLFormElement).reset();
   }
 
   return (

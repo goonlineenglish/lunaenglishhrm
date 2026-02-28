@@ -1,0 +1,158 @@
+# SQL Migration Audit - Quick Reference
+
+**Status**: ✅ 24/24 PASS | ⚠️ 1 WARNING | ❌ 0 FAIL
+
+## Issue to Fix
+
+### Migration 016: add-lead-stage-notes-table.sql
+**Severity**: LOW
+**Line**: 13
+**Issue**: Missing explicit ON DELETE clause on auth.users FK
+
+```sql
+-- BEFORE (current):
+created_by  UUID REFERENCES auth.users(id),
+
+-- AFTER (fix):
+created_by  UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+```
+
+**Why**: Explicit ON DELETE is best practice. Implicit behavior is undefined.
+
+---
+
+## Migration Status Grid
+
+| # | Name | Status | Notes |
+|---|------|--------|-------|
+| 001 | create-users-table | ✅ | Foundation, trigger pattern |
+| 002 | create-leads-table | ✅ | 3 enums, 5 indexes |
+| 003 | create-lead-activities | ✅ | Activity log |
+| 004 | create-follow-up-reminders | ✅ | Partial index on pending |
+| 005 | create-students | ✅ | Soft FK |
+| 006 | create-notifications | ✅ | Badge+timeline optimized |
+| 007 | create-integration-tokens | ✅ | Plaintext tokens (noted) |
+| 008 | create-webhook-events | ✅ | 4 indexes, retry-ready |
+| 009 | create-rls-policies | ✅ | 21 policies, 8 tables |
+| 010 | create-stage-reminder-trigger | ✅ | 3/8 stages auto-remind |
+| 011 | create-student-enrollment-trigger | ✅ | Auto-enroll on da_dang_ky |
+| 012 | create-dashboard-views | ✅ | 4 views |
+| 013 | create-reports-table | ✅ | Admin-only |
+| 014 | create-message-queue-table | ✅ | Retry queue |
+| 015 | create-zalo-followers-table | ✅ | Soft FK |
+| 016 | add-lead-stage-notes-table | ⚠️ | Missing ON DELETE |
+| 017 | alter-lead-activities-add-scheduling | ✅ | Backward compatible |
+| 018 | add-stage-next-step-configs | ✅ | Vietnamese seed |
+| 019 | add-email-zalo-templates | ✅ | Templates + seed |
+| 020 | add-rls-for-new-tables | ✅ | 4 tables, consistent |
+| 021 | extend-stage-trigger-with-checklist | ✅ | Checklist + stale RPC |
+| 022 | add-notification-dedup-index | ✅ | Webhook idempotency |
+| 023 | add-message-queue-claimed-at | ✅ | Stale detection |
+| 024 | backfill-missing-user-profiles | ✅ | RLS sync fix |
+
+---
+
+## Verification Checklist
+
+Before production:
+- [ ] Apply migration 016 fix
+- [ ] Run all 24 migrations on test database
+- [ ] Test RLS policies (admin, advisor, marketing roles)
+- [ ] Test triggers:
+  - [ ] Lead stage change → reminder created
+  - [ ] Lead → da_dang_ky → student auto-created
+  - [ ] Activity insert → updated_at set
+- [ ] Test indexes with EXPLAIN ANALYZE:
+  - [ ] Kanban board query (stage, assigned_to)
+  - [ ] Timeline query (lead_id, created_at DESC)
+  - [ ] Cron queries (pending reminders, stale leads)
+- [ ] Test webhook idempotency (migration 022)
+- [ ] Test user backfill (migration 024)
+
+---
+
+## Key Metrics
+
+- **Tables**: 15
+- **Views**: 4
+- **Indexes**: 30+
+- **Triggers**: 8
+- **RLS Policies**: 21
+- **Enums**: 8
+- **Functions**: 7
+
+---
+
+## Indexes Worth Noting
+
+**Performance-Critical**:
+- `idx_leads_stage` - Kanban board queries
+- `idx_leads_stage_assigned` - Composite for board + assignment
+- `idx_lead_activities_lead_id_created_at` - Timeline queries
+- `idx_notifications_user_unread WHERE is_read=false` - Badge count
+- `idx_reminders_pending_remind_at WHERE status='pending'` - Cron queries
+
+**Idempotency**:
+- `idx_notifications_unique_reminder_id WHERE reminder_id IS NOT NULL`
+- `idx_notifications_unique_activity_id WHERE activity_id IS NOT NULL`
+- `idx_webhook_events_fb_idempotency` (provider, event_type, id, time)
+- `idx_webhook_events_zalo_idempotency` (provider, msg_id)
+
+---
+
+## RLS Pattern (Consistent Across All Tables)
+
+```
+Admin:     FOR ALL → USING (role='admin')
+Advisor:   FOR SELECT → USING (role='advisor')
+           FOR INSERT → WITH CHECK (authorized)
+           FOR UPDATE → USING (owner=me) WITH CHECK (owner=me)
+Marketing: FOR SELECT → USING (role='marketing')  [read-only]
+```
+
+---
+
+## Enum Values (Vietnamese)
+
+**Pipeline Stages** (8):
+- moi_tiep_nhan, da_tu_van, dang_nurture, dat_lich_hoc_thu, dang_hoc_thu, cho_chot, da_dang_ky, mat_lead
+
+**Activity Types** (7):
+- call, message, meeting, note, stage_change, trial_booked, + 4 extended in 017: scheduled_call, trial_class, consultation, checklist
+
+**Lead Sources** (6):
+- facebook, zalo, walk_in, website, phone, referral
+
+**Program Types** (4):
+- buttercup, primary_success, secondary, ielts
+
+---
+
+## Trigger Timing Diagram
+
+```
+User updates lead (stage change)
+  ↓ [AFTER UPDATE on leads]
+  ├→ on_leads_updated: SET updated_at = NOW()
+  ├→ on_lead_stage_changed: Create reminder + cancel pending
+  └→ on_lead_enrolled: If stage='da_dang_ky', CREATE student
+       ↓ [AFTER INSERT on students]
+       └→ on_students_updated: SET updated_at = NOW()
+```
+
+---
+
+## Recommendations Summary
+
+| Priority | Item | Status |
+|----------|------|--------|
+| P0 | Fix migration 016 FK | TODO |
+| P1 | Test all migrations on fresh DB | TODO |
+| P1 | Verify RLS policies work | TODO |
+| P2 | Document selective reminders in 010 | TODO |
+| P2 | Encrypt tokens (Phase 10) | FUTURE |
+
+---
+
+**Full audit**: `plans/reports/migration-audit-2026-02-28.md`
+**Generated**: 2026-02-28

@@ -5,7 +5,16 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { LeadStage } from "@/lib/types/leads";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy init – avoid crashing the entire SSR module when the key is absent
+let _resend: InstanceType<typeof Resend> | null = null;
+function getResend() {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error("RESEND_API_KEY is not configured");
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
 const EMAIL_FROM = process.env.EMAIL_FROM ?? "Luna English <noreply@luna.edu.vn>";
 
 export interface EmailTemplate {
@@ -91,7 +100,7 @@ export async function sendLeadEmail(
 
   // Send via Resend
   try {
-    const { error: sendErr } = await resend.emails.send({
+    const { error: sendErr } = await getResend().emails.send({
       from: EMAIL_FROM,
       to: [lead.parent_email],
       subject,

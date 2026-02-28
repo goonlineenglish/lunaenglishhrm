@@ -97,8 +97,11 @@ chmod +x deploy/cron-setup.sh deploy/cron-health-check.sh
 # Verify
 crontab -l
 
-# Install log rotation
+# Install log rotation — replace <deploy_user> with the actual OS user (e.g. ubuntu)
 sudo cp deploy/logrotate-luna-crm.conf /etc/logrotate.d/luna-crm
+sudo sed -i "s/<deploy_user>/$(id -un)/g" /etc/logrotate.d/luna-crm
+# Verify the substitution looks correct before continuing
+sudo cat /etc/logrotate.d/luna-crm
 ```
 
 ### Step 6: Install logrotate for Docker

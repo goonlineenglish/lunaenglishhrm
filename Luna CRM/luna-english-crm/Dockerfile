@@ -9,6 +9,12 @@ RUN npm ci --omit=dev
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Accept build-time env vars for Next.js public variables
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

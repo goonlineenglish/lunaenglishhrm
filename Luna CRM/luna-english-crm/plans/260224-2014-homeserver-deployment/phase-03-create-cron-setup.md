@@ -22,7 +22,7 @@
 - 4 cron jobs running on schedule:
   1. `check-overdue-reminders` -- every 15 minutes
   2. `process-message-queue` -- every 5 minutes
-  3. `refresh-tokens` -- daily at 6:00 AM (Vietnam time, UTC+7 = 23:00 UTC-1 day)
+  3. `refresh-tokens` -- every 6 hours (handler refreshes tokens expiring within 12h; 6h cadence ensures safe overlap)
   4. `weekly-report` -- Monday 8:00 AM Vietnam time (= 01:00 UTC Monday)
 - Each job logs output with timestamp
 - Failed requests don't block other jobs

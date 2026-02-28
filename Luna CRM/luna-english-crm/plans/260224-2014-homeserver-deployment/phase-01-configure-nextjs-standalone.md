@@ -6,7 +6,7 @@
 
 ## Overview
 - **Priority**: P1 (blocker for all other phases)
-- **Status**: pending
+- **Status**: DONE — `next.config.ts:4` already has `output: "standalone"`
 - **Description**: Enable `output: 'standalone'` in Next.js config to produce a self-contained server binary (~15MB) instead of requiring full node_modules (~500MB). Critical for 120GB SSD constraint.
 
 ## Key Insights
@@ -64,7 +64,7 @@ node .next/standalone/server.js
 ```
 
 ## Todo List
-- [ ] Update `next.config.ts` with `output: 'standalone'`
+- [x] Update `next.config.ts` with `output: 'standalone'` — already present
 - [ ] Run `npm run build` and verify `.next/standalone/` exists
 - [ ] Verify no regressions in dev mode
 

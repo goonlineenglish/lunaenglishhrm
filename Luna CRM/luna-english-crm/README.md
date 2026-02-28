@@ -1,6 +1,6 @@
 # Luna English CRM
 
-Hệ thống quản lý tuyển sinh và chăm sóc học sinh Luna English (cơ sở Tân Mai). All 9 phases complete. Deployed to Supabase Cloud, ready for Vercel.
+Hệ thống quản lý tuyển sinh và chăm sóc học sinh Luna English (cơ sở Tân Mai). All 10 phases complete. Deployed to Supabase Cloud, Docker/Caddy ready.
 
 ## Tech Stack
 
@@ -33,6 +33,7 @@ app/
 │   ├── pipeline/           # Kanban board (8 stages)
 │   ├── reminders/          # Follow-up reminders
 │   ├── students/           # Enrollment management
+│   ├── activities/         # Global scheduled activities view
 │   ├── reports/            # KPI dashboard
 │   └── settings/           # Integration config
 ├── api/
@@ -41,44 +42,45 @@ app/
 └── globals.css             # Tailwind v4 theme
 
 components/
-├── ui/                     # 13 shadcn/ui base components
-├── pipeline/               # 14 Kanban components
-├── students/               # 10 enrollment components
+├── ui/                     # 19 shadcn/ui base components
+├── pipeline/               # 23 Kanban + activity + communication components
+├── students/               # 11 enrollment components
 ├── dashboard/              # 7 KPI + chart components
 ├── reminders/              # 4 reminder components
-├── settings/               # 4 integration components
-├── layout/                 # 7 sidebar/header components
+├── settings/               # 6 integration + stage config components
+├── layout/                 # 8 sidebar/header components
 └── auth/                   # 1 login component
 
 lib/
-├── actions/                # 9 server actions
+├── actions/                # 15 server actions
 ├── hooks/                  # 3 realtime + optimistic hooks
-├── integrations/           # Zalo/Facebook clients + handlers
-├── supabase/               # Client + server helpers
-├── constants/              # Navigation, stages, roles
+├── integrations/           # Zalo/Facebook clients + handlers + queue
+├── supabase/               # Client + server + admin helpers
+├── constants/              # Navigation, stages, roles, reminder types
 ├── types/                  # TypeScript interfaces
-└── utils/                  # Formatters, CSV parser
+└── utils/                  # Format, CSV parser, template renderer
 
 supabase/
-├── migrations/             # 15 SQL files (001-015)
-└── seed.sql                # 10 sample leads
+├── migrations/             # 24 SQL files (001-024)
+└── seed.sql                # Sample data
 
 docs/
 ├── project-overview-pdr.md # Business context, features
 ├── codebase-summary.md     # File index, counts
 ├── system-architecture.md  # Stack, DB schema, data flow
 ├── code-standards.md       # TypeScript, components, styling
-├── development-roadmap.md  # 9 phases + validation
-├── deployment-guide.md     # Supabase + Vercel setup
+├── development-roadmap.md  # 10 phases (all complete)
+├── deployment-guide.md     # Docker/Caddy + Vercel setup
 ├── design-guidelines.md    # Colors, typography, layout
 └── project-changelog.md    # Version history
 ```
 
 ## Development
 
-- **All 9 phases complete**: Setup, Auth, Pipeline, Reminders, Students, Dashboard, Integrations, Deployment, Testing
+- **All 10 phases complete**: Setup, Auth, Pipeline, Reminders, Students, Dashboard, Integrations, Deployment, Testing, Enhanced Activities & Communication
 - **Supabase Cloud deployed** (Singapore): vgxpucmwivhlgvlzzkju.supabase.co
 - **GitHub**: goonlineenglish/luna-english-crm (main branch)
-- **Vercel**: Planned (connect repo + set env vars)
+- **Docker + Caddy**: Homeserver deployment ready (see deployment-guide.md)
+- **Vercel**: Alternative cloud deployment (vercel.json configured with all 4 crons)
 
-See `docs/development-roadmap.md` for phase details and `docs/deployment-guide.md` for Vercel steps.
+See `docs/development-roadmap.md` for phase details and `docs/deployment-guide.md` for deployment steps.

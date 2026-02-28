@@ -72,9 +72,9 @@ app/
 └── middleware.ts           # Auth session
 
 components/
-├── ui/                     # 13 shadcn/ui base components
-├── pipeline/               # 21 Kanban + lead + activity + communication components
-├── students/               # 10 enrollment components
+├── ui/                     # 19 shadcn/ui base components
+├── pipeline/               # 23 Kanban + lead + activity + communication components
+├── students/               # 11 enrollment components
 ├── dashboard/              # 7 KPI + chart components
 ├── reminders/              # 4 reminder components
 ├── settings/               # 6 integration + stage config components
@@ -82,9 +82,9 @@ components/
 └── auth/                   # 1 login form
 
 lib/
-├── actions/                # 14 server action files
+├── actions/                # 15 server action files
 ├── hooks/                  # 3 realtime + optimistic
-├── integrations/           # Zalo, Facebook, queue
+├── integrations/           # 7 Zalo, Facebook, queue, dedup
 ├── queries/                # Dashboard SQL queries
 ├── supabase/               # Client/server/admin/middleware
 ├── constants/              # Navigation, stages, roles
@@ -92,11 +92,11 @@ lib/
 └── utils/                  # Format, CSV, referral codes, template renderer
 
 supabase/
-├── migrations/             # 23 SQL files (001-023)
+├── migrations/             # 24 SQL files (001-024)
 └── seed.sql                # 10 sample leads
 ```
 
-## Database Schema (23 migrations)
+## Database Schema (24 migrations)
 
 ### Core Tables (8)
 | Table | Rows | RLS | Trigger |
@@ -110,30 +110,37 @@ supabase/
 | integration_tokens | 2 | admin=all | -- |
 | webhook_events | 100+ | admin=read | -- |
 
-### Activity & Communication Tables (4)
-| Table | Purpose | RLS |
-|-------|---------|-----|
-| lead_stage_notes | Per-stage notes/results/next-steps per lead (migrations 016) | advisor=own, admin=all |
-| stage_next_step_configs | Configurable checklists per pipeline stage (migration 017, 7 stages seeded) | admin=write, all=read |
-| email_templates | Email templates with {{var}} placeholders (migration 018) | admin=write, all=read |
-| zalo_message_templates | Zalo OA message templates with placeholders (migration 019) | admin=write, all=read |
+### Activity & Communication Tables (7)
+| Table | Migration | Purpose | RLS |
+|-------|-----------|---------|-----|
+| lead_stage_notes | 016 | Per-stage notes/results/next-steps per lead | advisor=own, admin=all |
+| stage_next_step_configs | 017 | Configurable checklists per pipeline stage (7 stages seeded) | admin=write, all=read |
+| email_templates | 018 | Email templates with {{var}} placeholders | admin=write, all=read |
+| zalo_message_templates | 019 | Zalo OA message templates with placeholders | admin=write, all=read |
+| lead_activities (scheduling) | 020 | Added scheduling columns (scheduled_at, recurrence, participants) | follows lead |
+| stage_next_step_configs (RLS) | 020 | RLS policies added | admin=write, all=read |
+| lead_stage_notes (RLS) | 020 | RLS policies added | advisor=own, admin=all |
 
-### Support Tables (7+)
-- message_queue -- outbound messages (retry logic, exponential backoff)
-- zalo_followers -- Zalo OA follower mapping
-- reports -- periodic report storage
-- claimed_at -- Migration 020 (lead claim tracking for dedup)
-- migration 021 -- Template/checklist refinements
-- migration 022-023 -- Additional schema enhancements for scheduling/automation
+### Support Tables (7)
+- message_queue — outbound messages (retry logic, exponential backoff, claimed_at dedup)
+- zalo_followers — Zalo OA follower mapping
+- reports — periodic report storage
+- lead_activities (triggers) — migration 021 extends stage→checklist trigger
+- migration 022 — notification dedup index + other enhancements
+- migration 023 — message queue claimed_at for reclamation
+- migration 024 — backfill missing user profiles for ensure-user-profile pattern
 
 ### Enums & Views
-**Enums**: lead_stage (8), lead_source (5), program_type (3), activity_type (10: +scheduled_call, trial_class, consultation, checklist), reminder_type (4), reminder_status (3), student_status (3), renewal_status (3)
+**Enums**: lead_stage (8), lead_source (5), program_type (3), activity_type (10: call, sms, email, zalo_message, meeting, note, stage_change, scheduled_call, trial_class, consultation, checklist), reminder_type (4), reminder_status (3), student_status (3), renewal_status (3)
 
 **Dashboard Views**:
 - lead_funnel — leads per stage
 - lead_source_breakdown — leads grouped by source
 - advisor_performance — conversions + metrics per advisor
 - monthly_lead_trend — monthly new lead counts
+
+**RPC Functions**:
+- find_stale_leads(days) — detect leads idle in current stage beyond threshold
 
 ## API Routes
 
@@ -168,6 +175,7 @@ The `check-overdue-reminders` cron handles 4 sections:
 ## Auth Flow
 1. User submits email/password on `/login`
 2. Supabase Auth validates, returns session token
-3. Middleware refreshes session on every request
-4. Server components use `supabase.auth.getUser()` (never `getSession()`)
-5. RLS policies enforce data access based on role + user ID
+3. Server action `ensureUserProfile()` creates user profile with default role (admin→advisor conversion after initial setup)
+4. Middleware refreshes session on every request
+5. Server components use `supabase.auth.getUser()` (never `getSession()`)
+6. RLS policies enforce data access based on role + user ID

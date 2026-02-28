@@ -4,6 +4,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 
 /**
  * CRON: Refresh expiring Zalo OA tokens (every 6h).
+ * Finds tokens expiring within 12h — safe window for 6h cadence.
  */
 export async function GET(request: NextRequest) {
   // Verify cron secret

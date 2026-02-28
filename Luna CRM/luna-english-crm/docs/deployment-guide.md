@@ -11,7 +11,7 @@
 ### Supabase Cloud
 - **Project URL**: `https://vgxpucmwivhlgvlzzkju.supabase.co`
 - **Region**: Southeast Asia (Singapore)
-- **Database**: All 23 migrations (001-023) + seed data deployed
+- **Database**: All 24 migrations (001-024) + seed data deployed
 - **Auth**: Email/password, admin user created via Dashboard
 
 ### Environment Variables
@@ -110,7 +110,7 @@ chmod +x deploy/cron-setup.sh deploy/cron-health-check.sh
 6. Deploy!
 
 ### Post-Deploy
-- Verify all 23 migrations deployed to Supabase Cloud (Phase 10 includes migrations 016-023)
+- Verify all 24 migrations deployed to Supabase Cloud (migrations 001-024 covering all core, activity, and support tables)
 - Set `RESEND_API_KEY` and `EMAIL_FROM` for email communication
 - Custom domain configuration (if applicable)
 - Vercel Cron verification via `vercel.json`:

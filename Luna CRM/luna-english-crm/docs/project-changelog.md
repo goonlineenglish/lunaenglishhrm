@@ -6,8 +6,34 @@
 - Vercel deployment (connect GitHub, set env vars, verify cron)
 - Custom domain configuration (if applicable)
 - (Optional) Middleware → proxy migration (Next.js 16 deprecation warning)
-- Apply DB migrations 016-021 to Supabase Cloud
-- Set RESEND_API_KEY + EMAIL_FROM env vars in production
+- (Optional) Rate limiting on webhook endpoints
+- (Optional) Admin UI for email/Zalo template management
+
+---
+
+## [0.4.0] - 2026-02-28
+
+### Added — Docker/Caddy Deployment + Security Hardening
+- **Docker + Caddy**: Production-ready homeserver deployment (multi-stage Alpine build, non-root, 512MB mem limit)
+- **docker-compose.yml**: 2-service setup with health checks (30s interval)
+- **Caddyfile**: Reverse proxy with auto SSL, gzip/zstd, security headers, access logging
+- **Deployment scripts**: cron-setup.sh, cron-health-check.sh, logrotate-luna-crm.conf
+- **Next.js standalone**: Configured for edge deployment with NEXT_PUBLIC env vars exposed to Edge runtime
+
+### Fixed
+- **NEXT_PUBLIC env vars**: Exposed to Edge runtime in standalone mode (was missing from prelude)
+- **Nested Luna CRM dir**: Excluded from Docker build (.dockerignore updated)
+- **Resend lazy-init**: Prevent SSR crash when API key is missing (init only on first use)
+- **Backend schema**: Migration 024 backfill for missing user profiles (ensure-user-profile pattern)
+
+### Database
+- Migration 024: `backfill_missing_user_profiles` - Initialize profiles for auth.users without records
+
+### Infrastructure
+- Standalone Next.js output (15MB server.js)
+- Alpine Node 20 Docker image
+- Health check probes (Caddy + Luna CRM)
+- Cron jobs via host crontab (4 schedules: 15min, 5min, 6h, weekly)
 
 ---
 
@@ -48,6 +74,10 @@
 - **Cron auth fail-closed**: All 4 cron routes now deny access when `CRON_SECRET` env var is missing (was open when unset in check-overdue-reminders, refresh-tokens, process-message-queue)
 - **Search input escaping**: `searchLeads()` now escapes `%`, `\`, `_` in ilike filters to prevent query manipulation
 - **Zalo webhook race condition**: Event status update now uses record ID instead of provider+event_name query (prevents updating wrong record when concurrent events arrive)
+- **Facebook access token**: Moved from URL query params to Authorization header (was exposed in logs)
+- **Webhook idempotency**: Added deduplication for duplicate webhook events (webhook_idempotency.ts)
+- **Message queue reclamation**: Added claimed_at tracking for reclamation of failed jobs (migration 023)
+- **Centralized getAdminClient()**: Eliminated 4 duplicate implementations in separate modules
 
 ### Fixed
 - **Message queue retry status**: Failed messages now use "pending" status when retries remain, "failed" only after max_attempts exceeded (was always "failed")

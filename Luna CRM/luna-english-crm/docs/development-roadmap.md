@@ -94,9 +94,9 @@
 - [x] New activity types: scheduled_call, trial_class, consultation, checklist
 
 ## Next Steps (Unblocked)
-- [ ] Apply DB migrations 016-021 to Supabase Cloud
-- [ ] Set RESEND_API_KEY + EMAIL_FROM env vars in production
 - [ ] Deploy to Vercel (connect GitHub, set env vars, verify cron)
-- [ ] Custom domain configuration (if applicable)
+- [ ] Configure custom domain (if applicable)
 - [ ] (Optional) Middleware → proxy migration (Next.js 16 deprecation warning)
 - [ ] (Optional) Admin UI for email/Zalo template management (currently SQL-only)
+- [ ] (Optional) Rate limiting on webhook endpoints
+- [ ] (Optional) Role-based authorization in server actions (currently relies on RLS only)

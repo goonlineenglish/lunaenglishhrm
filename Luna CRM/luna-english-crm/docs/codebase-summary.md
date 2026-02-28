@@ -2,23 +2,23 @@
 
 ## Stats
 - **Framework**: Next.js 16.1.6 (App Router, TypeScript strict)
-- **Components**: 83 files (14 UI base + 69 feature)
-- **Pages**: 10 (login, pipeline, leads redirect, reminders, students, reports, settings, activities)
+- **Components**: 80 files (19 UI base + 61 feature)
+- **Pages**: 8 (login, pipeline, reminders, students, activities, reports, settings, + leads redirect)
 - **API Routes**: 6 routes (2 webhooks for Zalo/Facebook + 4 cron endpoints)
-- **Server Actions**: 14 files (auth, lead, reminder, student, activity, notification, dashboard, integration, message, stage-notes, scheduled-activity, checklist, email, zalo-message)
+- **Server Actions**: 15 files (auth, lead, reminder, student, activity, notification, dashboard, integration, message, stage-notes, scheduled-activity, checklist, email, zalo-message, ensure-user-profile)
 - **Hooks**: 3 (use-realtime-leads, use-optimistic-kanban, use-realtime-notifications)
-- **Integrations**: 5 (Zalo/Facebook clients, webhook handlers, message queue processor)
-- **Database**: 23 SQL migrations (001-023), seed data, RLS policies
+- **Integrations**: 7 files (Zalo client, Facebook client, Zalo webhook handler, Facebook webhook handler, message queue processor, message queue backoff, webhook idempotency)
+- **Database**: 24 SQL migrations (001-024), seed data, RLS policies
 - **Dashboard Views**: 4 (lead_funnel, lead_source_breakdown, advisor_performance, monthly_lead_trend)
 
 ## File Inventory
 
-### Components (83 files)
-**UI Base (14)**: button, badge, card, input, label, textarea, sheet, dialog, table, dropdown-menu, separator, avatar, scroll-area, select, tabs, popover, calendar, command, checkbox
+### Components (80 files)
+**UI Base (19)**: button, badge, card, input, label, textarea, sheet, dialog, table, dropdown-menu, separator, avatar, scroll-area, select, tabs, popover, calendar, command, checkbox
 
-**Pipeline (21)**: kanban-board, kanban-column, lead-card, lead-card-sla-timer, lead-detail-sheet, lead-detail-info, lead-detail-activities, lead-detail-reminders, lead-detail-zalo, quick-add-lead-sheet, filter-bar, command-search, lead-list-view, assign-advisor-select, pipeline-view, add-activity-form, lead-stage-notes-panel, add-scheduled-activity-dialog, scheduled-activity-list, activities-page-view, stage-next-steps-checklist, send-email-dialog, send-zalo-dialog
+**Pipeline (23)**: kanban-board, kanban-column, lead-card, lead-card-sla-timer, lead-detail-sheet, lead-detail-info, lead-detail-activities, lead-detail-reminders, lead-detail-zalo, lead-stage-notes-panel, stage-next-steps-checklist, quick-add-lead-sheet, filter-bar, command-search, lead-list-view, pipeline-view, assign-advisor-select, add-activity-form, add-scheduled-activity-dialog, scheduled-activity-list, activities-page-view, send-email-dialog, send-zalo-dialog
 
-**Students (11)**: student-data-table, student-columns, student-detail-sheet, student-detail-info, student-status-badge, student-status-transition, renewal-countdown, csv-import-dialog, csv-column-mapper, csv-preview-table, create-student-dialog
+**Students (11)**: student-data-table, student-columns, student-detail-sheet, student-detail-info, student-status-badge, student-status-transition, renewal-countdown, csv-import-dialog, csv-column-mapper, csv-preview-table, create-student-dialog, students-client
 
 **Dashboard (7)**: dashboard-view, kpi-card, kpi-cards-row, date-range-filter, pipeline-funnel-chart, leads-by-source-chart, monthly-trend-chart, advisor-performance-table
 
@@ -35,6 +35,7 @@
 |------|---------|
 | auth-actions | login, logout, getCurrentUser |
 | lead-actions | createLead, updateLead, deleteLead, updateLeadStage, searchLeads |
+| ensure-user-profile | ensureUserProfile (initialize admin/advisor users at first login) |
 | reminder-actions | createReminder, updateReminder, completeReminder, deleteReminder |
 | student-actions | createStudent, updateStudent, importStudentsCSV, updateStudentStatus |
 | activity-actions | addActivity, deleteActivity |
@@ -42,11 +43,11 @@
 | dashboard-actions | getDashboardKPIs, getLeadFunnel, getLeadsBySource, getMonthlyTrend |
 | integration-actions | saveIntegrationToken, getIntegrationStatus |
 | message-actions | queueMessage, processMessageQueue, updateRetryStatus |
-| stage-notes-actions | saveStageNote, getStageNotes |
+| stage-notes-actions | saveStageNote, getStageNotes, getStageNoteHistory |
 | scheduled-activity-actions | createScheduledActivity, updateActivityStatus, getUpcomingActivities |
-| checklist-actions | getStageChecklist, toggleChecklistItem |
-| email-actions | sendLeadEmail, getEmailTemplates |
-| zalo-message-actions | sendZaloMessage, getZaloTemplates |
+| checklist-actions | getStageChecklist, toggleChecklistItem, getChecklistProgress |
+| email-actions | sendLeadEmail, getEmailTemplates, previewEmailTemplate |
+| zalo-message-actions | sendZaloMessage, getZaloTemplates, previewZaloTemplate |
 
 ### Hooks (lib/hooks/)
 | Hook | Purpose |
@@ -63,6 +64,8 @@
 | zalo-webhook-handler.ts | Process Zalo webhook events (message_receive, etc.) |
 | facebook-webhook-handler.ts | Process Facebook webhook events |
 | message-queue-processor.ts | Retry failed messages with exponential backoff |
+| message-queue-backoff.ts | Backoff strategy calculation for retries |
+| webhook-idempotency.ts | Deduplication for duplicate webhook events |
 
 ### Constants & Types
 - **navigation.ts**: Nav items with string iconName + role access

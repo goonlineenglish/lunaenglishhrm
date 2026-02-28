@@ -42,19 +42,31 @@
 - RLS policies on every table
 - Migrations numbered sequentially: `001_`, `002_`, etc.
 
+## Server Actions Pattern
+- Return `{ success: boolean, error?: string, data?: T }`
+- Always use `supabase.auth.getUser()` on server (never `getSession()`)
+- Validate all ID parameters as UUID format
+- Use `getAdminClient()` from `lib/supabase/admin.ts` for privileged operations (centralized, never duplicate)
+- Handle user profile initialization with `ensureUserProfile()` on first login
+- Generic error messages in responses (no sensitive info leak)
+
 ## Error Handling
 - Server actions: return `{ success: boolean, error?: string }`
 - Client: use Sonner `toast.success()` / `toast.error()` (not shadcn toast)
 - Wrap Supabase calls in try/catch
 - Generic error messages in server actions (no sensitive info leak)
+- Global error boundaries: `app/error.tsx` (root) + `app/(dashboard)/error.tsx` (route)
 
 ## Security Practices
 - UUID validation on all server action ID parameters
 - HMAC-SHA256 verification on webhook signatures (Zalo + Facebook)
 - Cron auth fail-closed: deny access when `CRON_SECRET` env var missing
-- Input sanitization: escape `%`, `\`, `_` in ilike filters
+- Input sanitization: escape `%`, `\`, `_` in ilike filters (searchLeads)
 - No credentials in error responses (use generic messages)
 - Centralized admin client (`lib/supabase/admin.ts`) — no duplication
+- Webhook idempotency: prevent duplicate event processing (webhook-idempotency.ts)
+- Facebook token: use Authorization header (not URL query params)
+- Role-based auth limitation: currently relies on RLS only (no server-side role checks in actions)
 
 ## Imports
 - Use `@/` path alias for all imports

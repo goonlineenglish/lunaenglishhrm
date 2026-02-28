@@ -35,7 +35,8 @@ Internal CRM for Luna English (Tan Mai branch) managing student enrollment pipel
 ## Deployment Status
 - **Supabase Cloud**: Deployed (Singapore) — `vgxpucmwivhlgvlzzkju.supabase.co`
 - **GitHub**: `goonlineenglish/luna-english-crm` (main branch, up to date)
-- **Vercel**: Planned (connect GitHub, set env vars, verify cron)
+- **Docker + Caddy**: Homeserver deployment ready (see deployment-guide.md)
+- **Vercel**: Alternative cloud option (vercel.json with all 4 crons configured)
 
 ## Security Features
 - RLS policies on all 8 core tables (admin=full, advisor=scoped by lead assignment, marketing=read-only)

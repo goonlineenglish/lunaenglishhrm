@@ -35,7 +35,7 @@ Host crontab --> curl localhost:3000/api/cron/* (4 jobs)
 
 | # | Phase | Status | Effort |
 |---|-------|--------|--------|
-| 1 | [Configure Next.js standalone output](phase-01-configure-nextjs-standalone.md) | pending | 15min |
+| 1 | [Configure Next.js standalone output](phase-01-configure-nextjs-standalone.md) | **DONE** (already in next.config.ts) | 0 |
 | 2 | [Create Docker setup](phase-02-create-docker-setup.md) | pending | 1h |
 | 3 | [Create cron setup](phase-03-create-cron-setup.md) | pending | 30min |
 | 4 | [Deploy and verify](phase-04-deploy-and-verify.md) | pending | 1h15min |
@@ -46,7 +46,7 @@ Host crontab --> curl localhost:3000/api/cron/* (4 jobs)
 3. **Host crontab** -- no extra container, simple curl calls
 4. **Alpine images** -- minimal Docker footprint
 5. **SSD for app, HDD for logs** -- optimize limited SSD space
-6. **Docker memory limits** -- prevent OOM on 8GB system
+6. **Docker `mem_limit`** — use top-level `mem_limit` (not `deploy.resources.limits` which is Swarm-only)
 
 ## Dependencies
 - Domain DNS A record pointing to homeserver public IP

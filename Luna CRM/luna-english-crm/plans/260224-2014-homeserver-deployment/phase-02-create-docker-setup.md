@@ -14,7 +14,7 @@
 - Multi-stage build: deps stage, build stage, run stage -- final image ~150MB
 - Alpine-based Node 20 image (smallest LTS with Next.js 16 support)
 - Caddy auto-provisions Let's Encrypt certs with zero config
-- Docker memory limits prevent OOM: 512MB for app, 64MB for Caddy
+- `mem_limit` (plain Compose syntax) enforces memory caps; `deploy.resources.limits` is Swarm-only and ignored by `docker compose`
 - Node.js `--max-old-space-size=384` keeps V8 heap within container limit
 - `HOSTNAME=0.0.0.0` required for standalone server to accept external connections
 
@@ -37,12 +37,12 @@
 docker-compose.yml
 ├── luna-crm (Next.js standalone)
 │   ├── Port 3000 (internal only)
-│   ├── Memory limit: 512MB
+│   ├── mem_limit: 512m (plain Compose, not Swarm)
 │   ├── .env.production mounted
 │   └── Auto-restart: unless-stopped
 └── caddy (reverse proxy)
     ├── Ports 80, 443 (public)
-    ├── Memory limit: 64MB
+    ├── mem_limit: 64m (plain Compose, not Swarm)
     ├── Caddyfile mounted
     ├── caddy_data volume (certs on HDD)
     └── Auto-restart: unless-stopped
@@ -140,10 +140,7 @@ services:
       - "127.0.0.1:3000:3000"
     env_file:
       - .env.production
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    mem_limit: 512m
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/login"]
       interval: 30s
@@ -163,10 +160,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    deploy:
-      resources:
-        limits:
-          memory: 64M
+    mem_limit: 64m
     depends_on:
       luna-crm:
         condition: service_healthy

@@ -2,6 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Normalize Vietnamese phone: +84xxx or 0xxx → +84xxx
 function normalizeVietnamesePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -18,6 +21,8 @@ export async function sendZaloMessage(
   leadId: string,
   message: string
 ): Promise<{ success?: boolean; error?: string }> {
+  if (!UUID_REGEX.test(leadId)) return { error: "ID không hợp lệ" };
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -81,6 +86,13 @@ export async function queueMessage(
   leadId?: string
 ): Promise<{ success?: boolean; error?: string }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Chưa đăng nhập" };
+
+  if (leadId !== undefined && !UUID_REGEX.test(leadId))
+    return { error: "ID không hợp lệ" };
 
   const { error } = await supabase.from("message_queue").insert({
     provider,

@@ -68,6 +68,10 @@ export async function testZaloConnection(): Promise<{
   error?: string;
 }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Chưa đăng nhập" };
 
   const { data: token } = await supabase
     .from("integration_tokens")
@@ -109,6 +113,10 @@ export async function testFacebookConnection(): Promise<{
   error?: string;
 }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Chưa đăng nhập" };
 
   const { data: token } = await supabase
     .from("integration_tokens")
@@ -144,6 +152,10 @@ export async function getWebhookEvents(
   error?: string;
 }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Chưa đăng nhập" };
 
   let query = supabase
     .from("webhook_events")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import {
   fetchDashboardData,
   fetchPreviousPeriod,
@@ -41,14 +42,25 @@ export function DashboardView() {
     setLoading(true);
     try {
       const dr: DateRange = { from: range.from, to: range.to };
-      const [dashData, prevData] = await Promise.all([
+      const [dashResult, prevResult] = await Promise.all([
         fetchDashboardData(dr),
         fetchPreviousPeriod(dr),
       ]);
-      setData(dashData);
-      setPrev(prevData);
+
+      if (dashResult.error) {
+        toast.error(dashResult.error);
+        return;
+      }
+      if (prevResult.error) {
+        toast.error(prevResult.error);
+        return;
+      }
+
+      setData(dashResult.data ?? null);
+      setPrev(prevResult.data ?? null);
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
+      toast.error("Không thể tải dữ liệu dashboard");
     } finally {
       setLoading(false);
     }

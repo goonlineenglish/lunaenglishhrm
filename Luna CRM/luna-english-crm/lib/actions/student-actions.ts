@@ -35,6 +35,8 @@ export async function getStudents(
   filters: StudentFilters = {}
 ): Promise<PaginatedStudents> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { data: [], count: 0, error: "Chưa đăng nhập" };
   const { status, current_class, search, page = 1, pageSize = 20 } = filters;
 
   let query = supabase
@@ -279,6 +281,13 @@ export async function importStudentsCSV(
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
+
+    if (row.lead_id && !UUID_RE.test(row.lead_id)) {
+      failed++;
+      errors.push(`Dòng ${i + 1}: lead_id không hợp lệ`);
+      continue;
+    }
+
     const { error } = await supabase.from("students").insert({
       lead_id: row.lead_id || null,
       student_code: row.student_code || null,

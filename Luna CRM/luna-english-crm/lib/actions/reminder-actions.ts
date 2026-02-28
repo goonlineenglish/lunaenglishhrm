@@ -160,57 +160,73 @@ export interface ReminderWithLead {
 }
 
 export async function getReminders(
-  userId?: string,
   filter?: ReminderFilter
 ): Promise<{ data: ReminderWithLead[]; error?: string }> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  let query = supabase
-    .from("follow_up_reminders")
-    .select(
-      "id, lead_id, remind_at, type, status, assigned_to, note, created_at, leads(id, parent_name, student_name, parent_phone)"
-    )
-    .order("remind_at", { ascending: true });
+    if (!user) return { data: [], error: "Chưa đăng nhập" };
 
-  if (userId) {
-    query = query.eq("assigned_to", userId);
+    let query = supabase
+      .from("follow_up_reminders")
+      .select(
+        "id, lead_id, remind_at, type, status, assigned_to, note, created_at, leads(id, parent_name, student_name, parent_phone)"
+      )
+      .eq("assigned_to", user.id)
+      .order("remind_at", { ascending: true });
+
+    if (filter?.status) {
+      query = query.eq("status", filter.status);
+    } else {
+      query = query.eq("status", "pending");
+    }
+
+    if (filter?.type) {
+      query = query.eq("type", filter.type);
+    }
+
+    const { data, error } = await query;
+
+    if (error) return { data: [], error: error.message };
+
+    return { data: (data as unknown as ReminderWithLead[]) ?? [] };
+  } catch (err) {
+    console.error("getReminders error:", err);
+    return { data: [], error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
-
-  if (filter?.status) {
-    query = query.eq("status", filter.status);
-  } else {
-    query = query.eq("status", "pending");
-  }
-
-  if (filter?.type) {
-    query = query.eq("type", filter.type);
-  }
-
-  const { data, error } = await query;
-
-  if (error) return { data: [], error: error.message };
-
-  return { data: (data as unknown as ReminderWithLead[]) ?? [] };
 }
 
 export async function searchLeads(searchTerm: string) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  // Escape special characters for Supabase ilike filter
-  const escaped = searchTerm
-    .replace(/\\/g, "\\\\")
-    .replace(/%/g, "\\%")
-    .replace(/_/g, "\\_");
+    if (!user) return { data: [], error: "Chưa đăng nhập" };
 
-  const { data, error } = await supabase
-    .from("leads")
-    .select("id, parent_name, student_name, parent_phone")
-    .or(
-      `parent_name.ilike.%${escaped}%,student_name.ilike.%${escaped}%,parent_phone.ilike.%${escaped}%`
-    )
-    .limit(10);
+    // Escape special characters for Supabase ilike filter
+    const escaped = searchTerm
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_");
 
-  if (error) return { data: [], error: error.message };
+    const { data, error } = await supabase
+      .from("leads")
+      .select("id, parent_name, student_name, parent_phone")
+      .or(
+        `parent_name.ilike.%${escaped}%,student_name.ilike.%${escaped}%,parent_phone.ilike.%${escaped}%`
+      )
+      .limit(10);
 
-  return { data: data ?? [] };
+    if (error) return { data: [], error: error.message };
+
+    return { data: data ?? [] };
+  } catch (err) {
+    console.error("searchLeads error:", err);
+    return { data: [], error: "Đã xảy ra lỗi. Vui lòng thử lại." };
+  }
 }

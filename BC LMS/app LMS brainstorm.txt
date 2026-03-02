@@ -1,0 +1,117 @@
+tôi muốn làm 1 app LMS cho chương trình tiếng anh Buttercup
+
+Ngừơi dùng: Giáo viên dạy các chương trình tại Butterrcup Learning
+Có các chức năng chính sau 
+1. Theo dõi hồ sơ giáo viên
+- Hồ sơ giáo viên được theo dõi theo từng trường, chương trình được truy cập 
+- Tại hồ sơ, lưu thông tin nội dung đào tạo mà giáo viên đã hoàn thành  
+- Lưu giáo án đã sử dụng 
+1. Đào tạo theo lộ trình 
+
+2. Truy cập tài liệu nội bộ 
+
+3. Tạo và lưu giáo án theo hồ sơ giáo viên 
+- Mỗi chương trình học giáo viên được truy cập, có màn hình tạo giáo án
+- Mỗi chương trình có khung giáo án khác nhau
+
+4. Tài khoản admin
+- mẫu giáo án tôi sẽ cung cấp sau 
+
+
+
+
+
+
+2. Kiến trúc Dữ liệu (Prisma Schema)
+Hệ thống xoay quanh các thực thể (entities) cốt lõi sau:
+
+2.1. User (Người dùng)
+Roles: ADMIN, TEACHER_BUTTERCUP, TEACHER_PRIMARY_SUCCESS, TEACHER_PRIMARY_SECONDARY
+Lưu trữ thông tin cơ bản: email, password (hashed), tên, trường học.
+Mỗi giáo viên được phân quyền truy cập vào các chương trình (Programs) tương ứng.
+2.2. Course (Khóa học) & Lesson (Bài học)
+Course: Gắn với một 
+Program
+ cụ thể. Có thể là dạng TRAINING (Đào tạo giáo viên) hoặc MATERIAL (Tài liệu). Có giá tiền (price) mặc định.
+Lesson: Thuộc về một Course. Chứa nội dung (Markdown/HTML), link video (Google Drive), và các tài liệu đính kèm (JSON materials).
+Quản lý thứ tự bài học (order) và thời lượng (duration).
+2.3. Enrollment (Đăng ký) & Progress (Tiến độ)
+Enrollment: Ghi nhận User đã đăng nhập vào Course nào, mua lúc nào, áp dụng mã voucherCode nào và số tiền đã thanh toán (paidAmount).
+Progress: Theo dõi tiến độ học tập của từng học viên trên từng Lesson. Lưu trạng thái completed (hoàn thành) và thời gian đã xem video (watchedTime).
+2.4. Vouchers (Mã giảm giá)
+Voucher: Hệ thống mã giảm giá linh hoạt (theo % hoặc số tiền cố định). Có giới hạn số lần sử dụng (maxUses) và ngày hết hạn.
+VoucherUsage: Bảng trung gian để track người dùng nào đã sử dụng voucher nào, tránh việc dùng lặp lại sai quy định.
+3. Cấu trúc Tính năng (Feature Modules)
+3.1. Authentication & Authorization
+Đăng nhập: /login. Sử dụng API /api/auth/login để cấp JWT token, lưu vào cookie auth-token.
+Phân quyền (Middleware/Proxy): Next.js Middleware đảm bảo chỉ người dùng đã đăng nhập mới vào được Dashboard. Các users truy cập vào các khóa học dựa trên Role tương ứng (ví dụ: TEACHER_BUTTERCUP xem được khóa Buttercup).
+3.2. Dashboard & Student/Teacher Portal
+Hiển thị các khóa học mà người dùng có quyền truy cập.
+Tính năng Search để tìm kiếm khóa học và bài giảng.
+Tính năng Favorite để lưu lại khóa học yêu thích.
+3.3. Course Player (Trải nghiệm học thuật)
+Xem danh sách bài học trong khóa học.
+Trình xem video (nhúng Google Drive) kết hợp theo dõi thời lượng thực tế (watchedTime).
+Đánh dấu hoàn thành bài học (Mark as Completed).
+3.4. Hệ thống Thanh toán & Voucher (Enrollment System)
+Flow đăng ký khóa học: Nhập mã Voucher -> Validate API -> Xác nhận "mua" (hoặc enroll miễn phí với voucher 100%).
+API /api/vouchers/validate kiểm tra tính hợp lệ của mã.
+Logic ngăn chặn đăng ký nếu không thanh toán đủ hoặc không áp dụng voucher hợp lệ.
+3.5. Admin Panel (Quản trị hệ thống)
+Quản lý Khóa học & Bài học (Thêm, Sửa, Xóa).
+Quản lý người dùng (Duyệt giáo viên, cấp lại mật khẩu).
+Quản lý Vouchers (Tạo mới, set limit).
+Báo cáo thống kê cơ bản (Tổng số enrollment, tiến độ hoàn thành).
+
+Lưu ý: 
++ vấn đề bảo mật: không cho user tải, copy, chụp màn hình 
+
+
+
+
+clone app github sau để tôi vận hành trên máy của tôi https://github.com/instructure/canvas-lms
+
+Hãy dùng team agent để chạy cho nhanh
+
+vận hành app này cho tôi trên máy này
+
+Bổ sung sơ đồ state machine vào plan để dễ hình dung flow nội dung và action
+
+ - Mẫu giáo án cụ thể cho từng chương trình (Buttercup, Primary Success, Primary Secondary) — cần trước Phase 3: ok tôi gửi bằng cách nào 
+
+ - Số lượng giáo viên dự kiến (ảnh hưởng hosting plan): tầm 100 giáo viên 
+ 
+ codex có 1 số feedback sau về plan, hãy điều chỉnh plan 
+   Findings (by severity)
+
+  1. High: Access-control logic is inconsistent and can leak content after program revocation. The flow says revoking program removes
+     access, but course entry checks enrollment only.
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L256
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L281
+  2. High: middleware.ts is placed under lib/, which Next.js middleware will not execute from. If implemented this way, auth guard
+     may never run.
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L221
+  3. High: DRM CSS proposal breaks core UX. Global user-select: none and video { pointer-events: none; } can block text editing/copy
+     in legitimate places and disable player controls.
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L164
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L165
+  4. Medium: LessonPlan.programId has no relation/FK to Program, so invalid program IDs can be stored and joins become fragile.
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L118
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L121
+  5. Medium: Ordering fields are not protected by compound uniqueness, so duplicate order values can create nondeterministic lesson/
+     course ordering.
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L78
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L91
+  6. Medium: Auth plan uses cookie JWT but omits explicit CSRF/session-revocation requirements and tests; this is a common production
+     security gap.
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L14
+     C:/Users/Admin/.claude/plans/quiet-coalescing-marshmallow.md#L343
+
+  Open questions / assumptions
+
+  1. Should course access require both UserProgram membership and Enrollment, or only one canonical permission source?
+  2. Should revoking a program auto-revoke related enrollments and progress visibility?
+
+Resume this session with:
+claude --resume "bclms"
+PS F:\APP ANTIGRAVITY\Tool\BC LMS>

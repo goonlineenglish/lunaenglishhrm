@@ -1,0 +1,166 @@
+// Buttercup LMS — Full database schema
+// 9 models + 3 enums
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------- Enums -------
+
+enum Role {
+  ADMIN
+  MANAGER
+  TEACHER
+  TEACHING_ASSISTANT
+}
+
+enum CourseLevel {
+  BASIC
+  ADVANCED
+}
+
+enum CourseType {
+  TRAINING
+  MATERIAL
+}
+
+// ------- Models -------
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  password    String
+  name        String
+  school      String?
+  role        Role          @default(TEACHER)
+  isDeleted   Boolean       @default(false)
+  programs    UserProgram[]
+  enrollments Enrollment[]
+  progress    Progress[]
+  lessonPlans LessonPlan[]
+  sessions    Session[]
+  createdAt   DateTime      @default(now())
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jti         String   @unique
+  invalidated Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([jti])
+  @@map("sessions")
+}
+
+model Program {
+  id                 String        @id @default(cuid())
+  name               String
+  slug               String        @unique
+  description        String?
+  isDeleted          Boolean       @default(false)
+  lessonPlanTemplate String?
+  courses            Course[]
+  users              UserProgram[]
+  lessonPlans        LessonPlan[]
+
+  @@map("programs")
+}
+
+model UserProgram {
+  userId    String
+  programId String
+  user      User    @relation(fields: [userId], references: [id])
+  program   Program @relation(fields: [programId], references: [id])
+
+  @@id([userId, programId])
+  @@map("user_programs")
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  programId   String
+  program     Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  title       String
+  description String?
+  type        CourseType
+  level       CourseLevel  @default(BASIC)
+  order       Int
+  isDeleted   Boolean      @default(false)
+  lessons     Lesson[]
+  enrollments Enrollment[]
+
+  @@unique([programId, order])
+  @@index([programId])
+  @@map("courses")
+}
+
+model Lesson {
+  id        String     @id @default(cuid())
+  courseId  String
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  title     String
+  content   String?
+  videoUrl  String?
+  materials Json?
+  order     Int
+  duration  Int?
+  isDeleted Boolean    @default(false)
+  progress  Progress[]
+
+  @@unique([courseId, order])
+  @@index([courseId])
+  @@map("lessons")
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  user       User     @relation(fields: [userId], references: [id])
+  course     Course   @relation(fields: [courseId], references: [id])
+  enrolledAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  user        User     @relation(fields: [userId], references: [id])
+  lesson      Lesson   @relation(fields: [lessonId], references: [id])
+  completed   Boolean  @default(false)
+  watchedTime Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+  @@map("progress")
+}
+
+model LessonPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  programId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  program   Program  @relation(fields: [programId], references: [id], onDelete: Restrict)
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lesson_plans")
+}

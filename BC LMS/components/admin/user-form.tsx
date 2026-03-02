@@ -69,15 +69,26 @@ export function UserForm({ open, onClose, editUser, onSuccess }: UserFormProps) 
   // Populate form when editing
   useEffect(() => {
     if (editUser) {
-      setName(editUser.name);
-      setSchool(editUser.school ?? '');
-      setRole(editUser.role);
-      setEmail(editUser.email);
+      // Use queueMicrotask to batch state updates and avoid synchronous setState in effect
+      queueMicrotask(() => {
+        setEmail(editUser.email);
+        setName(editUser.name);
+        setRole(editUser.role);
+        setSchool(editUser.school ?? '');
+        setErrors({});
+        setServerError('');
+      });
     } else {
-      setEmail(''); setName(''); setPassword(''); setSchool(''); setRole('TEACHER');
+      queueMicrotask(() => {
+        setEmail('');
+        setName('');
+        setPassword('');
+        setSchool('');
+        setRole('TEACHER');
+        setErrors({});
+        setServerError('');
+      });
     }
-    setErrors({});
-    setServerError('');
   }, [editUser, open]);
 
   function handleSubmit(e: React.FormEvent) {

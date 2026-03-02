@@ -46,7 +46,7 @@ describe('Soft Delete Service', () => {
         slug: 'test-program',
         isDeleted: true,
         createdAt: new Date(),
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await softDeleteProgram('prog1');
 
@@ -101,7 +101,7 @@ describe('Soft Delete Service', () => {
         programId: 'prog1',
         order: 1,
         createdAt: new Date(),
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await softDeleteCourse('course1');
 
@@ -141,7 +141,7 @@ describe('Soft Delete Service', () => {
         programId: 'prog1',
         order: 1,
         createdAt: new Date(),
-      } as any);
+      } as Record<string, unknown>);
 
       await softDeleteCourse('course1');
 
@@ -160,7 +160,7 @@ describe('Soft Delete Service', () => {
         programId: 'prog1',
         order: 2,
         createdAt: new Date(),
-      } as any);
+      } as Record<string, unknown>);
 
       await softDeleteCourse('course2');
 

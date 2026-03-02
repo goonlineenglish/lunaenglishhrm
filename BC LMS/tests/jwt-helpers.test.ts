@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { signJwt, verifyJwt } from '@/lib/auth/jwt-helpers';
-import type { JwtPayload } from '@/lib/types/auth';
 
 // Mock JWT_SECRET for testing
 beforeAll(() => {

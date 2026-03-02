@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { canAccessCourseLevel } from '@/lib/services/access-control-service';
+import type { Role } from '@/lib/types/user';
 
 describe('Access Control Service', () => {
   describe('canAccessCourseLevel', () => {
@@ -26,7 +27,7 @@ describe('Access Control Service', () => {
     it('should evaluate CourseLevel gate correctly for mixed roles', () => {
       // BASIC: all can access
       const basicAllowed = ['ADMIN', 'MANAGER', 'TEACHER', 'TEACHING_ASSISTANT'].every(
-        (role) => canAccessCourseLevel(role as any, 'BASIC')
+        (role) => canAccessCourseLevel(role as Role, 'BASIC')
       );
       expect(basicAllowed).toBe(true);
 

@@ -1,7 +1,7 @@
 ---
 title: "Phase 1: Foundation - Auth, CRUD, Dashboard"
 description: "Greenfield setup for Buttercup LMS: Next.js 15, Prisma, JWT auth, 4-role system, admin CRUD, teacher dashboard"
-status: pending
+status: completed
 priority: P1
 effort: 40h
 branch: main

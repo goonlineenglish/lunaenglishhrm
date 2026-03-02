@@ -175,6 +175,11 @@ export async function updateLeadStage(
 
     const fromStage = currentLead.current_stage;
 
+    // Require lost reason when moving to mat_lead
+    if (newStage === "mat_lead" && !lostReason?.trim()) {
+      return { error: "Vui lòng nhập lý do mất lead" };
+    }
+
     const updateData: Record<string, unknown> = {
       current_stage: newStage,
       updated_at: new Date().toISOString(),
@@ -242,6 +247,87 @@ export async function deleteLead(leadId: string) {
   } catch (error) {
     console.error("deleteLead unexpected error:", error);
     return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
+  }
+}
+
+export interface BulkResult {
+  succeeded: string[];
+  failed: { id: string; error: string }[];
+}
+
+export async function bulkUpdateLeadStage(
+  leadIds: string[],
+  newStage: LeadStage,
+  lostReason?: string
+): Promise<BulkResult> {
+  const result: BulkResult = { succeeded: [], failed: [] };
+
+  if (newStage === "mat_lead" && !lostReason?.trim()) {
+    return { succeeded: [], failed: leadIds.map((id) => ({ id, error: "Thiếu lý do mất lead" })) };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { succeeded: [], failed: leadIds.map((id) => ({ id, error: "Chưa đăng nhập" })) };
+    }
+
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) {
+      return { succeeded: [], failed: leadIds.map((id) => ({ id, error: profileResult.error })) };
+    }
+
+    for (const leadId of leadIds) {
+      if (!UUID_RE.test(leadId)) {
+        result.failed.push({ id: leadId, error: "ID không hợp lệ" });
+        continue;
+      }
+
+      const { data: currentLead } = await supabase
+        .from("leads")
+        .select("current_stage")
+        .eq("id", leadId)
+        .single();
+
+      if (!currentLead) {
+        result.failed.push({ id: leadId, error: "Không tìm thấy lead" });
+        continue;
+      }
+
+      const updateData: Record<string, unknown> = {
+        current_stage: newStage,
+        updated_at: new Date().toISOString(),
+      };
+      if (newStage === "mat_lead" && lostReason) {
+        updateData.lost_reason = lostReason;
+      }
+
+      const { error } = await supabase
+        .from("leads")
+        .update(updateData)
+        .eq("id", leadId);
+
+      if (error) {
+        result.failed.push({ id: leadId, error: "Lỗi cập nhật" });
+      } else {
+        // Log activity
+        await supabase.from("lead_activities").insert({
+          lead_id: leadId,
+          type: "stage_change",
+          content: `Chuyển từ ${currentLead.current_stage} sang ${newStage}`,
+          created_by: user.id,
+          metadata: { from: currentLead.current_stage, to: newStage },
+        });
+        result.succeeded.push(leadId);
+      }
+    }
+
+    revalidatePath("/pipeline");
+    return result;
+  } catch (error) {
+    console.error("bulkUpdateLeadStage unexpected error:", error);
+    return { succeeded: [], failed: leadIds.map((id) => ({ id, error: "Lỗi hệ thống" })) };
   }
 }
 

@@ -2,7 +2,6 @@
 // Reads x-user-role from headers via getAuthenticatedUser(); redirects non-ADMIN to /dashboard
 
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getAuthenticatedUser } from '@/lib/auth/auth-guard';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 

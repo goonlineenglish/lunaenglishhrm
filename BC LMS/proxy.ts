@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   '/login',
   '/api/auth/login',
   '/api/health',
+  '/api/cron/session-cleanup',
   '/favicon.ico',
 ];
 
@@ -24,7 +25,12 @@ const BYPASS_PREFIXES = ['/_next/', '/public/'];
 const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 
 /** CSRF is exempt on these paths (no token exists yet at login) */
-const CSRF_EXEMPT_PATHS = ['/api/auth/login', '/api/health'];
+const CSRF_EXEMPT_PATHS = ['/api/auth/login', '/api/health', '/api/cron/'];
+
+/** Next.js Server Actions send a Next-Action header instead of x-csrf-token */
+function isServerAction(request: NextRequest): boolean {
+  return request.headers.has('next-action');
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -142,7 +148,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // 7. CSRF validation on mutating requests
   if (
     CSRF_METHODS.has(request.method) &&
-    !CSRF_EXEMPT_PATHS.some((p) => pathname.startsWith(p))
+    !CSRF_EXEMPT_PATHS.some((p) => pathname.startsWith(p)) &&
+    !isServerAction(request)
   ) {
     const headerToken = request.headers.get('x-csrf-token');
     const cookieToken = request.cookies.get('csrf-token')?.value;

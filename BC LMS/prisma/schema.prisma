@@ -44,6 +44,7 @@ model User {
   progress    Progress[]
   lessonPlans LessonPlan[]
   sessions    Session[]
+  favorites   Favorite[]
   createdAt   DateTime      @default(now())
 
   @@index([email])
@@ -101,6 +102,7 @@ model Course {
   isDeleted   Boolean      @default(false)
   lessons     Lesson[]
   enrollments Enrollment[]
+  favorites   Favorite[]
 
   @@unique([programId, order])
   @@index([programId])
@@ -163,4 +165,15 @@ model LessonPlan {
   updatedAt DateTime @updatedAt
 
   @@map("lesson_plans")
+}
+
+model Favorite {
+  userId    String
+  courseId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, courseId])
+  @@map("favorites")
 }

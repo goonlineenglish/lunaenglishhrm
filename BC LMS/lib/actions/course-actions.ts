@@ -184,6 +184,15 @@ export async function restoreCourse(id: string): Promise<{ success: boolean; err
       return { success: false, error: 'Không có quyền thực hiện thao tác này' };
     }
 
+    const course = await prisma.course.findUnique({
+      where: { id },
+      include: { program: { select: { isDeleted: true } } },
+    });
+    if (!course) return { success: false, error: 'Khóa học không tồn tại' };
+    if (course.program.isDeleted) {
+      return { success: false, error: 'Không thể khôi phục: chương trình chứa khóa học này đã bị xóa' };
+    }
+
     await prisma.course.update({ where: { id }, data: { isDeleted: false } });
     revalidatePath('/admin/courses');
     return { success: true };
@@ -282,6 +291,12 @@ export async function updateLesson(
 
     const partial = lessonSchema.omit({ courseId: true }).partial().parse(input);
 
+    // Verify lesson belongs to the expected course before updating
+    const existing = await prisma.lesson.findUnique({ where: { id }, select: { courseId: true } });
+    if (!existing || existing.courseId !== courseId) {
+      return { success: false, error: 'Bài học không thuộc khóa học này' };
+    }
+
     const lesson = await prisma.lesson.update({
       where: { id },
       data: {
@@ -318,6 +333,12 @@ export async function deleteLesson(
       return { success: false, error: 'Không có quyền thực hiện thao tác này' };
     }
 
+    // Verify lesson belongs to the expected course
+    const existing = await prisma.lesson.findUnique({ where: { id }, select: { courseId: true } });
+    if (!existing || existing.courseId !== courseId) {
+      return { success: false, error: 'Bài học không thuộc khóa học này' };
+    }
+
     await prisma.lesson.update({ where: { id }, data: { isDeleted: true } });
     revalidatePath(`/admin/courses/${courseId}`);
     return { success: true };
@@ -336,6 +357,14 @@ export async function reorderLessons(
     const user = await getAuthenticatedUser();
     if (user?.role !== 'ADMIN') {
       return { success: false, error: 'Không có quyền thực hiện thao tác này' };
+    }
+
+    // Verify all lessons belong to this course before reordering
+    const count = await prisma.lesson.count({
+      where: { id: { in: orderedIds }, courseId },
+    });
+    if (count !== orderedIds.length) {
+      return { success: false, error: 'Một hoặc nhiều bài học không thuộc khóa học này' };
     }
 
     await prisma.$transaction(

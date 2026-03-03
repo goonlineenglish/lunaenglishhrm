@@ -25,8 +25,22 @@ export async function getProgressReport(
   const isManager = authUser.role === 'MANAGER';
   if (!isAdmin && !isManager) throw new Error('Không có quyền xem báo cáo');
 
-  // IDOR: manager always scoped to own school
-  const schoolFilter = isManager ? authUser.school : (params.school ?? undefined);
+  // IDOR: manager always scoped to own school.
+  // If manager somehow has null school, deny access to prevent full data leak.
+  if (isManager && !authUser.school) {
+    throw new Error('Tài khoản quản lý chưa được gán trường/cơ sở');
+  }
+  const schoolFilter = isManager ? authUser.school! : (params.school ?? undefined);
+
+  // Date range filter for enrollments/progress — applied as a createdAt bound
+  const dateFrom = params.dateRange?.from ? new Date(params.dateRange.from) : undefined;
+  const dateTo = params.dateRange?.to ? new Date(params.dateRange.to) : undefined;
+  const dateFilter = dateFrom || dateTo
+    ? {
+        ...(dateFrom && { gte: dateFrom }),
+        ...(dateTo && { lte: dateTo }),
+      }
+    : undefined;
 
   const users = await prisma.user.findMany({
     where: {
@@ -49,9 +63,10 @@ export async function getProgressReport(
             },
           },
         },
+        ...(dateFilter && { where: { enrolledAt: dateFilter } }),
       },
       progress: {
-        where: { completed: true },
+        where: { completed: true, ...(dateFilter && { updatedAt: dateFilter }) },
         select: { id: true },
       },
     },

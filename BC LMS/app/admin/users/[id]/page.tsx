@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { RoleBadge } from '@/components/shared/role-badge';
-import { Button } from '@/components/ui/button';
 import type { Role } from '@/lib/types/user';
 
 interface PageProps {
@@ -16,7 +15,7 @@ interface PageProps {
 export default async function AdminUserDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const [user, programs] = await Promise.all([
+  const [user] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
       select: {
@@ -41,17 +40,9 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         _count: { select: { programs: true, enrollments: true } },
       },
     }),
-    prisma.program.findMany({
-      where: { isDeleted: false },
-      select: { id: true, name: true, slug: true },
-      orderBy: { name: 'asc' },
-    }),
   ]);
 
   if (!user) notFound();
-
-  const assignedProgramIds = user.programs.map((p) => p.program.id);
-  const unassignedPrograms = programs.filter((p) => !assignedProgramIds.includes(p.id));
 
   return (
     <div className="p-6 max-w-3xl">

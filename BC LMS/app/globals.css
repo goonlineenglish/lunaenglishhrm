@@ -124,3 +124,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print styles — hide UI chrome, show only lesson plan content */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  aside,
+  nav,
+  header {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+}

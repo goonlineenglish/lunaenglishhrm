@@ -1,11 +1,12 @@
 // CourseCard — displays a single accessible course in the dashboard grid
-// Shows title, program name, lesson count, type badge, level badge, and view link
+// Shows title, program name, lesson count, type badge, level badge, progress, and view link
 
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FavoriteButton } from '@/components/shared/favorite-button';
 import type { CourseLevel, CourseType } from '@/lib/types/course';
 
 interface CourseCardProps {
@@ -19,6 +20,9 @@ interface CourseCardProps {
     _count: { lessons: number };
   };
   showLevelBadge?: boolean;
+  /** Fraction 0-1 of lessons completed; shown as progress bar */
+  completionRatio?: number;
+  isFavorited?: boolean;
 }
 
 const TYPE_BADGE: Record<CourseType, { label: string; className: string }> = {
@@ -31,7 +35,12 @@ const LEVEL_BADGE: Record<CourseLevel, { label: string; className: string }> = {
   ADVANCED: { label: 'Nâng cao', className: 'bg-purple-100 text-purple-800 border-purple-200' },
 };
 
-export function CourseCard({ course, showLevelBadge = false }: CourseCardProps) {
+export function CourseCard({
+  course,
+  showLevelBadge = false,
+  completionRatio = 0,
+  isFavorited = false,
+}: CourseCardProps) {
   const typeBadge = TYPE_BADGE[course.type];
   const levelBadge = LEVEL_BADGE[course.level];
 
@@ -40,7 +49,8 @@ export function CourseCard({ course, showLevelBadge = false }: CourseCardProps) 
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base leading-snug line-clamp-2">{course.title}</CardTitle>
-          <div className="flex gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            <FavoriteButton courseId={course.id} initialFavorited={isFavorited} />
             <Badge variant="outline" className={typeBadge.className}>
               {typeBadge.label}
             </Badge>
@@ -64,9 +74,12 @@ export function CourseCard({ course, showLevelBadge = false }: CourseCardProps) 
           <span>{course._count.lessons} bài học</span>
         </div>
 
-        {/* Placeholder progress bar for Phase 2 */}
+        {/* Progress bar */}
         <div className="w-full bg-neutral-100 rounded-full h-1.5">
-          <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '0%' }} />
+          <div
+            className="bg-indigo-600 h-1.5 rounded-full transition-all"
+            style={{ width: `${Math.round(completionRatio * 100)}%` }}
+          />
         </div>
 
         <Button asChild variant="outline" size="sm" className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50">
@@ -76,3 +89,4 @@ export function CourseCard({ course, showLevelBadge = false }: CourseCardProps) 
     </Card>
   );
 }
+

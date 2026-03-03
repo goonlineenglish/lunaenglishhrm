@@ -24,10 +24,10 @@ export async function GET(req: NextRequest, { params }: Params): Promise<NextRes
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const { lessonId } = await params;
+    const { id: courseId, lessonId } = await params;
     const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
 
-    if (!lesson) {
+    if (!lesson || lesson.courseId !== courseId) {
       return NextResponse.json({ success: false, error: 'Lesson not found' }, { status: 404 });
     }
 
@@ -45,9 +45,15 @@ export async function PUT(req: NextRequest, { params }: Params): Promise<NextRes
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const { lessonId } = await params;
+    const { id: courseId, lessonId } = await params;
     const body = await req.json();
     const validated = updateLessonSchema.parse(body);
+
+    // Verify lesson belongs to this course
+    const existing = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { courseId: true } });
+    if (!existing || existing.courseId !== courseId) {
+      return NextResponse.json({ success: false, error: 'Lesson not found' }, { status: 404 });
+    }
 
     const lesson = await prisma.lesson.update({
       where: { id: lessonId },
@@ -86,10 +92,10 @@ export async function DELETE(req: NextRequest, { params }: Params): Promise<Next
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const { lessonId } = await params;
+    const { id: courseId, lessonId } = await params;
 
     const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
-    if (!lesson) {
+    if (!lesson || lesson.courseId !== courseId) {
       return NextResponse.json({ success: false, error: 'Lesson not found' }, { status: 404 });
     }
 

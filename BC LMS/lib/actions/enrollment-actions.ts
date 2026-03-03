@@ -10,12 +10,15 @@ type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
 
-/** List all enrollments for a user. */
+/** List all enrollments for a user. Caller must be ADMIN or the owner. */
 export async function getEnrollments(
   userId: string
 ): Promise<ActionResult<{ courseId: string; courseName: string }[]>> {
   const caller = await getAuthenticatedUser();
   if (!caller) return { success: false, error: 'Unauthorized' };
+  if (caller.role !== 'ADMIN' && caller.sub !== userId) {
+    return { success: false, error: 'Forbidden' };
+  }
 
   try {
     const enrollments = await prisma.enrollment.findMany({

@@ -5,7 +5,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, BookOpen, FileText, BarChart2, ShieldCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileText, BarChart2, ShieldCheck, LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/lib/types/user';
@@ -26,13 +26,13 @@ const ROLE_NAV: Partial<Record<Role, { href: string; label: string; icon: typeof
     { href: '/admin', label: 'Admin Panel', icon: ShieldCheck },
   ],
   MANAGER: [
-    { href: '/dashboard/reports', label: 'Báo cáo', icon: BarChart2 },
+    { href: '/reports', label: 'Báo cáo', icon: BarChart2 },
   ],
   TEACHER: [
-    { href: '/dashboard/lesson-plans', label: 'Giáo án', icon: FileText },
+    { href: '/lesson-plans', label: 'Kế hoạch dạy học', icon: FileText },
   ],
   TEACHING_ASSISTANT: [
-    { href: '/dashboard/lesson-plans', label: 'Giáo án', icon: FileText },
+    { href: '/lesson-plans', label: 'Kế hoạch dạy học', icon: FileText },
   ],
 };
 
@@ -97,16 +97,30 @@ export function DashboardSidebar({ role, userName, userEmail }: DashboardSidebar
 
         {/* Course browser link */}
         <Link
-          href="/dashboard/courses"
+          href="/courses"
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-            pathname.startsWith('/dashboard/courses')
+            pathname.startsWith('/courses')
               ? 'bg-indigo-600 text-white'
               : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
           )}
         >
           <BookOpen className="h-4 w-4 shrink-0" />
           Khóa học
+        </Link>
+
+        {/* Profile link */}
+        <Link
+          href="/profile"
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+            pathname === '/profile'
+              ? 'bg-indigo-600 text-white'
+              : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+          )}
+        >
+          <User className="h-4 w-4 shrink-0" />
+          Hồ sơ
         </Link>
       </nav>
 

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { LessonSidebar } from './lesson-sidebar';
 import { VideoPlayer } from './video-player';
 import { DrmZone } from './drm-zone';
+import { sanitizeHtml } from '@/lib/utils/sanitize-html';
 import type { CourseDetail, LessonItem } from '@/lib/types/course';
 import type { ProgressMap } from '@/lib/types/progress';
 
@@ -97,11 +98,11 @@ export function CoursePlayerLayout({
             <VideoPlayer videoUrl={activeLesson.videoUrl} title={activeLesson.title} />
           )}
 
-          {/* Content */}
+          {/* Content — sanitized before render to prevent XSS */}
           {activeLesson.content && (
             <div
               className="prose prose-sm max-w-none text-neutral-700 mt-5"
-              dangerouslySetInnerHTML={{ __html: activeLesson.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(activeLesson.content) }}
             />
           )}
         </DrmZone>

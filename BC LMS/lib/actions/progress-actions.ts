@@ -6,6 +6,7 @@
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedUser } from '@/lib/auth/auth-guard';
 import { getUserProgressMap } from '@/lib/services/progress-service';
+import { canAccessCourse } from '@/lib/services/access-control-service';
 import type {
   UpdateProgressInput,
   ProgressActionResult,
@@ -29,19 +30,24 @@ export async function updateProgress(
 
     const { lessonId, watchedTime, completed } = input;
 
-    // Fetch lesson duration for 80% auto-complete check
+    // Fetch lesson + its courseId for access-control check
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId, isDeleted: false },
-      select: { duration: true },
+      select: { duration: true, courseId: true },
     });
 
     if (!lesson) return { success: false, error: 'Bài học không tồn tại' };
+
+    // Three-Gate access check: user must have access to the course
+    const hasAccess = await canAccessCourse(user.sub, lesson.courseId, user.role as import('@/lib/types/user').Role);
+    if (!hasAccess) return { success: false, error: 'Không có quyền truy cập khóa học này' };
 
     // Determine completed flag:
     // explicit param overrides, else auto-detect via duration threshold
     let isCompleted = completed ?? false;
     if (!isCompleted && lesson.duration && lesson.duration > 0) {
-      isCompleted = watchedTime >= lesson.duration * COMPLETION_THRESHOLD;
+      // lesson.duration is stored in minutes; watchedTime is in seconds — convert minutes → seconds
+      isCompleted = watchedTime >= lesson.duration * 60 * COMPLETION_THRESHOLD;
     }
 
     const record = await prisma.progress.upsert({

@@ -44,9 +44,10 @@ describe('Soft Delete Service', () => {
         id: 'prog1',
         name: 'Test Program',
         slug: 'test-program',
+        description: null,
+        lessonPlanTemplate: null,
         isDeleted: true,
-        createdAt: new Date(),
-      } as Record<string, unknown>);
+      } as unknown as Awaited<ReturnType<typeof prisma.program.update>>);
 
       const result = await softDeleteProgram('prog1');
 
@@ -95,13 +96,14 @@ describe('Soft Delete Service', () => {
       vi.mocked(prisma.lesson.count).mockResolvedValueOnce(0);
       vi.mocked(prisma.course.update).mockResolvedValueOnce({
         id: 'course1',
-        name: 'Test Course',
+        title: 'Test Course',
+        description: null,
+        type: 'TRAINING',
         level: 'BASIC',
         isDeleted: true,
         programId: 'prog1',
         order: 1,
-        createdAt: new Date(),
-      } as Record<string, unknown>);
+      } as unknown as Awaited<ReturnType<typeof prisma.course.update>>);
 
       const result = await softDeleteCourse('course1');
 
@@ -135,13 +137,14 @@ describe('Soft Delete Service', () => {
       vi.mocked(prisma.lesson.count).mockResolvedValueOnce(0);
       vi.mocked(prisma.course.update).mockResolvedValueOnce({
         id: 'course1',
-        name: 'Course 1',
+        title: 'Course 1',
+        description: null,
+        type: 'TRAINING',
         level: 'BASIC',
         isDeleted: true,
         programId: 'prog1',
         order: 1,
-        createdAt: new Date(),
-      } as Record<string, unknown>);
+      } as unknown as Awaited<ReturnType<typeof prisma.course.update>>);
 
       await softDeleteCourse('course1');
 
@@ -154,13 +157,14 @@ describe('Soft Delete Service', () => {
       vi.mocked(prisma.lesson.count).mockResolvedValueOnce(0);
       vi.mocked(prisma.course.update).mockResolvedValueOnce({
         id: 'course2',
-        name: 'Course 2',
+        title: 'Course 2',
+        description: null,
+        type: 'TRAINING',
         level: 'BASIC',
         isDeleted: true,
         programId: 'prog1',
         order: 2,
-        createdAt: new Date(),
-      } as Record<string, unknown>);
+      } as unknown as Awaited<ReturnType<typeof prisma.course.update>>);
 
       await softDeleteCourse('course2');
 

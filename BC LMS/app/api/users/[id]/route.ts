@@ -12,7 +12,7 @@ const updateUserSchema = z.object({
   school: z.string().nullable().optional(),
   role: z.enum(['ADMIN', 'MANAGER', 'TEACHER', 'TEACHING_ASSISTANT']).optional(),
 }).refine(
-  (d) => d.role !== 'MANAGER' || d.school === undefined || (d.school && d.school.trim().length > 0),
+  (d) => d.role !== 'MANAGER' || (typeof d.school === 'string' && d.school.trim().length > 0),
   { message: 'Quản lý phải có trường/cơ sở', path: ['school'] }
 );
 

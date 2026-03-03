@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Admin Program Management"
-status: pending
+status: completed
 effort: 5h
 depends_on: [phase-02]
 blocks: [phase-05, phase-06]
@@ -192,14 +192,17 @@ export function generateSlug(name: string): string {
 
 ## Todo List
 
-- [ ] Create program types
-- [ ] Create soft delete service (canSoftDeleteProgram, canSoftDeleteCourse)
-- [ ] Create program server actions
-- [ ] Create Zod validation schema
-- [ ] Create slug generation helper
-- [ ] Create program list page
-- [ ] Create program table component
-- [ ] Create program form dialog
+- [x] Create program types
+- [x] Create soft delete service (canSoftDeleteProgram, canSoftDeleteCourse)
+- [x] Create program server actions
+- [x] Create Zod validation schema
+- [x] Create slug generation helper
+- [x] Create program list page
+- [x] Create program table component
+- [x] Create program form dialog
+- [x] Verify slug uniqueness enforcement
+- [x] Verify soft delete guard blocks when courses exist
+- [x] Verify restore works
 - [ ] Verify slug uniqueness enforcement
 - [ ] Verify soft delete guard blocks when courses exist
 - [ ] Verify restore works

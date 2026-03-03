@@ -5,7 +5,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, BookOpen, GraduationCap, LogOut } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, LogOut, FileText, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -18,9 +18,11 @@ const NAV_ITEMS = [
   { href: '/admin/users', label: 'Người dùng', icon: Users },
   { href: '/admin/programs', label: 'Chương trình', icon: BookOpen },
   { href: '/admin/courses', label: 'Khóa học', icon: GraduationCap },
+  { href: '/admin/templates', label: 'Templates', icon: FileText },
+  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart2 },
 ];
 
-export function AdminSidebar({ userEmail, userName }: AdminSidebarProps) {
+export function AdminSidebar({ userEmail }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 

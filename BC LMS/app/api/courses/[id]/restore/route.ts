@@ -15,9 +15,19 @@ export async function PATCH(req: NextRequest, { params }: Params): Promise<NextR
 
     const { id } = await params;
 
-    const course = await prisma.course.findUnique({ where: { id } });
+    const course = await prisma.course.findUnique({
+      where: { id },
+      include: { program: { select: { isDeleted: true } } },
+    });
     if (!course) {
       return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
+    }
+
+    if (course.program.isDeleted) {
+      return NextResponse.json(
+        { success: false, error: 'Không thể khôi phục: chương trình chứa khóa học này đã bị xóa' },
+        { status: 409 }
+      );
     }
 
     await prisma.course.update({ where: { id }, data: { isDeleted: false } });

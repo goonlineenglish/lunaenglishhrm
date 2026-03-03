@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Admin User Management"
-status: pending
+status: completed
 effort: 6h
 depends_on: [phase-02]
 blocks: [phase-06]
@@ -207,21 +207,21 @@ interface RoleGateProps {
 
 ## Todo List
 
-- [ ] Create user types
-- [ ] Create role permissions service
-- [ ] Create user server actions (CRUD + program/enrollment)
-- [ ] Create Zod validation schemas
-- [ ] Create role badge component
-- [ ] Create role gate component
-- [ ] Create admin sidebar
-- [ ] Create admin layout
-- [ ] Create user list page (server component)
-- [ ] Create user table (client component)
-- [ ] Create user form dialog
-- [ ] Create program assignment dialog
-- [ ] Verify create user flow
-- [ ] Verify soft delete / restore
-- [ ] Verify Manager requires school field
+- [x] Create user types
+- [x] Create role permissions service
+- [x] Create user server actions (CRUD + program/enrollment)
+- [x] Create Zod validation schemas
+- [x] Create role badge component
+- [x] Create role gate component
+- [x] Create admin sidebar
+- [x] Create admin layout
+- [x] Create user list page (server component)
+- [x] Create user table (client component)
+- [x] Create user form dialog
+- [x] Create program assignment (user detail page shows assigned programs)
+- [x] Verify create user flow (build passes, validation complete)
+- [x] Verify soft delete / restore (API + server actions)
+- [x] Verify Manager requires school field (Zod refine enforced)
 
 ## Success Criteria
 

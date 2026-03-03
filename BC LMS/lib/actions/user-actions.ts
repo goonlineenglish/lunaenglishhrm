@@ -31,7 +31,9 @@ const updateUserSchema = z.object({
   school: z.string().nullable().optional(),
   role: z.enum(['ADMIN', 'MANAGER', 'TEACHER', 'TEACHING_ASSISTANT']).optional(),
 }).refine(
-  (d) => d.role !== 'MANAGER' || d.school === undefined || (d.school && d.school.trim().length > 0),
+  // When role is being set to MANAGER, school must be explicitly provided and non-empty.
+  // "d.school === undefined" is NOT a pass — manager must have a school.
+  (d) => d.role !== 'MANAGER' || (typeof d.school === 'string' && d.school.trim().length > 0),
   { message: 'Quản lý phải có trường/cơ sở', path: ['school'] }
 );
 

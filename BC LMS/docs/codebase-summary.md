@@ -2,23 +2,19 @@
 
 ## Project Status
 
-**Status**: Pre-development — Architecture finalized, awaiting implementation.
-
-**Start Date**: Pending
-**Current Phase**: Planning complete; Phase 1 (Foundation) ready to begin
-**Last Updated**: 2026-03-02
-
-## Overview
-
-Buttercup LMS is an internal Learning Management System for teacher training at Buttercup Learning. Serves approximately 100 internal teachers across three programs (Buttercup, Primary Success, Primary Secondary) with course delivery, progress tracking, and lesson planning.
+**Status**: ALL 4 PHASES COMPLETE — Production Ready (2026-03-03)
+- 28 routes implemented (app/ pages + API)
+- 52 unit tests passing
+- Build clean
+- Ready for deployment
 
 **Tech Stack**:
-- Framework: Next.js 15 (App Router)
-- Database: PostgreSQL + Prisma ORM
+- Framework: Next.js 16.1.6 (App Router)
+- Database: PostgreSQL + Prisma v7 ORM with PrismaPg adapter
 - Auth: Custom JWT + httpOnly cookies + DB-backed Session table
 - UI: shadcn/ui + Tailwind v4
 - Rich Editor: Tiptap (lesson content + lesson plans)
-- Video: Google Drive (Phase 1-3) → Bunny.net Stream (Phase 4)
+- Video: Google Drive (Phase 1-4)
 - Deployment: Docker + Caddy reverse proxy
 
 ## Key Architectural Patterns
@@ -26,10 +22,11 @@ Buttercup LMS is an internal Learning Management System for teacher training at 
 ### Authentication & Session Management
 - **JWT**: 8-hour expiry, signed with HS256
 - **Storage**: httpOnly cookie `auth-token` (never accessible to JavaScript)
+- **CSRF Protection**: Double-submit cookie pattern (auth-token httpOnly + csrf-token NOT httpOnly)
 - **Session Table**: DB-backed sessions with `jti` (JWT ID), `invalidated` flag, `expiresAt`
-- **Verification**: Middleware validates JWT signature + checks session not invalidated
+- **Verification**: `proxy.ts` (at project root, NOT middleware.ts) validates JWT signature + checks session not invalidated
 - **Logout**: Sets `session.invalidated = true`, clears cookie
-- **CSRF Protection**: Double-submit cookie pattern on all mutating requests
+- **Cron Cleanup**: `GET /api/cron/session-cleanup` protected by `CRON_SECRET` header (daily expiry deletion)
 
 ### Access Control (Three-Gate Model)
 1. **Gate 1**: UserProgram (does user belong to program?)
@@ -56,14 +53,15 @@ All sensitive entities use soft delete flag (`isDeleted`):
 - **Prisma Client** (`lib/prisma.ts`): Centralized database access
 - **Error Handling**: All actions wrapped in try-catch, return `{ success: boolean, data?, error? }`
 
-### DRM Architecture (Phase 4)
+### DRM Architecture (Phase 4 — Complete)
 - **Scope**: `.drm-zone` CSS class only
-- **Watermark**: User email + timestamp, repositioned every 30s
-- **Page Blur**: On `visibilitychange` / `window blur`
+- **Watermark**: User email + timestamp, repositioned every 30s (15% opacity)
+- **Page Blur**: 8px on `visibilitychange` / `window blur`
 - **Right-Click**: Disabled on video element only (video controls remain accessible)
-- **Transparency**: Not military-grade; basic protection against casual bypassing
+- **Transparency**: Basic protection against casual bypassing (not military-grade)
+- **Implementation**: Components in `components/course-player/` (drm-zone.tsx, watermark.tsx)
 
-## Database Schema (9 Prisma Models)
+## Database Schema (10 Prisma Models — Complete)
 
 ### User
 ```prisma
@@ -210,7 +208,7 @@ model LessonPlan {
 }
 ```
 
-### Favorite (Phase 4)
+### Favorite (Phase 4 — Complete)
 ```prisma
 model Favorite {
   userId    String
@@ -222,7 +220,7 @@ model Favorite {
 }
 ```
 
-**Note**: The Favorite model is planned for Phase 4 (Security & Polish). Phase 1-3 implementation does not include this model.
+**Note**: Favorite model is fully implemented and active in Phase 4.
 
 ## Folder Structure (Planned)
 

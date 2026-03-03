@@ -2,13 +2,18 @@
 
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth/auth-guard';
+import { validateSession } from '@/lib/auth/session-helpers';
 import LoginForm from './login-form';
 
 export default async function LoginPage() {
-  // Redirect already-authenticated users
+  // Only redirect if BOTH JWT is valid AND the DB session is still active.
+  // This prevents redirect loops when JWT is valid but session has been invalidated.
   const user = await getAuthenticatedUser();
   if (user) {
-    redirect(user.role === 'ADMIN' ? '/admin' : '/dashboard');
+    const sessionActive = await validateSession(user.jti);
+    if (sessionActive) {
+      redirect(user.role === 'ADMIN' ? '/admin' : '/dashboard');
+    }
   }
 
   return (

@@ -71,7 +71,6 @@ export function UserListClient({
   }
 
   const isActive = currentTab === 'active';
-  const users = isActive ? activeUsers : deletedUsers;
   const pages = isActive ? activePages : deletedPages;
   const total = isActive ? activeTotal : deletedTotal;
 

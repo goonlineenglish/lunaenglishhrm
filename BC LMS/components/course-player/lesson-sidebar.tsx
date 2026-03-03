@@ -15,10 +15,11 @@ interface LessonSidebarProps {
   onSelect: (lessonId: string) => void;
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} phút`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}g ${m}p` : `${h} giờ`;
 }
 
 export function LessonSidebar({

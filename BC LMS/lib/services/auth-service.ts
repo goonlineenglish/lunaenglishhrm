@@ -33,7 +33,7 @@ export async function loginUser(
   password: string
 ): Promise<{ success: true; token: string; csrfToken: string; redirectTo: string } | { success: false; error: string }> {
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: email.toLowerCase() },
     select: { id: true, email: true, password: true, role: true, school: true, isDeleted: true },
   });
 

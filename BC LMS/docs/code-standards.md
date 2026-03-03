@@ -1,6 +1,6 @@
 # Code Standards & Best Practices
 
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-03 — All phases complete
 
 ## File Organization & Naming
 
@@ -35,21 +35,24 @@ lib/
 │   ├── course-actions.ts
 │   ├── enrollment-actions.ts
 │   ├── progress-actions.ts
-│   └── lesson-plan-actions.ts
+│   ├── lesson-plan-actions.ts
+│   ├── template-actions.ts
+│   ├── profile-actions.ts
+│   ├── report-actions.ts
+│   └── favorite-actions.ts
 ├── services/                # Business logic layer
 │   ├── access-control-service.ts
 │   ├── auth-service.ts
-│   ├── enrollment-service.ts
-│   ├── progress-service.ts
-│   └── template-service.ts
-├── auth/                    # Auth utilities & middleware
-│   ├── auth-guard.ts
-│   ├── jwt-helpers.ts
-│   └── session-helpers.ts
+│   ├── role-permissions-service.ts
+│   ├── soft-delete-service.ts
+│   └── progress-service.ts
 ├── types/                   # TypeScript type definitions
 │   ├── user.ts
 │   ├── course.ts
-│   └── auth.ts
+│   ├── auth.ts
+│   └── index.ts
+├── utils/                   # Utility functions
+│   └── sanitize-html.ts
 ├── prisma.ts               # Prisma client instance
 └── utils.ts                # Misc utilities
 
@@ -57,19 +60,39 @@ components/
 ├── auth/
 │   ├── login-form.tsx
 │   └── logout-button.tsx
+├── admin/
+│   ├── admin-sidebar.tsx
+│   ├── user-list-client.tsx
+│   ├── user-form.tsx
+│   ├── user-table.tsx
+│   ├── program-form.tsx
+│   ├── program-table.tsx
+│   └── report-table.tsx
 ├── dashboard/
+│   ├── dashboard-header.tsx
+│   ├── dashboard-sidebar.tsx
 │   ├── course-card.tsx
-│   └── progress-bar.tsx
+│   ├── course-card-skeleton.tsx
+│   └── empty-state.tsx
 ├── course-player/
+│   ├── course-player-layout.tsx
 │   ├── video-player.tsx
 │   ├── drm-zone.tsx
-│   └── watermark.tsx
+│   ├── watermark.tsx
+│   └── lesson-sidebar.tsx
 ├── lesson-plan/
-│   ├── editor.tsx
-│   └── template-selector.tsx
+│   ├── lesson-plan-editor-page.tsx
+│   ├── export-button.tsx
+│   └── lesson-plan-table.tsx
+├── tiptap/
+│   ├── tiptap-editor.tsx
+│   ├── tiptap-menu-bar.tsx
+│   └── tiptap-viewer.tsx
 └── shared/
-    ├── sidebar.tsx
-    └── header.tsx
+    ├── role-badge.tsx
+    ├── role-gate.tsx
+    ├── favorite-button.tsx
+    └── skeleton.tsx
 
 prisma/
 ├── schema.prisma            # Database schema definition
@@ -82,7 +105,7 @@ middleware.ts                # Auth guard middleware (ROOT of project)
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| **React Components** | PascalCase.tsx | `LoginForm.tsx`, `CourseCard.tsx` |
+| **React Components** | kebab-case.tsx | `login-form.tsx`, `course-card.tsx` |
 | **Server Actions** | kebab-case-actions.ts | `auth-actions.ts`, `course-actions.ts` |
 | **Services** | kebab-case-service.ts | `access-control-service.ts` |
 | **Utilities** | kebab-case.ts | `jwt-helpers.ts`, `query-filters.ts` |
@@ -256,12 +279,10 @@ try {
 
 ### Logging
 ```typescript
-import { logger } from '@/lib/logger';
-
 try {
   // Operation
 } catch (error) {
-  logger.error('Operation failed', { error, context: { userId } });
+  console.error('Operation failed', { error, context: { userId } });
   return { success: false, error: 'Operation failed' };
 }
 ```
@@ -380,11 +401,25 @@ export function Dashboard() {
 }
 ```
 
+## Authentication & Authorization
+
+### Auth Architecture
+- **JWT Token**: Signed with HS256, 8-hour expiry
+- **Storage**: httpOnly cookie `auth-token` (never accessible to JavaScript)
+- **Session Validation**: Checked against DB session table (jti, invalidated flag, expiresAt)
+- **CSRF Protection**: Double-submit cookie pattern — `auth-token` (httpOnly) + `csrf-token` (NOT httpOnly)
+- **Route Protection**: Via `proxy.ts` at project root (NOT middleware.ts — Next.js 16 convention)
+
+### Prisma v7 Notes
+- Requires `PrismaPg` adapter from `pg` package
+- Use `findFirst` (not `findUnique`) when filtering on non-unique fields like `isDeleted`
+- All queries must filter `WHERE isDeleted = false` for soft-deleted records
+
 ## Authentication & Authorization Helpers
 
 ### Getting Authenticated User
 ```typescript
-// lib/auth/auth-guard.ts
+// lib/auth/auth-guard.ts (proxy.ts at root)
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
@@ -397,12 +432,14 @@ export async function getAuthenticatedUser() {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
     const { payload } = await jwtVerify(token, secret);
-    return payload as { userId: string; email: string; role: string };
+    return payload as { userId: string; email: string; role: string; school?: string };
   } catch {
     return null;
   }
 }
 ```
+
+Note: Auth validation happens in `proxy.ts` at project root for all protected routes (/dashboard/*, /admin/*, /api/*).
 
 ### Role-Based Access Control
 ```typescript
@@ -524,7 +561,7 @@ Prisma will generate migration files. Key indexes:
 - `progress(userId, lessonId)` — unique constraint
 - `courses(programId, order)` — ordering
 
-## Environment Variables
+### Environment Variables
 
 ### Configuration
 Create `.env.local` for development:
@@ -534,17 +571,15 @@ DATABASE_URL=postgresql://user:password@localhost:5432/bc_lms
 
 # Auth
 JWT_SECRET=your-random-secret-min-32-chars
+CRON_SECRET=your-random-cron-secret-min-32-chars
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
-
-# External services (Phase 2+)
-GOOGLE_DRIVE_API_KEY=
-BUNNY_STREAM_API_KEY=
+NODE_ENV=development
 ```
 
-Never commit `.env.local` — use `.env.example` as template.
+Never commit `.env.local` — use `.env.example` as template. CRON_SECRET protects the session cleanup endpoint.
 
 ## Code Comments
 

@@ -49,9 +49,9 @@ export function DrmZone({ userEmail, children }: DrmZoneProps) {
   }, []);
 
   function handleVideoContextMenu(e: React.MouseEvent) {
-    // Disable right-click only when the target is a video element
+    // Disable right-click on video elements and iframe players
     const target = e.target as HTMLElement;
-    if (target.tagName === 'VIDEO') {
+    if (target.tagName === 'VIDEO' || target.tagName === 'IFRAME') {
       e.preventDefault();
     }
   }

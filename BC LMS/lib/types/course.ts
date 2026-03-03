@@ -15,6 +15,8 @@ export type CourseListItem = {
   programId: string;
   program: { name: string; slug: string };
   _count: { lessons: number; enrollments: number };
+  /** Active lesson IDs — used by dashboard to compute per-course completion ratio */
+  lessonIds?: string[];
 };
 
 export type CourseDetail = CourseListItem & {

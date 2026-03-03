@@ -42,7 +42,7 @@ export async function updateProfile(
       },
     });
 
-    revalidatePath('/dashboard/profile');
+    revalidatePath('/profile');
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {

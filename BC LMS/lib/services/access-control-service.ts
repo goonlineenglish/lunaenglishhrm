@@ -63,7 +63,7 @@ export async function getUserAccessibleCourses(userId: string, role: Role) {
   try {
     // ADMIN: see all active courses at allowed level (bypasses Gates 1 + 2)
     if (role === 'ADMIN') {
-      return prisma.course.findMany({
+      const courses = await prisma.course.findMany({
         where: {
           isDeleted: false,
           program: { isDeleted: false },
@@ -71,9 +71,11 @@ export async function getUserAccessibleCourses(userId: string, role: Role) {
         include: {
           program: { select: { id: true, name: true, slug: true } },
           _count: { select: { lessons: { where: { isDeleted: false } } } },
+          lessons: { where: { isDeleted: false }, select: { id: true } },
         },
         orderBy: [{ program: { name: 'asc' } }, { order: 'asc' }],
       });
+      return courses.map((c) => ({ ...c, lessonIds: c.lessons.map((l) => l.id) }));
     }
 
     // Gate 1: Get user's program memberships
@@ -99,6 +101,7 @@ export async function getUserAccessibleCourses(userId: string, role: Role) {
           include: {
             program: { select: { id: true, name: true, slug: true } },
             _count: { select: { lessons: { where: { isDeleted: false } } } },
+            lessons: { where: { isDeleted: false }, select: { id: true } },
           },
         },
       },
@@ -107,7 +110,8 @@ export async function getUserAccessibleCourses(userId: string, role: Role) {
     // Apply Gate 3: filter by CourseLevel based on role
     return enrollments
       .map((e) => e.course)
-      .filter((c) => canAccessCourseLevel(role, c.level as CourseLevel));
+      .filter((c) => canAccessCourseLevel(role, c.level as CourseLevel))
+      .map((c) => ({ ...c, lessonIds: c.lessons.map((l) => l.id) }));
   } catch {
     return [];
   }

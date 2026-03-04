@@ -15,6 +15,7 @@
 | Table | @tanstack/react-table | ^8.21.3 |
 | Date | date-fns + date-fns-tz | ^4.1.0 |
 | Email | Resend | ^4 |
+| Google Sheets | googleapis | ^4 |
 
 ## Application Architecture
 
@@ -157,6 +158,7 @@ supabase/
 | /api/cron/refresh-tokens | daily (6h) | CRON_SECRET |
 | /api/cron/process-message-queue | every 5min | CRON_SECRET |
 | /api/cron/weekly-report | Mon 8am | CRON_SECRET |
+| /api/cron/sync-google-sheets | every 15min | CRON_SECRET |
 
 All cron routes fail-closed: deny without CRON_SECRET env var.
 
@@ -166,11 +168,20 @@ The `check-overdue-reminders` cron handles 4 sections:
 3. Stale lead detection (via `find_stale_leads()` RPC)
 4. Trial class Zalo auto-reminder (24h before)
 
+The `sync-google-sheets` cron syncs 5 tabs one-way from Supabase to Google Sheets:
+1. Leads — lead records with current stage, source, advisor
+2. Học viên — enrolled students with status and renewal dates
+3. Hoạt động — all lead activities with types and timestamps
+4. Nhắc nhở — follow-up reminders with status and due dates
+5. Tổng quan — summary metrics (total leads, conversion rate, etc.)
+
 ## Environment Variables (New for Activities & Communication)
 | Variable | Purpose |
 |----------|---------|
 | `RESEND_API_KEY` | Resend email API key |
 | `EMAIL_FROM` | Sender email address (e.g., `noreply@luna.edu.vn`) |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | Google Service Account JSON key for Sheets API auth |
+| `GOOGLE_SHEET_ID` | Target Google Sheet ID for sync destination |
 
 ## Auth Flow
 1. User submits email/password on `/login`

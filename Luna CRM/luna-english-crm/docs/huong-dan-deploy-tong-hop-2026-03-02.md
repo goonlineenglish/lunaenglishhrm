@@ -1,6 +1,7 @@
 # Hướng dẫn Deploy Tổng hợp — Luna CRM cập nhật 2026-03-02
 
 > Gửi Antigravity team deploy. Tài liệu gộp tất cả thay đổi kể từ commit `e47736b` (bản đang chạy trên server).
+> Commits mới: `faa7ad7`, `58d2fe0`, `1dc568c`, `1955a78`
 
 ---
 
@@ -24,10 +25,11 @@
 ### C. Fix quyền Advisor
 - Advisor giờ có thể cập nhật trạng thái học sinh (trước đây chỉ Admin)
 
-### D. Tối ưu trang Học sinh (`/students`) — đang hoàn thiện
-- Thêm phân trang (Next/Prev)
-- Tìm kiếm server-side (nhanh hơn)
-- Cập nhật hàng loạt nhanh hơn (batch thay vì 1-by-1)
+### D. Tối ưu trang Học sinh (`/students`)
+- Thêm phân trang server-side 20 học sinh/trang (Next/Prev)
+- Tìm kiếm server-side qua DB (không còn load toàn bộ data về client)
+- Cập nhật hàng loạt nhanh hơn (batch query thay vì 1-by-1)
+- Memoize callbacks — tránh re-render thừa khi tick checkbox
 
 ---
 
@@ -133,8 +135,9 @@ Tự build khi push lên `main`. Không cần làm gì.
 - [ ] Checklist hiện: (1) Liên hệ lên lịch kiểm tra, (2) Gửi bài test, (3) Đánh giá kết quả
 
 ### 4.3 Trang Học sinh (`/students`)
-- [ ] Trang load không bị treo
-- [ ] Có nút phân trang Trước/Sau ở dưới bảng
+- [ ] Trang load không bị treo (không còn load toàn bộ data)
+- [ ] Có nút phân trang **Trước / Sau** ở dưới bảng, hiện "Trang X / Y · Z học sinh"
+- [ ] Gõ tên/SĐT vào ô tìm kiếm → kết quả từ server (không phải filter client)
 - [ ] Thay đổi trạng thái 1 học sinh → hoạt động bình thường
 - [ ] Đăng nhập bằng tài khoản Advisor → có thể đổi trạng thái học sinh
 

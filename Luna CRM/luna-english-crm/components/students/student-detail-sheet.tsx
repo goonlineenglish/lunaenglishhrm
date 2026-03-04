@@ -10,6 +10,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { StudentWithLead } from "@/lib/actions/student-actions";
 import { StudentDetailInfo } from "./student-detail-info";
+import { StudentLearningPathTab } from "./student-learning-path-tab";
+import { StudentAttendanceTab } from "./student-attendance-tab";
+import { StudentScoresTab } from "./student-scores-tab";
 
 interface Props {
   student: StudentWithLead | null;
@@ -34,9 +37,11 @@ export function StudentDetailSheet({ student, open, onClose, onRefresh }: Props)
         </SheetHeader>
 
         <Tabs defaultValue="info" className="mt-4 px-4">
-          <TabsList>
-            <TabsTrigger value="info">Thông tin</TabsTrigger>
-            <TabsTrigger value="lead">Lead gốc</TabsTrigger>
+          <TabsList className="w-full">
+            <TabsTrigger value="info" className="flex-1">Hồ sơ</TabsTrigger>
+            <TabsTrigger value="path" className="flex-1">Lộ trình</TabsTrigger>
+            <TabsTrigger value="attendance" className="flex-1">Điểm danh</TabsTrigger>
+            <TabsTrigger value="scores" className="flex-1">Điểm số</TabsTrigger>
           </TabsList>
           <TabsContent value="info" className="mt-4">
             <StudentDetailInfo
@@ -47,30 +52,17 @@ export function StudentDetailSheet({ student, open, onClose, onRefresh }: Props)
               }}
             />
           </TabsContent>
-          <TabsContent value="lead" className="mt-4">
-            {student.lead ? (
-              <div className="space-y-3 text-sm">
-                <InfoRow label="Tên học sinh" value={student.lead.student_name} />
-                <InfoRow label="Phụ huynh" value={student.lead.parent_name} />
-                <InfoRow label="SĐT" value={student.lead.parent_phone} />
-                <InfoRow label="Email" value={student.lead.parent_email} />
-                <InfoRow label="Nguồn" value={student.lead.source} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Không có lead liên kết</p>
-            )}
+          <TabsContent value="path" className="mt-4">
+            <StudentLearningPathTab studentId={student.id} />
+          </TabsContent>
+          <TabsContent value="attendance" className="mt-4">
+            <StudentAttendanceTab studentId={student.id} />
+          </TabsContent>
+          <TabsContent value="scores" className="mt-4">
+            <StudentScoresTab studentId={student.id} />
           </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value ?? "—"}</span>
-    </div>
   );
 }

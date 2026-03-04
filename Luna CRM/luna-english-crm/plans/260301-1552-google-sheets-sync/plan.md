@@ -1,6 +1,6 @@
 # Google Sheets Sync — 1-Way (Supabase → Sheets)
 
-**Status**: pending
+**Status**: complete
 **Created**: 2026-03-01
 **Scope**: Additive only — no changes to existing code
 

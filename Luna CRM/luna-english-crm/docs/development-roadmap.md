@@ -93,7 +93,32 @@
 - [x] Stage config settings UI (admin)
 - [x] New activity types: scheduled_call, trial_class, consultation, checklist
 
-## Next Steps (Unblocked)
+## Phase 11: Google Sheets Sync — COMPLETE
+- [x] Google Sheets API integration (googleapis v4)
+- [x] One-way Supabase → Sheets data sync
+- [x] 5-tab spreadsheet: Leads, Học viên, Hoạt động, Nhắc nhở, Tổng quan
+- [x] google-sheets-sync.ts module (tab creation, formatting, batch updates)
+- [x] Sync cron endpoint (15min schedule)
+- [x] Environment variables (GOOGLE_SERVICE_ACCOUNT_KEY, GOOGLE_SHEET_ID)
+- [x] Updated vercel.json with 5th cron
+
+## Phase 12: Student Data Hub Phase 1 — COMPLETE
+- [x] DB migration 034 (gap-fill for 029-033)
+- [x] Add `google_sheet` to `lead_source` enum
+- [x] Enforce `student_code` NOT NULL with backfill
+- [x] Create `sync_runs` table with UNIQUE partial index for concurrency guard
+- [x] Migrate legacy `secondary` → `secondary_basic`
+- [x] 9 new database tables (attendance_records, teacher_comments, student_scores, homework_records, learning_paths, learning_milestones, sheet_sync_snapshots, sync_runs, + 1 cascade delete tracking)
+- [x] Types module: student-hub-types.ts (AttendanceRecord, TeacherComment, StudentScore, LearningPath interfaces)
+- [x] Constants module: student-hub-constants.ts (PAYMENT_STATUS, PROGRAM_CONFIGS with 6 programs, ATTENDANCE_STATUS)
+- [x] Split student-actions.ts (398 lines) into 4 focused modules + barrel export
+- [x] 2-way Google Sheet sync (Sheets API inbound + outbound)
+- [x] Auto-create leads from Sheet (source='google_sheet', stage='da_dang_ky')
+- [x] Concurrency guard via sync_runs UNIQUE partial index (serverless-compatible)
+- [x] Enhanced student profile UI (7 new fields: DOB, gender, address, teacher, tuition, payment status, program)
+- [x] Student table: 3 new columns (Chương trình, GV phụ trách, Thanh toán)
+- [x] 4 new student detail tabs: Hồ sơ | Lộ trình học | Điểm danh | Điểm số
+- [x] npm run build ✓ clean, npm run lint ✓ clean, npm test ✓ 6/6 passing
 - [ ] Deploy to Vercel (connect GitHub, set env vars, verify cron)
 - [ ] Configure custom domain (if applicable)
 - [ ] (Optional) Middleware → proxy migration (Next.js 16 deprecation warning)

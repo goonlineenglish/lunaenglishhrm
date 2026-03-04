@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
+import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PROGRAM_CONFIGS } from "@/lib/constants/student-hub-constants";
 
 interface ColumnOptions {
   canEdit: boolean;
@@ -148,7 +149,33 @@ export function buildStudentColumns(opts: ColumnOptions): ColumnDef<StudentWithL
       cell: ({ row }) => (
         <RenewalCountdown levelEndDate={row.original.level_end_date} />
       ),
-    }
+    },
+    {
+      accessorKey: "program_type",
+      header: "Chương trình",
+      cell: ({ row }) => {
+        const pt = row.original.program_type;
+        return pt ? (PROGRAM_CONFIGS[pt as keyof typeof PROGRAM_CONFIGS]?.label ?? pt) : "—";
+      },
+    },
+    {
+      accessorKey: "teacher_name",
+      header: "GV phụ trách",
+      cell: ({ row }) => row.original.teacher_name ?? "—",
+    },
+    {
+      accessorKey: "payment_status",
+      header: "Thanh toán",
+      cell: ({ row }) => {
+        const ps = row.original.payment_status;
+        if (!ps) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span className={cn("px-2 py-0.5 rounded text-xs font-medium", PAYMENT_STATUS_COLORS[ps as keyof typeof PAYMENT_STATUS_COLORS] ?? "")}>
+            {PAYMENT_STATUS_LABELS[ps as keyof typeof PAYMENT_STATUS_LABELS] ?? ps}
+          </span>
+        );
+      },
+    },
   );
 
   return cols;

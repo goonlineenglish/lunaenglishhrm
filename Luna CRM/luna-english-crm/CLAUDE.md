@@ -246,3 +246,48 @@ Vietnamese user/deploy guides:
 - Primary: `#3E1A51` (deep purple) → oklch(0.28 0.12 310)
 - Secondary: `#3FA5DC` (blue) → oklch(0.65 0.14 230)
 - Sidebar: Dark purple background with blue accents
+
+## Next Development: Student Hub + Parent Reporting (v0.5.0)
+
+### Context
+- Approach A: CRM Hub — mở rộng Luna CRM làm trung tâm dữ liệu
+- Nguyên tắc: Tự động hóa tối đa, con người duyệt thông tin quan trọng
+- Quy mô: 50-200 HS, deploy trên Ubuntu homeserver (bật 24/7)
+- **Nguyên tắc vận hành + sơ đồ chi tiết**: `plans/student-hub-operation-principles.md`
+- Brainstorm report: `plans/reports/researcher-260304-1330-easycheck-crawling-feasibility.md`
+
+### Hệ sinh thái kết nối
+- **Luna CRM** (Supabase) — pipeline tuyển sinh, thông tin PH
+- **Google Sheet** — thông tin HS đã đăng ký (QL nhập)
+- **EasyCheck** (`quanly.easycheck.io.vn`) — web app GV nhập: điểm danh, nhận xét, điểm số, homework, học phí. Không có API/export → phải crawl bằng Puppeteer
+- **Phụ huynh** — nhận báo cáo qua Email + PDF + Web Portal (unique link, không cần login)
+
+### Chương trình Luna English (6 chương trình)
+| Chương trình | Độ tuổi | Cấu trúc | Đầu ra |
+|---|---|---|---|
+| Buttercup | 4-7 | 15 levels × 35 buổi (3th/level) | Pre-A1 Cambridge |
+| TH cơ bản (BGD + Academy Stars) | 7-10 | 3 khối × 70 lessons + 4 levels × 65 lessons | Điểm 8+ ở trường |
+| Primary Success | 7-10 | Lv1 (100 buổi) + Lv2 (150 buổi) | A1-A2 Cambridge |
+| TH cơ bản (BGD) | 11-18 | 4 khối × 70 lessons | Vững ngữ pháp THCS |
+| TH nâng cao (Prepare) | 11-18 | 4 levels × 70 lessons | A2-B1 KET/PET |
+| IELTS | 15+ | Cambridge Guide | 6.5+ IELTS |
+
+### 4 Phases
+| # | Phase | Mô tả |
+|---|---|---|
+| 1 | **Student Data Hub** | Supabase schema mới (attendance_records, teacher_comments, student_scores, fee_records, learning_paths, learning_milestones, parent_reports, parent_portal_tokens). Student profile UI tổng hợp |
+| 2 | **Ubuntu Cron + Crawlers** | EasyCheck Puppeteer crawler (23:00 daily) + Google Sheet bi-directional sync. Standalone Node scripts, systemd timers trên Ubuntu. Alert email nếu crawler fail |
+| 3 | **AI Engine + Alerts** | Gemini/Claude API: phân tích tiến độ, draft nhận xét cho GV duyệt, cảnh báo sớm (vắng 3 buổi, điểm giảm, homework trễ). GV/QL approve UI |
+| 4 | **Parent Reporting** | Auto weekly email (Sun 20:00) + monthly report (28th). PDF export. Parent Portal `/parent/[token]`. Approval workflow cho QL duyệt trước khi gửi |
+
+### Automation vs Human Approval
+- **Auto**: crawl EasyCheck, sync Sheet, tính điểm danh %, tính tiến độ level, tổng hợp điểm TB, gửi báo cáo tuần, tạo PDF, cập nhật portal, nhắc GV nhập nhận xét, AI phân tích + đề xuất
+- **Human**: GV duyệt/sửa nhận xét AI draft, QL duyệt báo cáo tháng trước khi gửi PH, điều chỉnh lộ trình đặc biệt, xử lý case bất thường
+
+### Risks
+- EasyCheck UI thay đổi → crawler vỡ (mitigate: monitor + alert, fallback manual input form)
+- EasyCheck block IP/session (mitigate: crawl 1 lần/ngày, delay giữa requests)
+
+### Report Templates
+- **Weekly**: điểm danh tuần, nhận xét GV, điểm kiểm tra, homework, tiến độ level
+- **Monthly**: tổng hợp tháng, đánh giá 4 kỹ năng (Nghe/Nói/Đọc/Viết) vs target, so sánh tháng trước, nhận xét tổng hợp GV, lộ trình journey map, học phí

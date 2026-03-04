@@ -12,6 +12,13 @@ import { updateStudent } from "@/lib/actions/student-actions";
 import type { StudentWithLead } from "@/lib/actions/student-actions";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
+import {
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUS_COLORS,
+  GENDER_LABELS,
+  PROGRAM_CONFIGS,
+} from "@/lib/constants/student-hub-constants";
+import { cn } from "@/lib/utils";
 
 interface Props {
   student: StudentWithLead;
@@ -119,6 +126,45 @@ export function StudentDetailInfo({ student, onUpdated }: Props) {
               </span>
               <RenewalCountdown levelEndDate={student.level_end_date} />
             </div>
+          )}
+        </FieldRow>
+        <FieldRow label="Ngày sinh" editing={false}>
+          <span>
+            {student.date_of_birth
+              ? format(parseISO(student.date_of_birth), "dd/MM/yyyy")
+              : "—"}
+          </span>
+        </FieldRow>
+        <FieldRow label="Giới tính" editing={false}>
+          <span>{student.gender ? (GENDER_LABELS[student.gender] ?? student.gender) : "—"}</span>
+        </FieldRow>
+        <FieldRow label="Địa chỉ" editing={false}>
+          <span>{student.address ?? "—"}</span>
+        </FieldRow>
+        <FieldRow label="Chương trình" editing={false}>
+          <span>
+            {student.program_type
+              ? (PROGRAM_CONFIGS[student.program_type as keyof typeof PROGRAM_CONFIGS]?.label ?? student.program_type)
+              : "—"}
+          </span>
+        </FieldRow>
+        <FieldRow label="GV phụ trách" editing={false}>
+          <span>{student.teacher_name ?? "—"}</span>
+        </FieldRow>
+        <FieldRow label="Học phí" editing={false}>
+          <span>
+            {student.tuition_amount != null
+              ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(student.tuition_amount)
+              : "—"}
+          </span>
+        </FieldRow>
+        <FieldRow label="Trạng thái TT" editing={false}>
+          {student.payment_status ? (
+            <span className={cn("px-2 py-0.5 rounded text-xs font-medium", PAYMENT_STATUS_COLORS[student.payment_status as keyof typeof PAYMENT_STATUS_COLORS] ?? "")}>
+              {PAYMENT_STATUS_LABELS[student.payment_status as keyof typeof PAYMENT_STATUS_LABELS] ?? student.payment_status}
+            </span>
+          ) : (
+            <span>—</span>
           )}
         </FieldRow>
       </div>

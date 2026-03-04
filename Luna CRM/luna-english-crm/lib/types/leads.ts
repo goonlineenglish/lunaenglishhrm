@@ -4,7 +4,8 @@ export type LeadSource =
   | "walk_in"
   | "website"
   | "phone"
-  | "referral";
+  | "referral"
+  | "google_sheet";
 
 export type LeadStage =
   | "moi_tiep_nhan"
@@ -18,8 +19,11 @@ export type LeadStage =
 
 export type ProgramType =
   | "buttercup"
+  | "primary_basic"
   | "primary_success"
   | "secondary"
+  | "secondary_basic"
+  | "secondary_advanced"
   | "ielts";
 
 export type LeadActivityType =

@@ -11,6 +11,70 @@
 
 ---
 
+## [0.5.0] - 2026-03-04
+
+### Added — Student Data Hub Phase 1
+- **Database Gap-Fill Migration 034**: Fills schema gaps from 029-033. Adds `google_sheet` to `lead_source` enum, migrates legacy `secondary`→`secondary_basic`, enforces `student_code` NOT NULL with backfill, creates `sync_runs` table with UNIQUE partial index for serverless-compatible concurrency guard
+- **9 New Database Tables** (across migrations 029-034): `attendance_records`, `teacher_comments`, `student_scores`, `homework_records`, `learning_paths`, `learning_milestones`, `sheet_sync_snapshots`, `sync_runs` + cascade delete tracking
+- **Types & Constants Module**:
+  - `lib/types/student-hub-types.ts` — AttendanceRecord, TeacherComment, StudentScore, HomeworkRecord, StudentNote, LearningPath, LearningMilestone interfaces
+  - `lib/constants/student-hub-constants.ts` — PAYMENT_STATUS_LABELS, ATTENDANCE_STATUS_LABELS, 6 PROGRAM_CONFIGS (Buttercup, TH basic BGD, Primary Success, TH nâng cao, IELTS), GENDER_OPTIONS
+- **Student Actions Refactor**: Split 398-line student-actions.ts into 4 focused modules + barrel export
+  - `lib/actions/student-crud-actions.ts` — getStudents, createStudent, updateStudent (now with 8 new fields)
+  - `lib/actions/student-status-actions.ts` — changeStudentStatus, bulkChangeStudentStatus
+  - `lib/actions/student-import-actions.ts` — importStudentsCSV
+  - `lib/actions/student-learning-actions.ts` — getLearningPath, upsertLearningPath, addMilestone
+- **2-Way Google Sheets Sync** (upgraded from 1-way):
+  - `lib/integrations/google-sheets-sync-utils.ts` — sheetsClient, STUDENT_COLUMN_MAP (16 columns), diffRows algorithm, acquireSyncLock/releaseSyncLock using sync_runs UNIQUE partial index
+  - `lib/integrations/google-sheets-inbound-sync.ts` — Sheet→CRM with auto-lead-creation (source='google_sheet', stage='da_dang_ky') when no matching lead found
+  - `lib/integrations/google-sheets-outbound-sync.ts` — CRM→Sheet + fixed studentsRows bug (now uses JOIN with leads table)
+  - `lib/integrations/google-sheets-sync.ts` — orchestrator with concurrency guard (sync_runs lock), 2-way flow
+- **Enhanced Student Profile UI**:
+  - Updated `components/students/student-detail-info.tsx` — displays 7 new fields: DOB (Ngày sinh), gender (Giới tính), address (Địa chỉ), teacher (GV phụ trách), tuition (Học phí), payment_status (Trạng thái thanh toán), program_type (Chương trình)
+  - Updated `components/students/student-detail-sheet.tsx` — 4 tabs: Hồ sơ | Lộ trình học | Điểm danh | Điểm số
+  - Created `components/students/student-learning-path-tab.tsx` — level/session progress visualization with milestones
+  - Created `components/students/student-attendance-tab.tsx` — attendance records table (placeholder for Phase 2 crawler data)
+  - Created `components/students/student-scores-tab.tsx` — scores + homework tables (placeholder for Phase 2 crawler data)
+  - Updated `components/students/student-columns.tsx` — added 3 new data columns: Chương trình (program_type), GV phụ trách (teacher), Thanh toán (payment_status)
+
+### Improvements
+- Concurrency guard implementation: `sync_runs` UNIQUE partial index (`WHERE status='running'`) eliminates advisory lock dependency (serverless-compatible)
+- Sheet sync stale run detection: Runs older than 10 minutes auto-timeout via cron check
+- Inbound sync: Smart lead matching on full name + phone to prevent duplicates
+
+### Testing & Quality
+- `npm run lint` — ✓ clean (no errors)
+- `npm run build` — ✓ clean (19 routes, all dependencies resolved)
+- `npm test` — ✓ 6/6 tests passing
+
+### Migration Data
+- Migration 034 backfill: All existing students get generated `student_code` (UUID prefix + sequential number) if missing
+- `secondary` program_interest → `secondary_basic` for backward compatibility
+
+### Documentation
+- Updated roadmap with Phase 12 completion details
+- New operation principles doc: `plans/student-hub-operation-principles.md`
+- Phase 1 implementation plan: `plans/260304-1631-student-data-hub-phase1/`
+
+---
+
+## [0.4.1] - 2026-03-02
+
+### Added — Google Sheets Sync
+- **Google Sheets Integration**: One-way data sync from Supabase → Google Sheets (15min cron)
+- **5-Tab Spreadsheet**: Leads, Học viên, Hoạt động, Nhắc nhở, Tổng quan tabs auto-populated
+- **google-sheets-sync.ts**: Core sync module (170 lines) handling tab creation, data formatting, batch updates
+- **Sync Cron Route**: `/api/cron/sync-google-sheets` endpoint (23 lines)
+- **Environment Variables**: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_SHEET_ID` required for operation
+
+### Dependencies
+- `googleapis` (Google Sheets API v4 client)
+
+### Infrastructure
+- Updated `vercel.json` with 5th cron schedule (sync-google-sheets every 15min)
+
+---
+
 ## [0.4.0] - 2026-02-28
 
 ### Added — Docker/Caddy Deployment + Security Hardening

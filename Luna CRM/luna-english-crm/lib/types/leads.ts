@@ -64,6 +64,7 @@ export interface Lead {
   lost_reason: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export type ActivityStatus = "pending" | "completed" | "cancelled";

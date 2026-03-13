@@ -97,7 +97,31 @@ supabase/
 └── seed.sql                # 10 sample leads
 ```
 
-## Database Schema (24 migrations)
+## Database Schema (35 migrations)
+
+### Soft Delete (Migration 035)
+Soft delete pattern implemented across 4 tables using `deleted_at TIMESTAMPTZ DEFAULT NULL`:
+
+**Affected Tables**: leads, students, lead_activities, lead_stage_notes
+
+**Architecture**:
+- Partial indexes (idx_leads_active, idx_students_active, idx_lead_activities_active) for fast active-record queries
+- RLS policies: advisor/marketing roles auto-filter `WHERE deleted_at IS NULL`
+- Admin queries use getAdminClient() to bypass RLS and view trash
+- Database cascade trigger: soft-deleting a lead auto-cascades delete_at to all child activities + stage notes
+- Restore uses timestamp matching (restores only items cascade-deleted at same time as parent) to maintain data integrity
+- Dashboard views updated: lead_funnel, lead_source_breakdown, advisor_performance, monthly_lead_trend filter `deleted_at IS NULL`
+- find_stale_leads() RPC excludes soft-deleted leads
+
+**Permissions**:
+- Admin: full delete + restore access; sees all records in `/trash` (3 tabs: leads, students, activities)
+- Advisor: can delete own leads + own activities; cannot restore
+- Marketing: no delete access
+
+**UI Components**:
+- DeleteConfirmationDialog (shared): reusable confirmation modal for all delete operations
+- /trash page: admin-only trash view with tabbed interface
+- 3 trash tables (DeletedLeadsTable, DeletedStudentsTable, DeletedActivitiesTable): restore buttons + deletion timestamps
 
 ### Core Tables (8)
 | Table | Rows | RLS | Trigger |

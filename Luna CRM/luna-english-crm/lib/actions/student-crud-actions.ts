@@ -42,7 +42,8 @@ export async function getStudents(filters: StudentFilters = {}): Promise<Paginat
     .select(
       "*, lead:leads(student_name, parent_name, parent_phone, parent_email, source)",
       { count: "exact" }
-    );
+    )
+    .is("deleted_at", null);
 
   if (status) query = query.eq("status", status);
   if (current_class) query = query.eq("current_class", current_class);
@@ -144,6 +145,7 @@ export async function updateStudent(
       .from("students")
       .update(data)
       .eq("id", id)
+      .is("deleted_at", null)
       .select()
       .single();
 

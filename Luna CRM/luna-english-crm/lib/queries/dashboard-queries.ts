@@ -58,6 +58,7 @@ export async function queryTotalLeads(
   const { count } = await supabase
     .from("leads")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .gte("created_at", dateRange.from.toISOString())
     .lte("created_at", dateRange.to.toISOString());
   return count ?? 0;
@@ -70,12 +71,14 @@ export async function queryConversionRate(
   const { count: total } = await supabase
     .from("leads")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .gte("created_at", dateRange.from.toISOString())
     .lte("created_at", dateRange.to.toISOString());
 
   const { count: converted } = await supabase
     .from("leads")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("current_stage", "da_dang_ky")
     .gte("created_at", dateRange.from.toISOString())
     .lte("created_at", dateRange.to.toISOString());
@@ -91,6 +94,7 @@ export async function queryAvgResponseTime(
   const { data } = await supabase
     .from("lead_activities")
     .select("lead_id, created_at")
+    .is("deleted_at", null)
     .in("type", ["call", "message"])
     .gte("created_at", dateRange.from.toISOString())
     .lte("created_at", dateRange.to.toISOString())
@@ -101,6 +105,7 @@ export async function queryAvgResponseTime(
   const { data: leads } = await supabase
     .from("leads")
     .select("id, created_at")
+    .is("deleted_at", null)
     .gte("created_at", dateRange.from.toISOString())
     .lte("created_at", dateRange.to.toISOString());
 
@@ -140,6 +145,7 @@ export async function queryActiveStudents(
   const { count } = await supabase
     .from("students")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("status", "active");
   return count ?? 0;
 }
@@ -189,6 +195,7 @@ export async function queryMonthlyTrend(
   const { data: enrolledData } = await supabase
     .from("leads")
     .select("created_at")
+    .is("deleted_at", null)
     .eq("current_stage", "da_dang_ky");
 
   const enrolledByMonth = new Map<string, number>();

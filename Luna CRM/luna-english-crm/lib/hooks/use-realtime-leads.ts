@@ -41,6 +41,11 @@ export function useRealtimeLeads(initialLeads: LeadWithAssignee[]) {
         { event: "UPDATE", schema: "public", table: "leads" },
         (payload) => {
           const updated = payload.new as LeadWithAssignee;
+          // Soft-deleted leads should be removed from the list
+          if (updated.deleted_at) {
+            setLeads((prev) => prev.filter((l) => l.id !== updated.id));
+            return;
+          }
           setLeads((prev) =>
             prev.map((l) =>
               l.id === updated.id ? { ...l, ...updated } : l

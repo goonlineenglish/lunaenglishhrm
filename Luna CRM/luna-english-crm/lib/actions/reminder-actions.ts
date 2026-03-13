@@ -217,6 +217,7 @@ export async function searchLeads(searchTerm: string) {
     const { data, error } = await supabase
       .from("leads")
       .select("id, parent_name, student_name, parent_phone")
+      .is("deleted_at", null)
       .or(
         `parent_name.ilike.%${escaped}%,student_name.ilike.%${escaped}%,parent_phone.ilike.%${escaped}%`
       )

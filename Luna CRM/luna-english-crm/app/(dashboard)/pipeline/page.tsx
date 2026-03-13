@@ -29,10 +29,11 @@ export default async function PipelinePage() {
 
   const role = (profile?.role as UserRole) ?? "advisor";
 
-  // Fetch leads with assigned user join
+  // Fetch leads with assigned user join (exclude soft-deleted)
   const { data: leads } = await supabase
     .from("leads")
     .select("*, users:assigned_to(full_name)")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   // Fetch advisors list for assignment

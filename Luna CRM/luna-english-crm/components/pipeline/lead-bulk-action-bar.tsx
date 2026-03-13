@@ -3,8 +3,9 @@
 import { useState } from "react";
 import type { LeadStage } from "@/lib/types/leads";
 import { PIPELINE_STAGES } from "@/lib/constants/pipeline-stages";
-import { bulkUpdateLeadStage } from "@/lib/actions/lead-actions";
+import { bulkUpdateLeadStage, deleteLead } from "@/lib/actions/lead-actions";
 import { StatusChangeConfirmationDialog } from "@/components/shared/status-change-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeadBulkActionBarProps {
@@ -26,6 +27,7 @@ interface LeadBulkActionBarProps {
 export function LeadBulkActionBar({ selectedIds, onClearSelection, onDone }: LeadBulkActionBarProps) {
   const [selectedStage, setSelectedStage] = useState<LeadStage | "">("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleApply(reason?: string) {
@@ -61,6 +63,25 @@ export function LeadBulkActionBar({ selectedIds, onClearSelection, onDone }: Lea
     }
   }
 
+  async function handleBulkDelete() {
+    setLoading(true);
+    let ok = 0;
+    let fail = 0;
+    for (const id of selectedIds) {
+      const result = await deleteLead(id);
+      if (result.error) fail++;
+      else ok++;
+    }
+    setLoading(false);
+    setDeleteOpen(false);
+    if (fail === 0) {
+      toast.success(`Đã xóa ${ok} lead`);
+    } else {
+      toast.warning(`${ok} thành công, ${fail} thất bại`);
+    }
+    onDone();
+  }
+
   if (selectedIds.length === 0) return null;
 
   return (
@@ -88,6 +109,17 @@ export function LeadBulkActionBar({ selectedIds, onClearSelection, onDone }: Lea
           <Button size="sm" disabled={!selectedStage || loading} onClick={handleSubmit}>
             {loading ? "Đang xử lý..." : "Áp dụng"}
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            disabled={loading}
+            onClick={() => setDeleteOpen(true)}
+            title="Xóa hàng loạt"
+          >
+            <Trash2 className="mr-1 size-4" />
+            Xóa
+          </Button>
           <Button size="sm" variant="ghost" onClick={onClearSelection}>
             <X className="size-4" />
           </Button>
@@ -102,6 +134,15 @@ export function LeadBulkActionBar({ selectedIds, onClearSelection, onDone }: Lea
         requireReason
         loading={loading}
         onConfirm={(reason) => handleApply(reason)}
+      />
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Xóa lead hàng loạt"
+        description={`Bạn có chắc muốn xóa ${selectedIds.length} lead? Dữ liệu sẽ được chuyển vào thùng rác.`}
+        onConfirm={handleBulkDelete}
+        loading={loading}
       />
     </>
   );

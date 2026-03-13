@@ -72,6 +72,7 @@ export async function getActivities(leadId: string) {
     .from("lead_activities")
     .select("*")
     .eq("lead_id", leadId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -102,6 +103,7 @@ export async function getStageChecklist(leadId: string, stage: string) {
     .select("*")
     .eq("lead_id", leadId)
     .eq("type", "checklist")
+    .is("deleted_at", null)
     .filter("metadata->>stage", "eq", stage)
     .order("created_at", { ascending: true });
 
@@ -129,11 +131,12 @@ export async function toggleChecklistItem(
     return { error: "Chưa đăng nhập" };
   }
 
-  // Fetch activity to verify ownership via lead
+  // Fetch activity to verify ownership via lead (exclude soft-deleted)
   const { data: activity, error: fetchErr } = await supabase
     .from("lead_activities")
     .select("id, lead_id, metadata")
     .eq("id", activityId)
+    .is("deleted_at", null)
     .single();
 
   if (fetchErr || !activity) {

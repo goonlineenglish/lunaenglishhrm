@@ -12,6 +12,7 @@ import {
   GraduationCap,
   BarChart3,
   Settings,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ const ICON_MAP: Record<NavIconName, LucideIcon> = {
   GraduationCap,
   BarChart3,
   Settings,
+  Trash2,
 };
 
 interface SidebarNavItemsProps {

@@ -22,6 +22,7 @@ export async function getStageNotes(
     .from("lead_stage_notes")
     .select("*")
     .eq("lead_id", leadId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {

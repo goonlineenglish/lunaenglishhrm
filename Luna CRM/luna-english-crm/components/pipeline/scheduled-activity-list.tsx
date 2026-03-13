@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateActivityStatus } from "@/lib/actions/scheduled-activity-actions";
+import { softDeleteActivity } from "@/lib/actions/soft-delete-actions";
 import type { LeadActivity } from "@/lib/types/leads";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   Check,
   X,
   Mail,
+  Trash2,
 } from "lucide-react";
 
 const VN_TZ = "Asia/Ho_Chi_Minh";
@@ -93,6 +95,18 @@ export function ScheduledActivityList({
       return;
     }
     toast.success(status === "completed" ? "Đã hoàn thành" : "Đã hủy");
+    onStatusChanged();
+  }
+
+  async function handleDelete(id: string) {
+    setUpdatingId(id);
+    const result = await softDeleteActivity(id);
+    setUpdatingId(null);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Đã xóa hoạt động");
     onStatusChanged();
   }
 
@@ -200,6 +214,16 @@ export function ScheduledActivityList({
                   onClick={() => handleStatus(activity.id, "cancelled")}
                 >
                   <X className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-destructive"
+                  title="Xóa"
+                  disabled={updatingId === activity.id}
+                  onClick={() => handleDelete(activity.id)}
+                >
+                  <Trash2 className="size-3.5" />
                 </Button>
               </div>
             )}

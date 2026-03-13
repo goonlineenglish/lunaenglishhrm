@@ -12,12 +12,13 @@ export async function GET(request: Request) {
 
   const supabase = getAdminClient();
 
-  // Find overdue pending reminders
+  // Find overdue pending reminders (exclude reminders for soft-deleted leads)
   const { data: overdueReminders, error: fetchError } = await supabase
     .from("follow_up_reminders")
-    .select("id, lead_id, type, assigned_to, remind_at, leads(parent_name, student_name)")
+    .select("id, lead_id, type, assigned_to, remind_at, leads!inner(parent_name, student_name, deleted_at)")
     .eq("status", "pending")
-    .lt("remind_at", new Date().toISOString());
+    .lt("remind_at", new Date().toISOString())
+    .is("leads.deleted_at", null);
 
   if (fetchError) {
     console.error("Failed to fetch overdue reminders:", fetchError.message);
@@ -116,6 +117,7 @@ export async function GET(request: Request) {
     .select("id, lead_id, schedule_to, metadata")
     .eq("type", "trial_class")
     .eq("status", "pending")
+    .is("deleted_at", null)
     .gte("schedule_to", tomorrowStart.toISOString())
     .lte("schedule_to", tomorrowEnd.toISOString());
 
@@ -146,6 +148,7 @@ export async function GET(request: Request) {
           .from("leads")
           .select("parent_name, student_name")
           .eq("id", activity.lead_id)
+          .is("deleted_at", null)
           .single();
 
         if (!lead) continue;
@@ -217,6 +220,7 @@ export async function GET(request: Request) {
     .from("lead_activities")
     .select("id, lead_id, title, type, schedule_to, leads!inner(parent_name, student_name, assigned_to)")
     .eq("status", "pending")
+    .is("deleted_at", null)
     .not("schedule_to", "is", null)
     .lte("schedule_to", in24h.toISOString())
     .gt("schedule_to", new Date().toISOString());

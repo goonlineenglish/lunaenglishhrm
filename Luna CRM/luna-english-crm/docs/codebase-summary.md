@@ -2,13 +2,13 @@
 
 ## Stats
 - **Framework**: Next.js 16.1.6 (App Router, TypeScript strict)
-- **Components**: 84 files (19 UI base + 65 feature)
-- **Pages**: 8 (login, pipeline, reminders, students, activities, reports, settings, + leads redirect)
+- **Components**: 87 files (19 UI base + 68 feature)
+- **Pages**: 9 (login, pipeline, reminders, students, activities, reports, settings, trash, + leads redirect)
 - **API Routes**: 7 routes (2 webhooks for Zalo/Facebook + 5 cron endpoints)
-- **Server Actions**: 19 files (auth, lead, reminder, student-crud, student-status, student-import, student-learning, activity, notification, dashboard, integration, message, stage-notes, scheduled-activity, checklist, email, zalo-message, ensure-user-profile, + barrel)
+- **Server Actions**: 20 files (auth, lead, reminder, student-crud, student-status, student-import, student-learning, activity, notification, dashboard, integration, message, stage-notes, scheduled-activity, checklist, email, zalo-message, soft-delete, ensure-user-profile, + barrel)
 - **Hooks**: 3 (use-realtime-leads, use-optimistic-kanban, use-realtime-notifications)
 - **Integrations**: 12 files (Zalo client, Facebook client, Zalo webhook handler, Facebook webhook handler, message queue processor, message queue backoff, webhook idempotency, google-sheets-sync, google-sheets-sync-utils, google-sheets-inbound-sync, google-sheets-outbound-sync)
-- **Database**: 34 SQL migrations (001-034), seed data, RLS policies
+- **Database**: 35 SQL migrations (001-035), seed data, RLS policies, soft delete cascade trigger
 - **Dashboard Views**: 4 (lead_funnel, lead_source_breakdown, advisor_performance, monthly_lead_trend)
 
 ## File Inventory
@@ -29,6 +29,8 @@
 **Layout (8)**: sidebar, sidebar-nav-items, sidebar-mobile, header, user-menu, notification-bell, notification-dropdown, notification-item
 
 **Auth (1)**: login-form
+
+**Trash (4)**: delete-confirmation-dialog, deleted-leads-table, deleted-students-table, deleted-activities-table
 
 ### Server Actions (lib/actions/)
 | File | Queries |
@@ -52,6 +54,7 @@
 | checklist-actions | getStageChecklist, toggleChecklistItem, getChecklistProgress |
 | email-actions | sendLeadEmail, getEmailTemplates, previewEmailTemplate |
 | zalo-message-actions | sendZaloMessage, getZaloTemplates, previewZaloTemplate |
+| soft-delete-actions | softDeleteStudent, restoreStudent, softDeleteActivity, restoreActivity, getDeletedLeads, getDeletedStudents, getDeletedActivities |
 
 ### Hooks (lib/hooks/)
 | Hook | Purpose |

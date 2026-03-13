@@ -80,6 +80,7 @@ async function lookupZaloUid(
     const { data: phoneLeads } = await supabase
       .from("leads")
       .select("id")
+      .is("deleted_at", null)
       .or(
         `parent_phone.eq.${normalized},parent_phone.eq.${normalized.replace("+84", "0")}`
       );
@@ -115,6 +116,7 @@ export async function checkZaloConnection(
     .from("leads")
     .select("parent_phone")
     .eq("id", leadId)
+    .is("deleted_at", null)
     .single();
 
   const zaloUid = await lookupZaloUid(supabase, leadId, lead?.parent_phone ?? null);
@@ -144,6 +146,7 @@ export async function sendZaloTemplateMessage(
     .from("leads")
     .select("id, parent_name, student_name, parent_phone, current_stage")
     .eq("id", leadId)
+    .is("deleted_at", null)
     .single();
 
   if (leadError || !lead) {

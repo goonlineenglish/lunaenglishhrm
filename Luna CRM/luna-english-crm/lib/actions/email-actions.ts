@@ -88,6 +88,7 @@ export async function sendLeadEmail(
     .from("leads")
     .select("id, parent_name, parent_email")
     .eq("id", leadId)
+    .is("deleted_at", null)
     .single();
 
   if (leadErr || !lead) {
@@ -149,6 +150,7 @@ export async function getLeadTemplateVars(
     .from("leads")
     .select("parent_name, student_name, parent_email, parent_phone")
     .eq("id", leadId)
+    .is("deleted_at", null)
     .single();
 
   if (!lead) return { error: "Không tìm thấy lead" };

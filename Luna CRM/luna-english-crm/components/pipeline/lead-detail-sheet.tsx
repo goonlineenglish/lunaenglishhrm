@@ -13,13 +13,16 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
+import { Mail, Trash2 } from "lucide-react";
 import { LeadDetailInfo } from "@/components/pipeline/lead-detail-info";
 import { LeadDetailActivities } from "@/components/pipeline/lead-detail-activities";
 import { LeadDetailReminders } from "@/components/pipeline/lead-detail-reminders";
 import { LeadDetailZalo } from "@/components/pipeline/lead-detail-zalo";
 import { LeadStageNotesPanel } from "@/components/pipeline/lead-stage-notes-panel";
 import { SendEmailDialog } from "@/components/pipeline/send-email-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { deleteLead } from "@/lib/actions/lead-actions";
+import { toast } from "sonner";
 
 interface Advisor {
   id: string;
@@ -45,6 +48,23 @@ export function LeadDetailSheet({
   onLeadUpdated,
 }: LeadDetailSheetProps) {
   const [emailOpen, setEmailOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const canDelete = userRole === "admin" || userRole === "advisor";
+
+  async function handleDelete() {
+    if (!lead) return;
+    setDeleteLoading(true);
+    const result = await deleteLead(lead.id);
+    setDeleteLoading(false);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Đã xóa lead");
+      setDeleteOpen(false);
+      onOpenChange(false);
+    }
+  }
 
   if (!lead) return null;
 
@@ -57,15 +77,28 @@ export function LeadDetailSheet({
               <SheetTitle>{lead.parent_name}</SheetTitle>
               <SheetDescription>{lead.parent_phone}</SheetDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEmailOpen(true)}
-              title="Gửi Email"
-            >
-              <Mail className="mr-1.5 size-4" />
-              Gửi Email
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEmailOpen(true)}
+                title="Gửi Email"
+              >
+                <Mail className="mr-1.5 size-4" />
+                Gửi Email
+              </Button>
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                  title="Xóa lead"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </SheetHeader>
         <div className="mt-4 px-4">
@@ -124,6 +157,15 @@ export function LeadDetailSheet({
           parentEmail={lead.parent_email}
           open={emailOpen}
           onOpenChange={setEmailOpen}
+        />
+
+        <DeleteConfirmationDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title="Xóa lead"
+          description={`Bạn có chắc muốn xóa lead "${lead.parent_name}"? Dữ liệu sẽ được chuyển vào thùng rác.`}
+          onConfirm={handleDelete}
+          loading={deleteLoading}
         />
       </SheetContent>
     </Sheet>

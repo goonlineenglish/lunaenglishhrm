@@ -243,6 +243,7 @@ export function StudentDataTable({
         open={!!selectedStudent}
         onClose={() => setSelectedStudent(null)}
         onRefresh={onRefresh}
+        userRole={userRole}
       />
     </div>
   );

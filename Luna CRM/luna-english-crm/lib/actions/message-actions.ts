@@ -44,6 +44,7 @@ export async function sendZaloMessage(
       .from("leads")
       .select("parent_phone")
       .eq("id", leadId)
+      .is("deleted_at", null)
       .single();
 
     if (lead?.parent_phone) {
@@ -51,6 +52,7 @@ export async function sendZaloMessage(
       const { data: phoneLeads } = await supabase
         .from("leads")
         .select("id")
+        .is("deleted_at", null)
         .or(
           `parent_phone.eq.${normalized},parent_phone.eq.${normalized.replace("+84", "0")}`
         );

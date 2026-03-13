@@ -55,13 +55,16 @@ CRON_CONTENT=$(cat <<EOF
 
 # Weekly report - Monday 01:00 UTC (8:00 AM UTC+7)
 0 1 * * 1 curl -sf --max-time 60 -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/weekly-report >> $LOG_DIR/weekly-report.log 2>&1
+
+# Sync Google Sheets - every 15 minutes
+*/15 * * * * curl -sf --max-time 30 -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/sync-google-sheets >> $LOG_DIR/sheets-sync.log 2>&1
 EOF
 )
 
 # Preserve existing crontab, append Luna CRM jobs
 # grep -v exits 1 when no lines match (e.g. first install with empty crontab);
 # || true prevents set -e from aborting the subshell before the new entries are written.
-(crontab -l 2>/dev/null | grep -v "luna-crm\|Luna English CRM\|process-message-queue\|check-overdue-reminders\|refresh-tokens\|weekly-report" || true; echo "$CRON_CONTENT") | crontab -
+(crontab -l 2>/dev/null | grep -v "luna-crm\|Luna English CRM\|process-message-queue\|check-overdue-reminders\|refresh-tokens\|weekly-report\|sync-google-sheets" || true; echo "$CRON_CONTENT") | crontab -
 
 echo "Cron jobs installed. Verify with: crontab -l"
 echo "Logs at: $LOG_DIR/"

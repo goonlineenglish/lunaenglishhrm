@@ -8,6 +8,7 @@
 - (Optional) Middleware → proxy migration (Next.js 16 deprecation warning)
 - (Optional) Rate limiting on webhook endpoints
 - (Optional) Admin UI for email/Zalo template management
+- (Optional) Hard-delete purge feature (admin-only, deferred phase)
 
 ---
 
@@ -55,6 +56,43 @@
 - Updated roadmap with Phase 12 completion details
 - New operation principles doc: `plans/student-hub-operation-principles.md`
 - Phase 1 implementation plan: `plans/260304-1631-student-data-hub-phase1/`
+
+---
+
+## [0.4.2] - 2026-03-04
+
+### Added — Soft Delete Strategy
+- **Database Migration 035**: Adds `deleted_at TIMESTAMPTZ` columns to 4 tables (leads, students, lead_activities, lead_stage_notes) with RLS policy updates, cascade trigger (soft-deleting lead cascades to activities + stage notes), and partial indexes (speed up IS NULL queries)
+- **Server Actions**:
+  - New `lib/actions/soft-delete-actions.ts` — deleteLead, deleteStudent, deleteActivity, deleteStageNote, restoreLead, restoreStudent, restoreActivity, restoreStageNote (admin-only)
+  - Updated `lib/actions/lead-actions.ts` — deleteLead now soft-deletes with role/ownership check (advisor owns → can delete own; admin → can delete any)
+  - Updated 7 action files with `deleted_at IS NULL` filters: email-actions, message-actions, zalo-message-actions, reminder-actions, student-learning-actions, stage-notes-actions, scheduled-activity-actions
+- **UI Components**:
+  - New `components/shared/delete-confirmation-dialog.tsx` — generic delete dialog with undo/restore preview
+  - New `/admin/trash` route — admin-only trash page with 3 tabs (Leads, Học viên, Activities) showing soft-deleted records + restore/purge buttons
+  - Updated lead/student/activity detail sheets — add delete buttons (trash icon) with confirmation
+  - Updated lead/student cards — add right-click context menu option for delete
+- **Security**:
+  - Role-based deletion: advisor can delete own records (via `advisor_id` check), admin can delete any record
+  - RLS policy updates: All SELECT policies filter `deleted_at IS NULL` by default
+  - Restored records: Reappear in normal queries automatically
+  - Cascade protection: Lead soft-delete cascades to activities + stage notes; students remain independent
+
+### Fixes
+- Applied `deleted_at IS NULL` filters to email-actions, message-actions, zalo-message-actions, reminder-actions to prevent notifications on soft-deleted leads
+- Code review: Added ownership validation in deleteLead, admin-only check in restore functions
+- Sheet sync: Outbound sync skips deleted records; inbound sync skips if CRM record is deleted (prevents resurrection)
+
+### Testing & Quality
+- `npm run build` — ✓ clean (all dependencies resolved)
+- `npm run lint` — ✓ clean (no style errors)
+- `npm test` — ✓ 6/6 tests passing
+
+### Database
+- 4 tables soft-deletable: leads, students, lead_activities, lead_stage_notes
+- Cascade trigger: `leads` → `lead_activities` + `lead_stage_notes`
+- Partial indexes: `(deleted_at IS NULL)` on lead/student queries
+- RLS: Defense-in-depth — SELECT policies check `deleted_at IS NULL`
 
 ---
 

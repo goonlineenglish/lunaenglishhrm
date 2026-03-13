@@ -38,7 +38,7 @@ export interface SyncResult {
   error?: string;
   tabs_synced?: number;
   total_rows?: number;
-  inbound?: { upserted: number; leadsCreated: number; skipped: number; errors: string[] };
+  inbound?: { upserted: number; leadsCreated: number; skipped: number; warnings: string[]; errors: string[] };
   details?: { tab: string; rows: number; status: string; error?: string }[];
   synced_at?: string;
   skipped_reason?: string;
@@ -109,7 +109,8 @@ export async function syncAllToSheets(): Promise<SyncResult> {
     await releaseSyncLock(sb, lockId, hasErrors ? "error" : "completed");
 
     return {
-      success: details.every((d) => d.status === "ok"),
+      // success = all outbound tabs ok AND no inbound errors
+      success: details.every((d) => d.status === "ok") && inboundResult.errors.length === 0,
       tabs_synced: details.filter((d) => d.status === "ok").length,
       total_rows: details.reduce((sum, d) => sum + d.rows, 0),
       inbound: inboundResult,

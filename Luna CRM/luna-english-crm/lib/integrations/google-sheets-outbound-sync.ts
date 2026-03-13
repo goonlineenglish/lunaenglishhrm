@@ -10,8 +10,9 @@ import { SHEET_HEADERS, formatSheetDate, type SheetRow } from "./google-sheets-s
 type Rows = (string | number | null)[][];
 type LeadJoin = { student_name?: string | null; parent_name?: string | null } | null;
 
-const v = (x: unknown) => (x as string) || "—";
-const d = (val: string | null) => (val ? formatSheetDate(val.split("T")[0]) : "—");
+// Use null (empty cell) instead of "—" so inbound sync doesn't write sentinel back to DB
+const v = (x: unknown) => (x as string) || null;
+const d = (val: string | null) => (val ? formatSheetDate(val.split("T")[0]) : null);
 
 /** Build the "Học viên" tab with all 16 mapped columns */
 export async function buildStudentsTab(sb: SupabaseClient): Promise<Rows> {
@@ -22,6 +23,7 @@ export async function buildStudentsTab(sb: SupabaseClient): Promise<Rows> {
       "teacher_name, enrollment_date, level_end_date, tuition_amount, payment_status," +
       "lead:leads(student_name, parent_name, parent_phone, parent_email)"
     )
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(`buildStudentsTab: ${error.message}`);
@@ -57,6 +59,7 @@ export async function buildLeadsTab(sb: SupabaseClient): Promise<Rows> {
   const { data, error } = await sb
     .from("leads")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(`buildLeadsTab: ${error.message}`);
   return [
@@ -75,6 +78,7 @@ export async function buildActivitiesTab(sb: SupabaseClient): Promise<Rows> {
   const { data, error } = await sb
     .from("lead_activities")
     .select("*, leads(student_name, parent_name)")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) throw new Error(`buildActivitiesTab: ${error.message}`);
@@ -107,9 +111,9 @@ export async function buildOverviewTab(sb: SupabaseClient): Promise<Rows> {
   const [funnel, source, stu, total, conv] = await Promise.all([
     sb.from("lead_funnel").select("*"),
     sb.from("lead_source_breakdown").select("*"),
-    sb.from("students").select("*", { count: "exact", head: true }),
-    sb.from("leads").select("*", { count: "exact", head: true }),
-    sb.from("leads").select("*", { count: "exact", head: true }).eq("current_stage", "da_dang_ky"),
+    sb.from("students").select("*", { count: "exact", head: true }).is("deleted_at", null),
+    sb.from("leads").select("*", { count: "exact", head: true }).is("deleted_at", null),
+    sb.from("leads").select("*", { count: "exact", head: true }).is("deleted_at", null).eq("current_stage", "da_dang_ky"),
   ]);
   const funnelData = funnel.data ?? [];
   const sourceData = source.data ?? [];
@@ -142,6 +146,7 @@ export async function buildStudentSnapshot(sb: SupabaseClient): Promise<SheetRow
       "teacher_name, enrollment_date, level_end_date, tuition_amount, payment_status," +
       "lead:leads(student_name, parent_name, parent_phone, parent_email)"
     )
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

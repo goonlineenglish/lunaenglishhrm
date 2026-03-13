@@ -119,9 +119,12 @@
 - [x] Student table: 3 new columns (Chương trình, GV phụ trách, Thanh toán)
 - [x] 4 new student detail tabs: Hồ sơ | Lộ trình học | Điểm danh | Điểm số
 - [x] npm run build ✓ clean, npm run lint ✓ clean, npm test ✓ 6/6 passing
-- [ ] Deploy to Vercel (connect GitHub, set env vars, verify cron)
-- [ ] Configure custom domain (if applicable)
-- [ ] (Optional) Middleware → proxy migration (Next.js 16 deprecation warning)
-- [ ] (Optional) Admin UI for email/Zalo template management (currently SQL-only)
-- [ ] (Optional) Rate limiting on webhook endpoints
-- [ ] (Optional) Role-based authorization in server actions (currently relies on RLS only)
+
+## Phase 13: Soft Delete Strategy — COMPLETE
+- [x] DB migration 035 (soft delete columns: deleted_at, RLS policy updates, cascade trigger, partial indexes)
+- [x] Server actions: soft delete + restore functions (soft-delete-actions.ts, lead-actions.ts updates)
+- [x] Query filters: added `deleted_at IS NULL` to all lead/student/activity queries (7 action files)
+- [x] UI components: delete confirmation dialog, lead/student/activity delete buttons, admin trash page with 3 tabs
+- [x] Security: role checks (advisor owns → can delete own, admin → can delete any), deleted_at filters applied to email/message/zalo/reminder actions
+- [x] Code review fixes: ownership validation, role authorization, filter application across all actions
+- [x] npm run build ✓ clean, npm run lint ✓ clean, npm test ✓ 6/6 passing

@@ -179,6 +179,7 @@ export async function getUpcomingActivities(filters?: {
   let query = supabase
     .from("lead_activities")
     .select("*, leads!inner(parent_name, student_name, assigned_to)")
+    .is("deleted_at", null)
     .not("schedule_from", "is", null)
     .order("schedule_from", { ascending: true });
 

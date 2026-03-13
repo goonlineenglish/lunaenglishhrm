@@ -25,7 +25,7 @@ export async function changeStudentStatus(id: string, newStatus: StudentStatus, 
     if ("error" in profileResult) return { error: profileResult.error };
 
     const { data: current, error: fetchError } = await supabase
-      .from("students").select("status").eq("id", id).single();
+      .from("students").select("status").eq("id", id).is("deleted_at", null).single();
     if (fetchError || !current) return { error: "Không tìm thấy học sinh" };
 
     const currentStatus = current.status as StudentStatus;
@@ -89,7 +89,7 @@ export async function bulkChangeStudentStatus(
     }
 
     const { data: currentStudents } = await supabase
-      .from("students").select("id, status").in("id", validIds);
+      .from("students").select("id, status").in("id", validIds).is("deleted_at", null);
     if (!currentStudents) {
       return { succeeded: [], failed: validIds.map((id) => ({ id, error: "Không tìm thấy" })) };
     }

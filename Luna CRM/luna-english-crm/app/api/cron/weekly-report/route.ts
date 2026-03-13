@@ -35,17 +35,20 @@ export async function GET(request: Request) {
     supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .gte("created_at", fromIso)
       .lte("created_at", toIso),
     supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("current_stage", "da_dang_ky")
       .gte("created_at", fromIso)
       .lte("created_at", toIso),
     supabase
       .from("students")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("status", "active"),
     supabase
       .from("lead_funnel")

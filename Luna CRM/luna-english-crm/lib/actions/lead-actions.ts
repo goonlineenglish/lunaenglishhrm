@@ -124,6 +124,7 @@ export async function updateLead(leadId: string, input: UpdateLeadInput) {
       .from("leads")
       .update({ ...input, updated_at: new Date().toISOString() })
       .eq("id", leadId)
+      .is("deleted_at", null)
       .select()
       .single();
 
@@ -162,11 +163,12 @@ export async function updateLeadStage(
       return { error: profileResult.error };
     }
 
-    // Get current stage
+    // Get current stage (exclude soft-deleted)
     const { data: currentLead, error: fetchError } = await supabase
       .from("leads")
       .select("current_stage")
       .eq("id", leadId)
+      .is("deleted_at", null)
       .single();
 
     if (fetchError || !currentLead) {
@@ -235,10 +237,32 @@ export async function deleteLead(leadId: string) {
       return { error: profileResult.error };
     }
 
-    const { error } = await supabase.from("leads").delete().eq("id", leadId);
+    const role = profileResult.role;
+    if (role !== "admin" && role !== "advisor") {
+      return { error: "Bạn không có quyền xóa lead" };
+    }
 
-    if (error) {
-      console.error("deleteLead error:", error.message);
+    // Soft delete: set deleted_at instead of hard DELETE
+    // Guard: only delete active leads (prevents re-delete breaking cascade restore)
+    // Cascade to activities + stage notes handled by DB trigger
+    let query = supabase
+      .from("leads")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", leadId)
+      .is("deleted_at", null);
+
+    // Advisors can only delete their own leads
+    if (role === "advisor") {
+      query = query.eq("assigned_to", user.id);
+    }
+
+    const { data, error } = await query.select("id").single();
+
+    if (error || !data) {
+      if (error?.code === "PGRST116") {
+        return { error: "Lead không tồn tại hoặc đã bị xóa" };
+      }
+      console.error("deleteLead error:", error?.message);
       return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
     }
 
@@ -246,6 +270,47 @@ export async function deleteLead(leadId: string) {
     return { success: true };
   } catch (error) {
     console.error("deleteLead unexpected error:", error);
+    return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
+  }
+}
+
+export async function restoreLead(leadId: string) {
+  if (!UUID_RE.test(leadId)) return { error: "ID không hợp lệ" };
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Chưa đăng nhập" };
+
+    const profileResult = await ensureUserProfile(supabase, user);
+    if ("error" in profileResult) return { error: profileResult.error };
+
+    // Only admin can restore (advisor can soft-delete own but restore is admin-only for safety)
+    if (profileResult.role !== "admin") {
+      return { error: "Chỉ admin mới có thể khôi phục lead" };
+    }
+
+    // Cascade restore handled by DB trigger (restores activities + stage notes)
+    const { data, error } = await supabase
+      .from("leads")
+      .update({ deleted_at: null })
+      .eq("id", leadId)
+      .not("deleted_at", "is", null)
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      if (error?.code === "PGRST116") {
+        return { error: "Lead không tồn tại hoặc chưa bị xóa" };
+      }
+      console.error("restoreLead error:", error?.message);
+      return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
+    }
+
+    revalidatePath("/pipeline");
+    revalidatePath("/trash");
+    return { success: true };
+  } catch (error) {
+    console.error("restoreLead unexpected error:", error);
     return { error: "Đã xảy ra lỗi. Vui lòng thử lại." };
   }
 }
@@ -288,6 +353,7 @@ export async function bulkUpdateLeadStage(
         .from("leads")
         .select("current_stage")
         .eq("id", leadId)
+        .is("deleted_at", null)
         .single();
 
       if (!currentLead) {
@@ -356,6 +422,7 @@ export async function assignLead(leadId: string, advisorId: string | null) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", leadId)
+      .is("deleted_at", null)
       .select()
       .single();
 

@@ -7,7 +7,8 @@ export type NavIconName =
   | "CalendarCheck"
   | "GraduationCap"
   | "BarChart3"
-  | "Settings";
+  | "Settings"
+  | "Trash2";
 
 export interface NavItem {
   label: string;
@@ -57,6 +58,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Cai dat",
     href: "/settings",
     iconName: "Settings",
+    roles: ["admin"],
+  },
+  {
+    label: "Thùng rác",
+    href: "/trash",
+    iconName: "Trash2",
     roles: ["admin"],
   },
 ];

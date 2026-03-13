@@ -1,0 +1,804 @@
+# Luna HRM System Architecture
+
+**Project:** Luna HRM (Lightweight HRM for English Language Centers)
+**Status:** Complete (All 7 phases)
+**Last Updated:** 2026-03-07
+
+---
+
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Client Layer (Browser/PWA)             │
+│  Next.js 16 App Router + React + Tailwind v4 + shadcn/ui   │
+│  (Bottom nav for mobile, CSS-responsive with hidden md:flex)│
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTPS
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Next.js 16 Backend                        │
+│  ├─ /api/* routes (Server Actions + API routes)             │
+│  ├─ /app/* routes (Page components)                         │
+│  └─ Middleware (Auth check via JWT)                         │
+│  └─ Service Worker (Static assets caching)                  │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ RLS Enforcement
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Supabase Cloud (PostgreSQL + Auth)             │
+│  ├─ Auth (Email/password, JWT with app_metadata)           │
+│  ├─ Database (17 tables)                                    │
+│  ├─ RLS Policies (68 policies for role-based access)       │
+│  └─ Edge Functions (Email sending, cron jobs)              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Authentication & Authorization Architecture
+
+### Auth Flow
+
+1. **Login/Signup:** User enters email + password via `/auth/login` or `/auth/signup`
+2. **JWT Creation:** Supabase issues JWT with:
+   - `sub`: user UUID (= employees.id)
+   - `app_metadata`: `{ role: "admin|branch_manager|accountant|employee", branch_id: UUID }`
+3. **Session Storage:** JWT stored in Supabase session (httpOnly cookie or localStorage per framework)
+4. **Middleware Check:** Every request via `lib/middleware.ts` validates JWT
+5. **Helper Functions:**
+   - `get_user_role()` — reads JWT app_metadata.role
+   - `get_user_branch_id()` — reads JWT app_metadata.branch_id
+
+### Authorization Model
+
+| Role | CRUD Scope | Attendance | Payroll | Evaluation | Audit |
+|------|-----------|-----------|---------|-----------|-------|
+| **admin** | All tables, all branches | View all | Full (create, recalc, undo, send email) | Create templates/periods, view all | View all |
+| **branch_manager** | Own branch employees, schedules, attendance | Full own branch | View own branch only | Score own branch | View own branch |
+| **accountant** | Payroll only | View all | Full CRUD + send email | View all | View all |
+| **employee** | Own data only | View own | View own payslips | N/A | View own |
+
+### Identity Mapping
+
+```sql
+-- Canonical link: employees.id = auth.users.id (both UUID)
+-- Enforced by trigger: before insert on auth.users
+--   → Create matching employee record with id = user_id
+
+-- Role/branch stored in app_metadata (admin-only write)
+-- app_metadata = { role: string, branch_id: UUID }
+
+-- RLS leverages JWT to enforce policies
+-- WHERE get_user_role() = 'admin'
+-- WHERE branch_id = get_user_branch_id()
+```
+
+---
+
+## Database Architecture (17 Tables)
+
+### Data Relationships
+
+```
+branches (root)
+  ├─ employees (FK: branch_id, manager_id)
+  │   ├─ class_schedules (teacher_id, assistant_id)
+  │   │   ├─ attendance (class_schedule_id) → status 1/0/KP/0.5
+  │   │   └─ attendance_locks (branch_id, week_start)
+  │   ├─ office_attendance (employee_id)
+  │   ├─ employee_weekly_notes (employee_id, typed)
+  │   ├─ kpi_evaluations (employee_id, period)
+  │   ├─ payslips (employee_id, payroll_period_id)
+  │   ├─ employee_notes (employee_id, typed)
+  │   └─ employee_evaluations (employee_id, period_id)
+  │       └─ evaluation_scores (criterion_id)
+  │
+  ├─ payroll_periods (branch_id)
+  │   └─ payslips (FK: employee_id, payroll_period_id)
+  │
+  ├─ evaluation_templates
+  │   ├─ evaluation_criteria
+  │   └─ evaluation_periods (template_id)
+  │       └─ employee_evaluations
+```
+
+### Critical Tables
+
+#### `employees` (Extended Profile)
+```sql
+CREATE TABLE employees (
+  id UUID PRIMARY KEY = auth.users.id,
+  branch_id UUID NOT NULL REFERENCES branches(id),
+  full_name TEXT NOT NULL,
+  employee_code TEXT UNIQUE,
+  position TEXT,
+  rate_per_session NUMERIC(10,2),
+
+  -- Extended profile (Phase 6)
+  cccd TEXT UNIQUE,                  -- ID card
+  dob DATE,
+  bank_account TEXT,
+  qualifications TEXT,               -- JSON array of certs
+  characteristics TEXT,              -- Free text skills
+
+  -- Employment flags
+  has_labor_contract BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `class_schedules`
+```sql
+CREATE TABLE class_schedules (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id),
+  class_code TEXT NOT NULL,
+  class_name TEXT NOT NULL,
+  shift_time TEXT,                   -- e.g. "9:00-10:30"
+  days_of_week TEXT[] NOT NULL,      -- e.g. ['MON', 'WED', 'FRI']
+  teacher_id UUID NOT NULL REFERENCES employees(id),
+  assistant_id UUID NOT NULL REFERENCES employees(id),
+  is_active BOOLEAN DEFAULT TRUE,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `attendance`
+```sql
+CREATE TABLE attendance (
+  id UUID PRIMARY KEY,
+  class_schedule_id UUID NOT NULL REFERENCES class_schedules(id),
+  week_start DATE NOT NULL,          -- ISO date (YYYY-MM-DD)
+  status VARCHAR(3) CHECK (status IN ('1', '0', 'KP', '0.5')),
+  is_locked BOOLEAN DEFAULT FALSE,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(class_schedule_id, week_start)
+);
+-- No branch_id on this table — RLS via JOIN on class_schedules.branch_id
+```
+
+#### `attendance_locks`
+```sql
+CREATE TABLE attendance_locks (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id),
+  week_start DATE NOT NULL,
+  locked_by UUID NOT NULL REFERENCES employees(id),
+  locked_at TIMESTAMPTZ DEFAULT NOW(),
+
+  UNIQUE(branch_id, week_start)
+);
+```
+
+#### `employee_weekly_notes` (Payroll Adjustments)
+```sql
+CREATE TABLE employee_weekly_notes (
+  id UUID PRIMARY KEY,
+  employee_id UUID NOT NULL REFERENCES employees(id),
+  week_start DATE NOT NULL,
+  note_type VARCHAR(50),             -- 'substitute'|'bonus'|'penalty'|'extra_job'|'general'
+  sessions_worked NUMERIC(5,2),      -- Numeric, supports 0.5
+  substitute_sessions NUMERIC(5,2),
+  other_adjustments NUMERIC(10,2),
+  description TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Single source of truth for payroll adjustments
+```
+
+#### `kpi_evaluations`
+```sql
+CREATE TABLE kpi_evaluations (
+  id UUID PRIMARY KEY,
+  employee_id UUID NOT NULL REFERENCES employees(id),
+  evaluation_period TEXT NOT NULL,   -- e.g. '2026-03'
+
+  -- Part A: 4 pass/fail criteria
+  part_a_pass BOOLEAN,
+
+  -- Part B: 5 criteria /10 scale
+  part_b_score NUMERIC(3,1),         -- 0-10
+
+  -- Derived bonus (bonus = score × 50,000 VND)
+  -- Only if part_a_pass = true; else bonus = 0
+  bonus_amount NUMERIC(10,2),
+
+  created_by UUID REFERENCES employees(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(employee_id, evaluation_period)
+);
+-- Teaching assistants only
+```
+
+#### `payroll_periods`
+```sql
+CREATE TABLE payroll_periods (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id),
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  is_locked BOOLEAN DEFAULT FALSE,
+  is_recalculated BOOLEAN DEFAULT FALSE,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `payslips`
+```sql
+CREATE TABLE payslips (
+  id UUID PRIMARY KEY,
+  employee_id UUID NOT NULL REFERENCES employees(id),
+  payroll_period_id UUID NOT NULL REFERENCES payroll_periods(id),
+
+  -- Calculation breakdown
+  sessions_worked NUMERIC(5,2),
+  base_salary NUMERIC(10,2),
+  substitute_salary NUMERIC(10,2),
+  other_allowances NUMERIC(10,2),
+  kpi_bonus NUMERIC(10,2),
+
+  -- Deductions
+  bhxh_amount NUMERIC(10,2),         -- 8% if labor_contract
+  bhyt_amount NUMERIC(10,2),         -- 1.5% if labor_contract
+  bhtn_amount NUMERIC(10,2),         -- 1% if labor_contract
+  tax_amount NUMERIC(10,2),          -- TNCN progressive
+  other_deductions NUMERIC(10,2),
+
+  gross_salary NUMERIC(10,2),
+  net_salary NUMERIC(10,2),
+
+  is_confirmed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(employee_id, payroll_period_id)
+);
+```
+
+#### `evaluation_templates` & `evaluation_criteria` (Phase 6)
+```sql
+CREATE TABLE evaluation_templates (
+  id UUID PRIMARY KEY,
+  branch_id UUID NOT NULL REFERENCES branches(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE evaluation_criteria (
+  id UUID PRIMARY KEY,
+  template_id UUID NOT NULL REFERENCES evaluation_templates(id),
+  criterion_name TEXT NOT NULL,
+  description TEXT,
+  order INT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `employee_evaluations` & `evaluation_scores` (Phase 6)
+```sql
+CREATE TABLE employee_evaluations (
+  id UUID PRIMARY KEY,
+  employee_id UUID NOT NULL REFERENCES employees(id),
+  period_id UUID NOT NULL REFERENCES evaluation_periods(id),
+  evaluated_by UUID NOT NULL REFERENCES employees(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(employee_id, period_id)
+);
+
+CREATE TABLE evaluation_scores (
+  id UUID PRIMARY KEY,
+  evaluation_id UUID NOT NULL REFERENCES employee_evaluations(id),
+  criterion_id UUID NOT NULL REFERENCES evaluation_criteria(id),
+  score NUMERIC(3,1),                -- 0-10
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `employee_notes` (Phase 6, Ad-hoc Notes)
+```sql
+CREATE TABLE employee_notes (
+  id UUID PRIMARY KEY,
+  employee_id UUID NOT NULL REFERENCES employees(id),
+  note_type VARCHAR(50),             -- free text type
+  content TEXT NOT NULL,
+  created_by UUID NOT NULL REFERENCES employees(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## Application Architecture
+
+### Layers
+
+#### 1. Presentation Layer (`/app/*`, `/components/*`)
+- **Routing:** Next.js 16 App Router with route groups `(auth)`, `(dashboard)`
+- **Pages:** Dashboard, class schedules, attendance, payroll, KPI, employees, evaluations
+- **Components:** Modular, prefixed by feature (e.g., `components/attendance/`, `components/payroll/`)
+- **State:** React hooks + server-side data via Server Actions
+- **Mobile:** CSS-responsive with `hidden md:flex` (no useMediaQuery for SSR safety)
+
+#### 2. API & Actions Layer (`/lib/actions/*`)
+- **Server Actions:** Async functions for CRUD, calculations, validation
+- **Barrel Exports:** Each feature has `index.ts` for clean imports
+- **Error Handling:** try-catch with user-friendly messages
+- **Data Validation:** Input validation before DB writes
+
+**Key Action Files:**
+- `class-schedule-actions.ts` — Create, update, delete, list, import .xlsx
+- `attendance-actions.ts` — Query grid, save grid, lock/unlock, normalize week_start
+- `payroll-period-actions.ts` — Calculate payroll, preview, confirm, undo, recalc
+- `kpi-save-actions.ts` — Submit KPI scores
+- `evaluation-save-actions.ts` — Create evaluations
+- `employee-profile-actions.ts` — Update profile fields
+- `employee-notes-actions.ts` — CRUD notes
+- `audit-log-service.ts` — Fire-and-forget logging
+
+#### 3. Service Layer (`/lib/services/*`)
+- **Auth Service** — Supabase client, user role/branch extraction
+- **Attendance Grid Service** — State normalization, click-to-cycle logic
+- **Payroll Calculation Service** — 3 formulas (Office/Teacher/Assistant), tax, insurance
+- **Audit Log Service** — Background logging with no await
+
+#### 4. Data & Type Layer (`/lib/types/*`, `/lib/db/*`)
+- **Types:** TypeScript interfaces for all entities (Employee, Attendance, Payroll, KPI, Evaluation)
+- **Database Client:** Supabase JS client initialization
+- **Middleware:** Auth token extraction and JWT validation
+
+#### 5. Utilities (`/lib/utils/*`, `/lib/constants/*`)
+- **Date Helpers:** `parseIsoDateLocal()`, `getWeekStart()`, `getMonthBounds()` (date range calculations)
+- **Format Helpers:** Currency, percentage, date formatting
+- **Excel Parsers:** `excel-schedule-parser.ts` (import), `excel-payroll-export.ts` (export)
+- **Validation:** Input validation rules
+- **Messages:** Vietnamese labels + UI strings
+
+### Data Flow Patterns
+
+#### Read Pattern (Query)
+```
+Component
+  ↓ (useState + useEffect)
+  ↓ calls Server Action
+  ↓ queryEmployees(branch_id)
+  ↓ Supabase query (RLS enforced)
+  ↓ Returns data + error
+  ↓ Component renders
+```
+
+#### Write Pattern (Mutation)
+```
+Component
+  ↓ (form submission)
+  ↓ calls Server Action
+  ↓ saveAttendance(data)
+  ↓ Validate input
+  ↓ Upsert to Supabase
+  ↓ Audit log (fire-and-forget)
+  ↓ Returns success/error
+  ↓ Revalidate cache + refetch
+```
+
+---
+
+## Feature Architecture
+
+### Class Schedules Module
+```
+Routes: /class-schedules
+├─ ClassScheduleForm (create/edit)
+├─ ClassScheduleTable (list)
+└─ ExcelImportDialog
+    └─ excel-schedule-parser.ts
+
+Actions: class-schedule-actions.ts
+├─ createClassSchedule(data)
+├─ updateClassSchedule(id, data)
+├─ deleteClassSchedule(id)
+├─ listClassSchedulesByBranch(branch_id)
+└─ importSchedulesFromExcel(file)
+
+Database: class_schedules + employees (FK)
+RLS: branch_id-scoped (BM/Admin only)
+```
+
+### Attendance Module
+```
+Routes: /attendance, /my-attendance
+├─ AttendanceGrid (click-to-cycle)
+├─ AttendanceNotesPanel
+└─ AttendanceDiffViewer
+
+Actions: attendance-actions.ts
+├─ queryAttendanceGrid(class_id, week_start)
+├─ saveAttendanceGrid(updates)
+├─ lockWeek(branch_id, week_start)
+└─ unlockWeek(branch_id, week_start)
+
+Database: attendance + class_schedules + attendance_locks
+RLS: class_schedule.branch_id-scoped (BM locks, all can view own)
+Cron:
+  - Friday 3pm: Weekend reminder
+  - Sunday 11pm: Auto-lock week
+
+### Attendance Summary by Class Module (Feature: 2026-03-11)
+```
+Routes: /attendance (tab), /payroll/[period] (collapsible), /my-attendance (card)
+├─ AttendanceSummaryCards (shared UI component)
+├─ PayrollAttendanceSummary (extracted, payroll page)
+└─ Inline cards (my-attendance page)
+
+Actions: attendance-summary-actions.ts
+├─ getAttendanceSummary(branchId, weekStart, month, year) → branch-scoped
+└─ getMyAttendanceSummary(month, year) → employee self-only
+
+Query Pattern: Two-step (proven for large data)
+  1. Query class_schedules by branch_id → get schedule IDs + metadata
+  2. Query attendance by schedule IDs → filter at DB, aggregate in-memory
+  Benefits: Avoids untested joins, enforces branch scoping, handles VP staff
+
+Database: attendance + office_attendance + class_schedules (JOIN) + employees
+RLS: Branch-scoped for admin view, self-scoped for employee portal
+Data: Week totals + month totals per employee per class
+```
+
+### Payroll Module (Feature: Semi-Manual Mode, 2026-03-11)
+```
+Routes: /payroll
+├─ PayrollPeriodForm (create period)
+├─ PayrollSpreadsheet (semi-manual payslip entry)
+├─ PayslipPreview (monthly comparison, >20% alert)
+├─ PayslipExcelExport
+└─ PayrollAttendanceSummary (collapsible panel)
+
+Actions: payroll-period-actions.ts, payroll-payslip-actions.ts, payroll-calculate-actions.ts
+├─ createPayrollPeriod(branch_id, start, end)
+├─ initializePayslips(payroll_period_id) → auto-fill attendance + rates
+├─ reinitializePayslips(payroll_period_id) → reset to initial state
+├─ batchUpdatePayslips(updates) → manual entry of deductions/totals, sets is_reviewed=true
+├─ confirmPayrollPeriod(period_id) → checks all is_reviewed=true
+├─ calculatePayroll(payroll_period_id) → legacy, for reference
+├─ previewPayroll(period_id)
+├─ recalculatePayroll(period_id)
+└─ undoPayroll(period_id, max 24h)
+
+Services: payroll-calculation-service.ts, payroll-prefill-service.ts, payroll-audit-service.ts
+├─ calculateOfficeSalary, calculateTeacherSalary, calculateAssistantSalary (reference only)
+├─ prefillFromKpiAndNotes(payslip) → suggest KPI bonus, allowances, deductions
+└─ logPayslipAudit(payslip_id, changes, actor) → fire-and-forget
+
+Field Classification:
+  - Auto-calculated (read-only): sessions_worked, rate_per_session, teaching_pay, substitute sessions/rate/pay
+  - Pre-filled suggestions (editable): kpi_bonus, allowances, deductions, penalties, other_pay
+  - Manual entry (starts at 0): bhxh, bhyt, bhtn, tncn, gross_salary, net_salary
+  - System-managed: is_reviewed (boolean, gate for confirmPayrollPeriod)
+
+Database: payslips + employees + kpi_evaluations + employee_weekly_notes
+Audit: payslip_audit_logs (migration 007)
+```
+
+### KPI Module
+```
+Routes: /kpi
+├─ KpiGrid (Part A pass/fail + Part B /10)
+├─ KpiSubmissionForm
+└─ KpiHistoryChart (6-month)
+
+Actions: kpi-save-actions.ts
+├─ submitKPI(employee_id, period, part_a_pass, part_b_score)
+├─ getKPIHistory(employee_id, months=6)
+└─ calculateBonus(part_a_pass, part_b_score) → score × 50,000
+
+Database: kpi_evaluations
+Rules:
+  - Teaching assistants only
+  - base_pass rule: if false → bonus = 0 only
+  - Pre-fill from last month
+Cron:
+  - 25th each month: Reminder to submit
+```
+
+### Evaluation Module (Phase 6)
+```
+Routes: /evaluation-templates, /evaluation-periods, /employees/[id]/evaluate
+├─ EvaluationTemplateForm
+├─ EvaluationPeriodForm
+├─ EvaluationForm (score /10 per criterion)
+├─ EvaluationHistoryList
+└─ EvaluationDetailView
+
+Actions:
+├─ evaluation-template-actions.ts (admin CRUD templates)
+├─ evaluation-period-actions.ts (admin CRUD periods)
+├─ evaluation-actions.ts (query evaluations)
+└─ evaluation-save-actions.ts (create evaluations)
+
+Database:
+├─ evaluation_templates (admin creates)
+├─ evaluation_criteria (per template)
+├─ evaluation_periods (period + template + start/end)
+├─ employee_evaluations (per employee + period)
+└─ evaluation_scores (score /10 + comment per criterion)
+
+RLS: Templates/periods admin-only, evaluations BM-scoped
+```
+
+### Employee Portal Module (Phase 5)
+```
+Routes: /my-attendance, /my-payslips, /my-profile
+├─ MyAttendanceGrid (read-only)
+├─ MyPayslipHistory
+└─ MyProfileView
+
+Actions: employee-portal-actions.ts
+├─ queryMyAttendance(employee_id)
+├─ queryMyPayslips(employee_id)
+└─ queryMyProfile(employee_id)
+
+Database: attendance, payslips, employees (self-only)
+RLS: WHERE employee_id = get_user_id()
+Mobile: Bottom nav, CSS-responsive layout
+PWA: Service worker (static assets only)
+```
+
+### Employee Profile Module (Phase 6)
+```
+Routes: /employees, /employees/[id]
+├─ EmployeeForm (CRUD)
+├─ EmployeeProfileInfo
+├─ EmployeeProfileTabs (Basic, Extended, Evaluations, Notes)
+├─ EmployeeNotesList
+└─ EmployeeNoteForm
+
+Actions:
+├─ employee-actions.ts (CRUD employee)
+├─ employee-profile-actions.ts (profile fields)
+├─ employee-notes-actions.ts (CRUD notes)
+
+Database: employees (extended fields), employee_notes
+Extended Fields: cccd, dob, bank_account, qualifications, characteristics
+RLS: BM can edit own branch, admin can edit all
+```
+
+### Audit Log Module (Phase 7)
+```
+Audit Table: audit_logs
+├─ action (CREATE|UPDATE|DELETE|CALCULATE|CONFIRM|LOCK)
+├─ table_name
+├─ record_id
+├─ actor_id (who made the change)
+├─ changes (JSON diff)
+└─ created_at
+
+Service: audit-log-service.ts
+└─ logAudit(action, table, id, actor, changes) — fire-and-forget
+
+Integration: Called in all CRUD actions + payroll calculations
+RLS: All employees can view own actions, admin/accountant view all
+```
+
+---
+
+## Security Architecture
+
+### Authentication
+- **Method:** Supabase Auth (email/password)
+- **Token:** JWT with app_metadata (role, branch_id)
+- **Storage:** Supabase manages session (httpOnly cookie)
+- **Refresh:** Automatic via Supabase JS client
+
+### Authorization (RLS)
+- **Policy Type:** Row-level security on all 17 tables
+- **Enforcement:** 68 RLS policies
+- **Key Functions:**
+  - `get_user_role()` — from JWT app_metadata.role
+  - `get_user_branch_id()` — from JWT app_metadata.branch_id
+  - `get_user_id()` — from JWT sub
+
+### Data Protection
+- **Password Hashing:** Supabase handles (bcrypt)
+- **HTTPS:** Required in production
+- **Secrets:** Environment variables only (.env.local, never in code)
+- **Audit Trail:** All changes logged with actor + timestamp
+
+### Role-Based Access Control
+- **Admin:** All CRUD, all branches, audits, recalc
+- **Branch Manager:** Own branch only, can lock/unlock
+- **Accountant:** Payroll CRUD, view all
+- **Employee:** Own data only (read-only)
+
+---
+
+## Performance & Optimization
+
+### Database Optimization
+- **Indexes:** week_start, employee_id, branch_id, payroll_period_id
+- **Unique Constraints:** Prevent duplicates (e.g., unique(employee_id, week_start) on attendance)
+- **Upsert Pattern:** Single `INSERT ... ON CONFLICT ... DO UPDATE` replaces insert+loop
+
+### Application Optimization
+1. **Attendance Grid:** Upsert all changes in 1 query
+2. **Payroll Calculation:** In-memory loop (no DB calls per session)
+3. **Static Asset Caching:** Service worker (excludes /api/*)
+4. **Code Splitting:** Component-level with Next.js dynamic imports
+5. **Lazy Loading:** Images with Next/Image component
+
+### Optimization Features (18 MVP)
+1. **Auto-fill Attendance:** From class schedules (cron)
+2. **Weekend Reminder:** Friday email reminder
+3. **Auto-lock Week:** Sunday 11pm cron
+4. **Conflict Highlight:** Substitute teacher flagged
+5. **Diff Preview:** Before/after comparison
+6. **Payroll Comparison:** Month-to-month comparison
+7. **>20% Alert:** Alert if salary change exceeds 20%
+8. **Checklist from Notes:** employee_weekly_notes becomes checklist
+9. **Snapshot Rate:** Lock rate at payroll confirmation
+10. **Double Confirm:** Confirm + re-enter to prevent accidental lock
+11. **Undo 24h:** Revert payroll within 24 hours
+12. **KPI Pre-fill:** From last month scores
+13. **KPI Reminder:** 25th month cron
+14. **6-Month Chart:** KPI history visualization
+15. **Audit Log:** All CRUD + calculations logged
+16. **Keyboard Shortcuts:** Arrow nav, Ctrl+S
+17. **Excel Import:** Class schedules from .xlsx
+18. **Excel Export:** Payroll to .xlsx
+
+---
+
+## Deployment Architecture
+
+### Infrastructure
+- **Frontend:** Next.js 16 on Dell Ubuntu server
+- **Database:** Supabase Cloud PostgreSQL (500MB free)
+- **Auth:** Supabase Auth
+- **Storage:** Cloudinary or local file storage
+- **Port:** 3001
+- **Domain:** Configure via Caddy/Nginx reverse proxy
+
+### CI/CD
+- **VCS:** GitHub (private repo)
+- **Builds:** npm run build (0 errors)
+- **Tests:** npm test (unit tests passing)
+- **Deployment:** SSH to Dell Ubuntu, pull + npm install + npm run build + npm start
+
+### Environment Variables
+```bash
+# .env.local (never commit)
+NEXT_PUBLIC_SUPABASE_URL=https://vgxpucmwivhlgvlzzkju.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+
+# Optional: Email service
+RESEND_API_KEY=...
+```
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- `tests/attendance-lock.test.ts` — Lock enforcement logic
+- `tests/payroll-calculation.test.ts` — 3 formula calculations
+- `tests/kpi-bonus.test.ts` — Bonus calculation with base_pass rule
+
+### Integration Tests
+- RLS policy validation (role-based access)
+- CRUD operations (create, read, update, delete)
+- Audit logging
+
+### Manual Testing
+- Attendance grid click-to-cycle
+- Payroll preview + confirm + undo
+- KPI submission + history
+- Evaluation template creation + scoring
+- Excel import/export
+- Keyboard shortcuts
+
+---
+
+## Scalability Considerations
+
+### Current Scope
+- Single branch (multi-branch ready via branch_id scoping)
+- ~100 employees per branch
+- 1 year of payroll data
+- Weekly attendance records
+
+### Bottlenecks & Solutions
+1. **Attendance Grid Load:** Week_start index + upsert pattern (solved)
+2. **Payroll Calculation:** In-memory calculation for <100 employees (solved)
+3. **RLS Policy Count:** 68 policies (manageable; consider policy consolidation for 100+ tables)
+4. **File Storage:** Limit to profile images (use Cloudinary for scalability)
+
+### Future Scaling
+- Multi-tenant support (org_id column)
+- Database connection pooling (PgBouncer)
+- Read replicas for reporting
+- Caching layer (Redis) for frequently accessed data
+
+---
+
+## Key Architectural Decisions
+
+### 1. Database Identity
+**Decision:** `employees.id = auth.users.id` (canonical link)
+**Why:** Eliminates junction tables, simplifies RLS
+**Trade-off:** Employee creation coupled to auth user
+
+### 2. Role/Branch in JWT
+**Decision:** Store in `app_metadata` (admin-only write), not `user_metadata`
+**Why:** User-metadata is client-writable (security risk)
+**Trade-off:** Role changes require JWT re-issue
+
+### 3. Attendance RLS via Class
+**Decision:** No `branch_id` on `attendance` table; RLS via JOIN on `class_schedules.branch_id`
+**Why:** Normalizes branch data, prevents redundancy
+**Trade-off:** RLS policy complexity (one extra JOIN)
+
+### 4. Employee Notes as Payroll Source
+**Decision:** `employee_weekly_notes` is single source of truth for adjustments
+**Why:** Audit trail, avoids scattered adjustments
+**Trade-off:** Notes must be typed for accountant checklist
+
+### 5. Audit Logs Fire-and-Forget
+**Decision:** Async logging without await (background job)
+**Why:** No latency impact on CRUD
+**Trade-off:** Eventual consistency (logs may lag by seconds)
+
+### 6. CSS-Responsive Layout
+**Decision:** Use Tailwind `hidden md:flex` (no useMediaQuery hook)
+**Why:** SSR-safe, no hydration mismatches
+**Trade-off:** Limited dynamic breakpoint logic
+
+### 7. Service Worker Static-Only
+**Decision:** Cache static assets, exclude `/api/*` routes
+**Why:** Avoid stale API responses
+**Trade-off:** API always fresh (network must be available)
+
+---
+
+## Monitoring & Logging
+
+### Application Logging
+- **Audit Table:** All CRUD + calculations
+- **Error Handling:** Server action errors returned to client
+- **Performance:** Watch for slow queries (attendance grid, payroll calc)
+
+### Database Monitoring
+- **Query Logs:** Monitor RLS policy evaluation time
+- **Connection Pool:** Monitor for exhaustion
+- **Storage:** Monitor 500MB limit (Supabase Cloud free tier)
+
+### Production Alerts
+- Payroll lock failures
+- RLS policy violations (403 errors)
+- Service worker cache misses
+- Cron job failures (auto-fill, auto-lock, reminders)
+
+---
+
+## Documentation References
+
+- **Code Standards:** `/docs/code-standards.md`
+- **Project Overview & PDR:** `/docs/project-overview-pdr.md`
+- **Codebase Summary:** `/docs/codebase-summary.md`
+- **Deployment Guide:** `/docs/deployment-guide.md`
+- **Project Roadmap:** `/docs/project-roadmap.md`
+
+---
+
+**Last Updated:** 2026-03-11
+**Maintained By:** Luna HRM Team

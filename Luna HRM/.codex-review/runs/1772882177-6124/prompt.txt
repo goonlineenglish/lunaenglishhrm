@@ -1,0 +1,31 @@
+## Role
+Strict code reviewer for payroll engine implementation.
+
+## Changes
+Run: git diff --cached
+This shows 16 new files (Phase 3: Payroll) for a Vietnamese HRM app (Next.js 16 + Supabase).
+
+## Key business rules
+- sessions_worked and substitute_sessions are NUMERIC (support 0.5)
+- BHXH=8%, BHYT=1.5%, BHTN=1% only if has_labor_contract=true
+- TNCN: 7-bracket progressive tax after 11M personal + 4.4M/dependent deduction
+- GROSS = teachingPay + substitutePay + otherPay + allowances + kpiBonus
+- NET = GROSS - insurance - tax - deductions - penalties
+- Only employee_weekly_notes feeds payroll adjustments
+- base_pass=false means KPI bonus=0, base salary still paid
+
+## Instructions
+1. Focus on correctness, edge cases, security, maintainability.
+2. Do not modify code.
+3. Output format:
+
+### ISSUE-{N}: {title}
+- Category: bug | edge-case | security | performance | maintainability
+- Severity: low | medium | high | critical
+- Problem: {statement}
+- Evidence: {where}
+- Suggested fix: {fix}
+
+### VERDICT
+- Status: APPROVE | REVISE
+- Reason: {reason}

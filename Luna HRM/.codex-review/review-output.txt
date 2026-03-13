@@ -1,0 +1,73 @@
+### ISSUE-1: Auth identity and JWT claim model are not safe enough for RLS
+- Category: architecture
+- Severity: critical
+- Problem: The plan uses `auth.uid()` against `employees.id`, but never defines a canonical link between Supabase auth users and employee rows. At the same time, role and branch are populated into `raw_user_meta_data`/`user_metadata` after login and then used by RLS.
+- Why it matters: Employee self-access, branch scoping, and mutation attribution can break outright or become privilege-escalation paths if metadata is stale or user-editable.
+- Suggested fix: In Phase 1, define a single source of truth such as `employees.auth_user_id UNIQUE REFERENCES auth.users(id)` or make `employees.id = auth.users.id`, and have RLS read role/branch from DB or `app_metadata`, not mutable `user_metadata`.
+
+### ISSUE-2: Branch scoping for attendance is internally inconsistent
+- Category: correctness
+- Severity: critical
+- Problem: `attendance` is modeled without `branch_id`, but both the architecture and Phase 1 indexes/policies rely on `attendance.branch_id` for filtering and indexing. The same gap exists for other indirectly-owned tables where the plan just says “WHERE branch_id = … on most tables.”
+- Why it matters: The migrations and RLS policy set as written cannot be implemented cleanly, and branch managers may either see too much or be blocked from legitimate data.
+- Suggested fix: Either add `branch_id` to branch-scoped child tables that need direct filtering, or explicitly define join-based RLS for each indirect table and add supporting indexes for those joins.
+
+### ISSUE-3: Core database integrity constraints are underspecified
+- Category: correctness
+- Severity: high
+- Problem: The plan lists some indexes, but several payroll/auth-critical constraints are missing from the implementation checklist: `payslips` only gets an index on `(payroll_period_id, employee_id)` instead of a UNIQUE constraint, email uniqueness is not defined, and enum/range checks are not enumerated.
+- Why it matters: Duplicate payslips, ambiguous employee lookups, invalid months/days/status values, and impossible schedule assignments can all leak into production data and poison later phases.
+- Suggested fix: Expand Phase 1 with an explicit constraint matrix: UNIQUE `(payroll_period_id, employee_id)`, UNIQUE `lower(email)`, CHECKs for month/year/status/position/role/dependent_count, `teacher_id <> assistant_id`, and array validation for `days_of_week`.
+
+### ISSUE-4: The schema sequencing still has unresolved migration blockers
+- Category: sequencing
+- Severity: high
+- Problem: `branches.manager_id` points to `employees`, while `employees.branch_id` points to `branches`, but the plan creates `branches` first with no staged FK strategy. Separately, Phase 2 promises week lock/unlock behavior without defining a persistent lock table or lock columns in Phase 1.
+- Why it matters: The initial migration path is incomplete, and attendance immutability cannot be enforced reliably before payroll depends on it.
+- Suggested fix: Stage the circular FK with a later `ALTER TABLE`, and add an `attendance_locks` model in Phase 1 so Phase 2 and Phase 3 share a real persisted lock state.
+
+### ISSUE-5: Payroll is scheduled before KPI business rules are settled
+- Category: sequencing
+- Severity: high
+- Problem: The master plan says Phase 4 integrates into Phase 3, but Phase 3 already depends on KPI bonus input while Phase 4 still leaves `base_pass` behavior unresolved. The documents also contradict each other on whether `base_pass=false` removes only bonus or base pay itself.
+- Why it matters: Payroll logic will either be reworked after implementation or shipped with the wrong compensation rule for assistants.
+- Suggested fix: Move the KPI rule decision ahead of Phase 3 completion, or split Phase 3 into payroll-core and payroll-with-KPI. Lock the `base_pass` rule in the architecture doc before coding.
+
+### ISSUE-6: Payroll input data flow is too ambiguous for monthly settlement
+- Category: architecture
+- Severity: high
+- Problem: Payroll reads substitute/bonus/penalty/extra pay from `employee_weekly_notes`, but that table only stores `week_start`, free-text description, and overloaded `amount`/`amount_unit`. Phase 6 also says `employee_evaluations.bonus_impact` affects payroll, but Phase 3 never reads it.
+- Why it matters: Cross-month weeks, partial-period adjustments, and bonus inputs from evaluations cannot be reconciled deterministically, which makes recalculation and audit difficult.
+- Suggested fix: Introduce a structured payroll-adjustments source with `effective_date`, typed amount fields, and period/payslip linkage, or formally declare that only one table feeds payroll adjustments and remove the other claim.
+
+### ISSUE-7: Half sessions and half days do not fit the payslip schema
+- Category: correctness
+- Severity: critical
+- Problem: Attendance supports `0.5`, and the payroll service sums halves, but `payslips.sessions_worked` and `substitute_sessions` are defined as `INT`.
+- Why it matters: Legitimate attendance data will be truncated or rounded in the payroll snapshot, causing silent pay discrepancies.
+- Suggested fix: Change these payroll snapshot fields to `NUMERIC` or store consistent integer half-units everywhere from counters through payslips.
+
+### ISSUE-8: Recalculation semantics and salary deductions are incomplete
+- Category: correctness
+- Severity: high
+- Problem: `salary_components` supports both allowances and deductions, but the payroll phase only fetches recurring allowances. Also, the payslip detail panel allows manual edits to `other_pay`, `penalties`, and `extra_notes`, while auto-calculate is defined as an upsert with no preservation or reset rule.
+- Why it matters: Recurring deductions are ignored, and rerunning payroll can overwrite accountant adjustments unpredictably.
+- Suggested fix: Extend the calculation contract to include recurring deductions, and define explicit recalculation behavior: preserved manual fields, reset option, and post-confirm immutability.
+
+### ISSUE-9: The Phase 5 UI plan conflicts with Next.js 16 server-first patterns
+- Category: architecture
+- Severity: high
+- Problem: The employee/mobile portal is planned by detecting viewport with `use-media-query` inside the shared dashboard layout and reusing the same `/attendance` and `/payroll` routes for BM/accountant workflows and employee views. The PWA section also mixes “cache API responses” with “do not cache sensitive data.”
+- Why it matters: Viewport-based branching pushes the shell toward client rendering and hydration flicker, and route reuse creates conflicting data/loading requirements. The service worker plan is inconsistent for payroll privacy.
+- Suggested fix: Keep the main shell server-rendered, use CSS-responsive navigation where possible, split employee-specific pages or route segments, use the App Router metadata APIs for manifest/theme config, and limit the service worker to public assets plus explicitly safe data only.
+
+### ISSUE-10: The payroll plan claims legal exactness while using simplified deduction rules
+- Category: risk
+- Severity: high
+- Problem: Insurance is calculated from `gross` with only a `has_labor_contract` flag, even though the schema already tracks nationality and the plan claims exact compliance. No insurance base, caps, residency, or foreign-worker tax handling is defined.
+- Why it matters: Contracted and foreign staff can receive materially incorrect deductions, which undermines the “matches Vietnamese law exactly” success criterion.
+- Suggested fix: Either narrow the scope to an agreed internal payroll approximation, or extend the schema and calculation rules now with insurance base, caps, tax residency, and employee category rules before implementation starts.
+
+### VERDICT
+- Status: REVISE
+- Reason: The plan is directionally solid, but the current version has critical gaps in identity/RLS design, branch-scoped schema consistency, and payroll source-of-truth rules. Those need to be fixed before implementation, otherwise later phases will force schema rewrites and payroll/security regressions.

@@ -1,0 +1,13 @@
+{
+  "watchdog_pid": 11668,
+  "run_id": "1772817699-12832",
+  "state_dir": "F:\\APP ANTIGRAVITY\\Tool\\Luna HRM\\luna-hrm\\.codex-review\\runs\\1772817699-12832",
+  "working_dir": "F:\\APP ANTIGRAVITY\\Tool\\Luna HRM\\luna-hrm",
+  "effort": "high",
+  "timeout": 3600,
+  "started_at": 1772817699,
+  "thread_id": "019cc418-d7bf-7993-9c06-18c69c5bf016",
+  "last_line_count": 0,
+  "stall_count": 0,
+  "last_poll_at": 0
+}

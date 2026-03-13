@@ -38,16 +38,51 @@ export async function saveAttendanceBatch(
     const normalizedWeekStartStr = toISODate(normalizedWeekStart)
 
     if (isWeekLocked(normalizedWeekStart)) {
-      return { success: false, error: 'Tuần này đã bị khoá tự động, không thể lưu.' }
+      // Auto-lock: check if there's an override row
+      const { data: overrideRow } = await sb
+        .from('attendance_locks')
+        .select('id')
+        .eq('branch_id', effectiveBranch)
+        .eq('week_start', normalizedWeekStartStr)
+        .eq('is_override', true)
+        .maybeSingle()
+      if (!overrideRow) {
+        return { success: false, error: 'Tuần này đã bị khoá tự động, không thể lưu.' }
+      }
     }
-    const { data: lockRow } = await sb
+    // Check manual lock (is_override=false)
+    const { data: manualLockRow } = await sb
       .from('attendance_locks')
       .select('id')
       .eq('branch_id', effectiveBranch)
       .eq('week_start', normalizedWeekStartStr)
+      .eq('is_override', false)
       .maybeSingle()
-    if (lockRow) {
+    if (manualLockRow) {
       return { success: false, error: 'Tuần này đã bị khoá, không thể lưu.' }
+    }
+
+    // Cross-month payroll guard: block if payroll for EITHER bounding month is confirmed
+    const weekEndDate = new Date(normalizedWeekStart)
+    weekEndDate.setDate(weekEndDate.getDate() + 6)
+    const startMonth = normalizedWeekStart.getMonth() + 1
+    const startYear = normalizedWeekStart.getFullYear()
+    const endMonth = weekEndDate.getMonth() + 1
+    const endYear = weekEndDate.getFullYear()
+    let payrollFilter = `and(month.eq.${startMonth},year.eq.${startYear})`
+    if (startMonth !== endMonth || startYear !== endYear) {
+      payrollFilter += `,and(month.eq.${endMonth},year.eq.${endYear})`
+    }
+    const { data: confirmedPeriod } = await sb
+      .from('payroll_periods')
+      .select('id')
+      .eq('branch_id', effectiveBranch)
+      .eq('status', 'confirmed')
+      .or(payrollFilter)
+      .limit(1)
+      .maybeSingle()
+    if (confirmedPeriod) {
+      return { success: false, error: 'Không thể lưu — bảng lương tháng này đã được xác nhận.' }
     }
 
     const weekDates = getWeekDates(normalizedWeekStart)
@@ -123,6 +158,7 @@ export async function lockWeek(
         week_start: canonicalWeekStart,
         locked_by: user.id,
         locked_at: new Date().toISOString(),
+        is_override: false,
       })
 
     if (error) {
@@ -135,35 +171,5 @@ export async function lockWeek(
   } catch (err) {
     console.error('[lockWeek]', err)
     return { success: false, error: 'Không thể khoá tuần.' }
-  }
-}
-
-export async function unlockWeek(
-  branchId: string,
-  weekStartStr: string
-): Promise<ActionResult> {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
-      return { success: false, error: 'Chỉ admin mới có thể mở khoá tuần.' }
-    }
-
-    const canonicalWeekStart = toISODate(getWeekStart(parseIsoDateLocal(weekStartStr)))
-
-    const supabase = await createClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any
-
-    const { error } = await sb
-      .from('attendance_locks')
-      .delete()
-      .eq('branch_id', branchId)
-      .eq('week_start', canonicalWeekStart)
-
-    if (error) throw error
-    return { success: true }
-  } catch (err) {
-    console.error('[unlockWeek]', err)
-    return { success: false, error: 'Không thể mở khoá tuần.' }
   }
 }

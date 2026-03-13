@@ -40,7 +40,7 @@ luna-hrm/
 ├── components/
 │   ├── layout/                          # Sidebar, nav, footer
 │   ├── class-schedules/                 # Class schedule form, table, import dialog
-│   ├── attendance/                      # Grid, notes panel, diff viewer, summary cards
+│   ├── attendance/                      # Grid, notes panel, diff viewer, summary cards, calendar dates, lock override
 │   ├── office-attendance/               # Daily grid, helpers
 │   ├── employees/                       # Form, profile-info, profile-tabs, notes
 │   ├── payroll/                         # Period form, slip preview, export button, attendance summary
@@ -57,6 +57,7 @@ luna-hrm/
 │   │   ├── class-schedule-actions.ts   # CRUD + import class schedules
 │   │   ├── attendance-actions.ts       # Query + save attendance
 │   │   ├── attendance-summary-actions.ts # Attendance summary (Feature: Summary by Class)
+│   │   ├── attendance-lock-actions.ts   # Lock override actions (Feature: Calendar + Lock Override)
 │   │   ├── office-attendance-actions.ts # Query + save office attendance
 │   │   ├── employee-actions.ts         # CRUD employees
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
@@ -95,7 +96,7 @@ luna-hrm/
 │   ├── utils/
 │   │   ├── excel-schedule-parser.ts    # .xlsx class schedule import
 │   │   ├── excel-payroll-export.ts     # Export payroll to .xlsx
-│   │   ├── date-helpers.ts             # parseIsoDateLocal, getWeekStart
+│   │   ├── date-helpers.ts             # parseIsoDateLocal, getWeekStart, getMonthBounds, isWeekLocked, getWeekDates
 │   │   ├── format-helpers.ts           # Format numbers, dates
 │   │   └── validation.ts               # Input validation
 │   ├── constants/
@@ -113,7 +114,8 @@ luna-hrm/
 │   │   ├── 003_indexes.sql             # Performance indexes
 │   │   ├── 004_add_payslip_deductions_column.sql  # Payslip deductions
 │   │   ├── 005_audit_logs.sql          # Audit log table + RLS
-│   │   └── 006_payslip_audit_logs.sql  # Audit logs for manual payslip edits (Feature: Semi-Manual Payroll, 2026-03-11)
+│   │   ├── 006_payslip_audit_logs.sql  # Audit logs for manual payslip edits (Feature: Semi-Manual Payroll, 2026-03-11)
+│   │   └── 008_attendance_lock_override.sql  # Lock override + multi-row lock query (Feature: Calendar + Lock Override, 2026-03-14)
 │   └── seed.sql                        # 21 employees, 10 classes, sample data
 ├── public/
 │   ├── manifest.json                   # PWA manifest
@@ -121,7 +123,8 @@ luna-hrm/
 ├── tests/
 │   ├── attendance-lock.test.ts         # Unit tests
 │   ├── payroll-calculation.test.ts
-│   └── kpi-bonus.test.ts
+│   ├── kpi-bonus.test.ts
+│   └── attendance-summary.test.ts      # Attendance summary tests (Feature: 2026-03-11)
 ├── package.json                        # Dependencies
 ├── tsconfig.json                       # TypeScript config
 ├── tailwind.config.ts                  # Tailwind v4 config (CSS-first)
@@ -141,7 +144,7 @@ luna-hrm/
 ### 2. Attendance (Chấm Công)
 - **Routes:** `/attendance`, `/my-attendance`
 - **Components:** AttendanceGrid, AttendanceNotesPanel, AttendanceDiffViewer, AttendanceSummaryCards
-- **Actions:** attendance-actions.ts (query grid, save grid, lock/unlock), attendance-summary-actions.ts
+- **Actions:** attendance-actions.ts (query grid, save grid, lock/unlock), attendance-summary-actions.ts, attendance-lock-actions.ts
 - **Database:** `attendance`, `attendance_locks` tables
 - **Features:**
   - Weekly grid (1/0/KP/0.5 statuses)
@@ -151,6 +154,8 @@ luna-hrm/
   - Week locking (admin/BM only)
   - Employee weekly notes integration
   - Attendance summary by class (tabbed view) — Feature: 2026-03-11
+  - Calendar dates in grid header (DD/MM) — Feature: 2026-03-14
+  - Lock override for auto-locked weeks (admin/BM) — Feature: 2026-03-14
 
 ### 3. Office Attendance (VP Staff)
 - **Routes:** `/office-attendance`
@@ -331,4 +336,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-11 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class features
+**Last Updated:** 2026-03-14 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override features

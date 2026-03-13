@@ -14,7 +14,7 @@ import { AttendanceWeekSelector } from '@/components/attendance/attendance-week-
 import { AttendanceLegend } from '@/components/attendance/attendance-legend'
 import { OfficeAttendanceGrid } from '@/components/office-attendance/office-attendance-grid'
 import { getOfficeAttendanceGrid } from '@/lib/actions/office-attendance-actions'
-import { getWeekStart, toISODate, isWeekLocked } from '@/lib/utils/date-helpers'
+import { getWeekStart, toISODate } from '@/lib/utils/date-helpers'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import type { OfficeGridData } from '@/lib/actions/office-attendance-actions'
 
@@ -22,6 +22,8 @@ export default function OfficeAttendancePage() {
   const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()))
   const [branchId, setBranchId] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userRole, setUserRole] = useState<string>('')
+  const [roleLoaded, setRoleLoaded] = useState(false)
   const [data, setData] = useState<OfficeGridData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +31,8 @@ export default function OfficeAttendancePage() {
   useEffect(() => {
     getCurrentUser().then((user) => {
       if (user?.role === 'admin') setIsAdmin(true)
+      if (user?.role) setUserRole(user.role)
+      setRoleLoaded(true)
     })
   }, [])
 
@@ -44,15 +48,14 @@ export default function OfficeAttendancePage() {
     const dateStr = toISODate(weekStart)
     const result = await getOfficeAttendanceGrid(branchId, dateStr)
     if (result.success && result.data) {
-      const autoLocked = isWeekLocked(weekStart)
-      setData({ ...result.data, isLocked: result.data.isLocked || autoLocked })
+      setData(result.data)
     } else {
       setError(result.error ?? 'Lỗi tải chấm công VP.')
     }
     setLoading(false)
   }, [weekStart, branchId, isAdmin])
 
-  useEffect(() => { fetchGrid() }, [fetchGrid])
+  useEffect(() => { if (roleLoaded) fetchGrid() }, [fetchGrid, roleLoaded])
 
   return (
     <div className="space-y-4">
@@ -90,6 +93,9 @@ export default function OfficeAttendancePage() {
           branchId={branchId}
           weekStart={weekStart}
           isLocked={data.isLocked}
+          lockType={data.lockType}
+          hasOverride={data.hasOverride}
+          userRole={userRole}
           onSaved={fetchGrid}
         />
       )}

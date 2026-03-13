@@ -111,7 +111,8 @@ export function formatWeekRange(weekStart: Date): string {
 }
 
 /**
- * Check if a week is auto-locked (> 3 days past next Monday)
+ * Check if a week is auto-locked (> 3 days past week end / Sunday).
+ * weekStart + 7 days = Sunday, + 3 grace days = +10 from Monday.
  */
 export function isWeekLocked(weekStart: Date): boolean {
   const nextMonday = new Date(weekStart)

@@ -67,6 +67,8 @@ export interface AttendanceLock {
   week_start: string       // DATE — Monday of the locked week
   locked_by: string        // FK → employees.id
   locked_at: string
+  /** true = override row (cancels auto-lock). false = manual lock. */
+  is_override: boolean
 }
 
 export type AttendanceLockInsert = Omit<AttendanceLock, 'id'>

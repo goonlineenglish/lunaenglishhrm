@@ -22,7 +22,7 @@ import { AttendanceSummaryCards } from '@/components/attendance/attendance-summa
 import { getAttendanceGrid, type AttendanceGridData } from '@/lib/actions/attendance-actions'
 import { getAttendanceSummary } from '@/lib/actions/attendance-summary-actions'
 import { getWeeklyNotes, type NoteWithEmployee } from '@/lib/actions/weekly-notes-actions'
-import { getWeekStart, toISODate, isWeekLocked } from '@/lib/utils/date-helpers'
+import { getWeekStart, toISODate } from '@/lib/utils/date-helpers'
 import type { ScheduleConflict } from '@/lib/services/attendance-grid-service'
 import { getDayName } from '@/lib/utils/date-helpers'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
@@ -32,6 +32,8 @@ export default function AttendancePage() {
   const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()))
   const [branchId, setBranchId] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userRole, setUserRole] = useState<string>('')
+  const [roleLoaded, setRoleLoaded] = useState(false)
   const [activeTab, setActiveTab] = useState<'grid' | 'summary'>('grid')
   const [data, setData] = useState<AttendanceGridData | null>(null)
   const [notes, setNotes] = useState<NoteWithEmployee[]>([])
@@ -45,6 +47,8 @@ export default function AttendancePage() {
   useEffect(() => {
     getCurrentUser().then((user) => {
       if (user?.role === 'admin') setIsAdmin(true)
+      if (user?.role) setUserRole(user.role)
+      setRoleLoaded(true)
     })
   }, [])
 
@@ -64,8 +68,7 @@ export default function AttendancePage() {
       getWeeklyNotes(branchId, dateStr),
     ])
     if (gridResult.success && gridResult.data) {
-      const autoLocked = isWeekLocked(weekStart)
-      setData({ ...gridResult.data, isLocked: gridResult.data.isLocked || autoLocked })
+      setData(gridResult.data)
     } else {
       setError(gridResult.error ?? 'Lỗi tải chấm công.')
     }
@@ -73,7 +76,7 @@ export default function AttendancePage() {
     setLoading(false)
   }, [weekStart, branchId, isAdmin])
 
-  useEffect(() => { fetchGrid() }, [fetchGrid])
+  useEffect(() => { if (roleLoaded) fetchGrid() }, [fetchGrid, roleLoaded])
 
   /** Fetch summary when "Tổng hợp" tab mounts (called from onValueChange) */
   const fetchSummary = useCallback(async () => {
@@ -142,6 +145,9 @@ export default function AttendancePage() {
                 branchId={branchId}
                 weekStart={weekStart}
                 isLocked={data.isLocked}
+                lockType={data.lockType}
+                hasOverride={data.hasOverride}
+                userRole={userRole}
                 onSaved={fetchGrid}
               />
               <AttendanceSummary summary={data.summary} />

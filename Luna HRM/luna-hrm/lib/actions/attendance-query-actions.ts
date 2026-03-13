@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
-import { getWeekDates, getWeekStart, parseIsoDateLocal, toISODate } from '@/lib/utils/date-helpers'
+import { getWeekDates, getWeekStart, parseIsoDateLocal, toISODate, isWeekLocked } from '@/lib/utils/date-helpers'
 import {
   buildAttendanceGrid,
   detectConflicts,
@@ -24,6 +24,10 @@ export interface AttendanceGridData {
   conflicts: ScheduleConflict[]
   summary: WeekSummary[]
   isLocked: boolean
+  /** 'auto' = auto-locked by time, 'manual' = BM/admin locked, null = not locked */
+  lockType: 'auto' | 'manual' | null
+  /** true = admin/BM has overridden the auto-lock for this week */
+  hasOverride: boolean
 }
 
 export async function getAttendanceGrid(
@@ -70,12 +74,19 @@ export async function getAttendanceGrid(
       existingRecords = att ?? []
     }
 
-    const { data: lockData } = await sb
+    // Multi-row lock query: get all lock rows for this (branch, week)
+    // UNIQUE(branch_id, week_start, is_override) → max 2 rows
+    const { data: lockRows } = await sb
       .from('attendance_locks')
-      .select('id')
+      .select('id, is_override')
       .eq('branch_id', effectiveBranch)
       .eq('week_start', dateFrom)
-      .maybeSingle()
+
+    const hasManualLock = (lockRows ?? []).some((r: { is_override: boolean }) => !r.is_override)
+    const hasOverride = (lockRows ?? []).some((r: { is_override: boolean }) => r.is_override)
+    const autoLocked = isWeekLocked(weekStart)
+    const isLocked = (autoLocked && !hasOverride) || hasManualLock
+    const lockType: 'auto' | 'manual' | null = hasManualLock ? 'manual' : (autoLocked ? 'auto' : null)
 
     const rows = buildAttendanceGrid(schedules ?? [], existingRecords, weekDates)
     const conflicts = detectConflicts(schedules ?? [])
@@ -83,7 +94,7 @@ export async function getAttendanceGrid(
 
     return {
       success: true,
-      data: { rows, conflicts, summary, isLocked: !!lockData },
+      data: { rows, conflicts, summary, isLocked, lockType, hasOverride },
     }
   } catch (err) {
     console.error('[getAttendanceGrid]', err)

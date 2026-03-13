@@ -255,11 +255,29 @@ npm run build && npm start
 | Seed data | `supabase/seed.sql` (21 employees, 10 classes) |
 | Test password | `Luna@2026` (dev only) |
 
-*Created: 2026-03-07 | Updated: 2026-03-11*
+### Feature 3: Attendance Calendar Dates + Lock Override
+- **Status:** ✅ Complete
+- **Completion Date:** 2026-03-14
+- **Description:** UX enhancements to attendance grid with calendar dates in header (DD/MM under day names) and admin/BM ability to override auto-locked weeks.
+- **Scope:**
+  - Calendar dates in header (phase 1): DD/MM display under day names in both class and office attendance grids
+  - Lock override system (phase 2): Admin + BM can override auto-locked weeks via `is_override=true` flag on `attendance_locks` table
+  - Cross-month payroll guard: prevent editing attendance if payroll confirmed
+  - Multi-row lock query: both manual and override rows coexist
+- **Key Implementation Files:**
+  - `supabase/migrations/008_attendance_lock_override.sql` (NEW)
+  - `lib/actions/attendance-lock-actions.ts` (NEW — extracted: `unlockWeek`, `overrideAutoLock`, `removeOverride`)
+  - `lib/actions/attendance-query-actions.ts` (EXTENDED — multi-row lock query, `lockType` + `hasOverride`)
+  - `lib/actions/office-attendance-actions.ts` (EXTENDED — identical multi-row lock patterns)
+  - `components/attendance/attendance-grid.tsx` (EXTENDED — calendar dates + unlock/override buttons)
+  - `components/office-attendance/office-attendance-grid.tsx` (EXTENDED — same features)
+  - `app/(dashboard)/attendance/page.tsx`, `office-attendance/page.tsx` (UPDATED — removed client-side auto-lock merge)
+- **Review Status:**
+  - Adversarial code review: 14 issues → all fixed
+- **Tests:** 130+ unit tests passing
+- **Build:** 24 routes, 0 errors, clean
 
----
 
-## Post-MVP Features (2026-03-11)
 
 ### Feature 1: Semi-Manual Payroll Mode
 - **Status:** ✅ Complete

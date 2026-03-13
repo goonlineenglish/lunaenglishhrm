@@ -27,6 +27,9 @@ export interface OfficeGridRow {
 export interface OfficeGridData {
   rows: OfficeGridRow[]
   isLocked: boolean
+  /** 'auto' = auto-locked by time, 'manual' = BM/admin locked, null = not locked */
+  lockType: 'auto' | 'manual' | null
+  hasOverride: boolean
 }
 
 export async function getOfficeAttendanceGrid(
@@ -55,7 +58,7 @@ export async function getOfficeAttendanceGrid(
     if (empErr) throw empErr
 
     if (!employees || employees.length === 0) {
-      return { success: true, data: { rows: [], isLocked: false } }
+      return { success: true, data: { rows: [], isLocked: false, lockType: null, hasOverride: false } }
     }
 
     const weekStart = getWeekStart(parseIsoDateLocal(weekStartStr))
@@ -77,12 +80,18 @@ export async function getOfficeAttendanceGrid(
       recMap.set(`${r.employee_id}:${r.date}`, { id: r.id, status: r.status })
     }
 
-    const { data: lockData } = await sb
+    // Multi-row lock query (max 2 rows per branch+week)
+    const { data: lockRows } = await sb
       .from('attendance_locks')
-      .select('id')
+      .select('id, is_override')
       .eq('branch_id', effectiveBranch)
       .eq('week_start', dateFrom)
-      .maybeSingle()
+
+    const hasManualLock = (lockRows ?? []).some((r: { is_override: boolean }) => !r.is_override)
+    const hasOverride = (lockRows ?? []).some((r: { is_override: boolean }) => r.is_override)
+    const autoLocked = isWeekLocked(weekStart)
+    const isLocked = (autoLocked && !hasOverride) || hasManualLock
+    const lockType: 'auto' | 'manual' | null = hasManualLock ? 'manual' : (autoLocked ? 'auto' : null)
 
     const rows: OfficeGridRow[] = (employees as { id: string; employee_code: string; full_name: string }[]).map((emp) => {
       const cells: Record<number, OfficeGridCell> = {}
@@ -100,7 +109,7 @@ export async function getOfficeAttendanceGrid(
       return { employeeId: emp.id, employeeCode: emp.employee_code, employeeName: emp.full_name, cells }
     })
 
-    return { success: true, data: { rows, isLocked: !!lockData } }
+    return { success: true, data: { rows, isLocked, lockType, hasOverride } }
   } catch (err) {
     console.error('[getOfficeAttendanceGrid]', err)
     return { success: false, error: 'Không thể tải chấm công VP.' }
@@ -136,16 +145,49 @@ export async function saveOfficeAttendanceBatch(
     const normalizedWeekStartStr = toISODate(normalizedWeekStart)
 
     if (isWeekLocked(normalizedWeekStart)) {
-      return { success: false, error: 'Tuần này đã bị khoá tự động, không thể lưu.' }
+      const { data: overrideRow } = await sb
+        .from('attendance_locks')
+        .select('id')
+        .eq('branch_id', effectiveBranch)
+        .eq('week_start', normalizedWeekStartStr)
+        .eq('is_override', true)
+        .maybeSingle()
+      if (!overrideRow) {
+        return { success: false, error: 'Tuần này đã bị khoá tự động, không thể lưu.' }
+      }
     }
-    const { data: lockRow } = await sb
+    const { data: manualLockRow } = await sb
       .from('attendance_locks')
       .select('id')
       .eq('branch_id', effectiveBranch)
       .eq('week_start', normalizedWeekStartStr)
+      .eq('is_override', false)
       .maybeSingle()
-    if (lockRow) {
+    if (manualLockRow) {
       return { success: false, error: 'Tuần này đã bị khoá, không thể lưu.' }
+    }
+
+    // Cross-month payroll guard
+    const weekEndDate = new Date(normalizedWeekStart)
+    weekEndDate.setDate(weekEndDate.getDate() + 6)
+    const startMonth = normalizedWeekStart.getMonth() + 1
+    const startYear = normalizedWeekStart.getFullYear()
+    const endMonth = weekEndDate.getMonth() + 1
+    const endYear = weekEndDate.getFullYear()
+    let payrollFilter = `and(month.eq.${startMonth},year.eq.${startYear})`
+    if (startMonth !== endMonth || startYear !== endYear) {
+      payrollFilter += `,and(month.eq.${endMonth},year.eq.${endYear})`
+    }
+    const { data: confirmedPeriod } = await sb
+      .from('payroll_periods')
+      .select('id')
+      .eq('branch_id', effectiveBranch)
+      .eq('status', 'confirmed')
+      .or(payrollFilter)
+      .limit(1)
+      .maybeSingle()
+    if (confirmedPeriod) {
+      return { success: false, error: 'Không thể lưu — bảng lương tháng này đã được xác nhận.' }
     }
 
     const weekDates = getWeekDates(normalizedWeekStart)

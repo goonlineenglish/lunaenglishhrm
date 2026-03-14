@@ -70,6 +70,7 @@ export async function getCourseById(id: string): Promise<CourseDetail | null> {
       lessons: {
         where: { isDeleted: false },
         orderBy: { order: 'asc' },
+        include: { materials: true },
       },
     },
   });

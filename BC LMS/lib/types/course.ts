@@ -1,6 +1,8 @@
 // Course and Lesson type definitions
 // CourseLevel: BASIC (all roles), ADVANCED (ADMIN + TEACHER only)
 
+import type { MaterialItem } from '@/lib/types/material';
+
 export type CourseLevel = 'BASIC' | 'ADVANCED';
 export type CourseType = 'TRAINING' | 'MATERIAL';
 
@@ -32,6 +34,7 @@ export type LessonItem = {
   duration: number | null;
   isDeleted: boolean;
   courseId: string;
+  materials?: MaterialItem[];
 };
 
 export type CreateCourseInput = {

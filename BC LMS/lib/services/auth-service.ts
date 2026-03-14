@@ -67,7 +67,7 @@ export async function loginUser(
   const csrfToken = randomBytes(32).toString('hex');
 
   // Role-based redirect
-  const redirectTo = user.role === 'ADMIN' ? '/admin' : '/dashboard';
+  const redirectTo = user.role === 'ADMIN' ? '/admin/users' : '/dashboard';
 
   return { success: true, token, csrfToken, redirectTo };
 }

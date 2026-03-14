@@ -10,6 +10,7 @@ import { LessonSidebar } from './lesson-sidebar';
 import { VideoPlayer } from './video-player';
 import { DrmZone } from './drm-zone';
 import { sanitizeHtml } from '@/lib/utils/sanitize-html';
+import { MaterialsList } from '@/components/shared/materials-list';
 import type { CourseDetail, LessonItem } from '@/lib/types/course';
 import type { ProgressMap } from '@/lib/types/progress';
 
@@ -104,6 +105,11 @@ export function CoursePlayerLayout({
               className="prose prose-sm max-w-none text-neutral-700 mt-5"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(activeLesson.content) }}
             />
+          )}
+
+          {/* Materials — downloadable attachments inside DRM zone */}
+          {activeLesson.materials && activeLesson.materials.length > 0 && (
+            <MaterialsList materials={activeLesson.materials} />
           )}
         </DrmZone>
 

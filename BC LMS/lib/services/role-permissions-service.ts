@@ -16,6 +16,9 @@ const PERMISSIONS: Record<string, Role[]> = {
   'reports:view_school': ['MANAGER'],
   'progress:track': ['MANAGER', 'TEACHER', 'TEACHING_ASSISTANT'],
   'favorites:toggle': ['ADMIN', 'MANAGER', 'TEACHER', 'TEACHING_ASSISTANT'],
+  'materials:upload': ['ADMIN'],
+  'materials:delete': ['ADMIN'],
+  'materials:download': ['ADMIN', 'MANAGER', 'TEACHER', 'TEACHING_ASSISTANT'],
 };
 
 /**

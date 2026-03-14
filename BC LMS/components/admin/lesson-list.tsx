@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { LessonForm, type LessonFormValues } from '@/components/admin/lesson-form';
+import { LessonEditDialog } from '@/components/admin/lesson-edit-dialog';
 import {
   createLesson,
   updateLesson,
@@ -228,28 +229,15 @@ export function LessonList({ courseId, initialLessons }: LessonListProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit lesson dialog */}
-      <Dialog open={!!editTarget} onOpenChange={() => setEditTarget(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa bài học</DialogTitle>
-          </DialogHeader>
-          {editTarget && (
-            <LessonForm
-              defaultValues={{
-                title: editTarget.title,
-                order: editTarget.order,
-                duration: editTarget.duration ?? undefined,
-                content: editTarget.content ?? '',
-                videoUrl: editTarget.videoUrl ?? '',
-              }}
-              onSubmit={handleEdit}
-              isLoading={isPending}
-              submitLabel="Cập nhật"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <LessonEditDialog
+        open={!!editTarget}
+        onOpenChange={() => setEditTarget(null)}
+        lesson={editTarget}
+        courseId={courseId}
+        onSubmit={handleEdit}
+        isLoading={isPending}
+        onMaterialsChange={() => router.refresh()}
+      />
     </div>
   );
 }

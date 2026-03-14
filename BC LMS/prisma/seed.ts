@@ -1,4 +1,4 @@
-// prisma/seed.ts — Seeds admin user and 3 programs
+// prisma/seed.ts — Seeds admin, manager, teacher users and 3 programs
 // Run: npx prisma db seed
 
 import "dotenv/config";
@@ -14,9 +14,9 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("Starting seed...");
 
-  // Create admin user — password: changeme123 (must be changed on first login)
   const hashedPassword = await bcrypt.hash("changeme123", 12);
 
+  // Admin
   const admin = await prisma.user.upsert({
     where: { email: "admin@buttercuplearning.com" },
     update: {},
@@ -27,8 +27,35 @@ async function main() {
       role: "ADMIN",
     },
   });
+  console.log(`Admin: ${admin.email}`);
 
-  console.log(`Admin user: ${admin.email}`);
+  // Manager
+  const manager = await prisma.user.upsert({
+    where: { email: "manager@buttercuplearning.com" },
+    update: {},
+    create: {
+      email: "manager@buttercuplearning.com",
+      password: hashedPassword,
+      name: "Quản Lý",
+      role: "MANAGER",
+      school: "Buttercup HN",
+    },
+  });
+  console.log(`Manager: ${manager.email}`);
+
+  // Teacher
+  const teacher = await prisma.user.upsert({
+    where: { email: "teacher@buttercuplearning.com" },
+    update: {},
+    create: {
+      email: "teacher@buttercuplearning.com",
+      password: hashedPassword,
+      name: "Giáo Viên",
+      role: "TEACHER",
+      school: "Buttercup HN",
+    },
+  });
+  console.log(`Teacher: ${teacher.email}`);
 
   // Create 3 programs
   const programs = [

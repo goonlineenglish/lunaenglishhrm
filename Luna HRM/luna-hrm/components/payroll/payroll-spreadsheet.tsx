@@ -181,11 +181,10 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
 
   const isTeachingTab = tab === 'teacher' || tab === 'assistant'
   const unreviewedCount = payslips.filter((p) => !p.is_reviewed).length
-  // +1 for # col, +1 for Lớp col (teaching tabs), - cols rendered in class row (5: #, name, class, sessions, rate, amount, reset = 7 total rendered)
-  // class row renders 7 tds; total cols = 1(#) + 1(Lớp) + visibleColumns.length
-  // class row has: 1(#) + 1(name) + 1(class) + 1(sessions) + 1(rate) + 1(amount) + 1(reset) = 7
-  // trailing filler = total - 7
-  const classRowFillerCols = Math.max(0, 1 + 1 + visibleColumns.length - 7) // 2 fixed + visible - 7 rendered
+  // Class row renders: 1(#) + 1(empty/Lớp) + 2(class code colSpan=2) + 1(sessions) + 1(rate) + 1(amount) + 1(reset) = 8 cols
+  // Total header cols = 1(#) + 1(Lớp) + visibleColumns.length
+  // trailing filler = total - 8 = visibleColumns.length - 6
+  const classRowFillerCols = Math.max(0, visibleColumns.length - 6)
 
   // Footer totals: merge unsaved edits into sum (ISSUE-9)
   const totalGross = payslips.reduce((s, p) => {

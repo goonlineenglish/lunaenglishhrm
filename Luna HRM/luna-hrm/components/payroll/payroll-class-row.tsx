@@ -31,10 +31,11 @@ function PayrollClassRowInner({ entry, index, editing, isLocked, fillerColSpan, 
     <tr className="border-b bg-muted/5 hover:bg-muted/10 text-xs">
       {/* # */}
       <td className="px-2 py-1 text-center text-muted-foreground border-r w-8">{index + 1}</td>
-      {/* Employee name (empty — merged with group header) */}
+      {/* Empty — aligns with "Lớp" toggle column */}
       <td className="px-2 py-1 border-r" />
-      {/* Class code */}
-      <td className="px-2 py-1 border-r text-muted-foreground whitespace-nowrap">
+      {/* Class code + name: colSpan=2 to span "Mã NV" + "Họ tên" columns,
+          so Sessions aligns under "Buổi" and Rate aligns under "Đơn giá" */}
+      <td colSpan={2} className="px-2 py-1 border-r text-muted-foreground whitespace-nowrap">
         {entry.class_code}
         <span className="ml-1 text-muted-foreground/60">({entry.class_name})</span>
       </td>

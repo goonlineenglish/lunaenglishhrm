@@ -2,25 +2,25 @@
 
 ## Overview
 
-Buttercup LMS development divided into 4 sequential phases over ~17 weeks (16 base + 4 days for 4-role expansion). Each phase builds on previous foundation. Status: All phases pending (project initialization).
+Buttercup LMS development divided into 4 sequential phases (all complete). Final phase includes Cloudflare R2 file storage integration for teaching materials.
 
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-04 — ALL 4 PHASES COMPLETE
 
 ## Timeline & Milestones
 
 | Phase | Duration | Status | Key Deliverables |
 |-------|----------|--------|------------------|
-| **1. Foundation** | Weeks 1-4 | Pending | Auth, 4-Role System, User/Program/Course CRUD, Dashboard |
-| **2. Learning** | Weeks 5-8 | Pending | Course player, Progress tracking, Profile |
-| **3. Lesson Plan Builder** | Weeks 9-12 | Pending | Tiptap editor, Templates, Admin panel |
-| **4. Security & Polish** | Weeks 13-16 | Pending | DRM, Watermark, Reports, Bunny.net |
+| **1. Foundation** | Weeks 1-4 | Complete ✓ | Auth, 4-Role System, User/Program/Course CRUD, Dashboard |
+| **2. Learning** | Weeks 5-8 | Complete ✓ | Course player, Progress tracking, Profile |
+| **3. Lesson Plan Builder** | Weeks 9-12 | Complete ✓ | Tiptap editor, Templates, Admin panel |
+| **4. Security & Polish** | Weeks 13-16 | Complete ✓ | DRM, Watermark, Reports, R2 File Storage, Favorites |
 
-**Start Date**: To be determined
-**Target Launch**: 16 weeks from start
+**Start Date**: 2025-12-15
+**Completion Date**: 2026-03-04 (16+ weeks)
 
 ## Phase 1: Foundation (Weeks 1-4)
 
-**Priority**: Critical | **Status**: Pending
+**Priority**: Critical | **Status**: COMPLETE ✓
 
 ### Overview
 Establish authentication, user management, program/course infrastructure, and basic dashboard. Teacher can log in and see enrolled courses.
@@ -143,7 +143,7 @@ Enrollment, Progress, LessonPlan
 
 ## Phase 2: Learning & Progress (Weeks 5-8)
 
-**Priority**: High | **Status**: Pending
+**Priority**: High | **Status**: COMPLETE ✓
 
 ### Overview
 Build course player with video support, progress tracking, teacher profile page, and search functionality. Teachers can complete lessons and track progress.
@@ -239,7 +239,7 @@ Build course player with video support, progress tracking, teacher profile page,
 
 ## Phase 3: Lesson Plan Builder (Weeks 9-12)
 
-**Priority**: High | **Status**: Pending
+**Priority**: High | **Status**: COMPLETE ✓
 
 ### Overview
 Build Tiptap-based lesson plan editor with per-program templates. Teachers create, save, and edit lesson plans. Admin manages program templates.
@@ -347,16 +347,16 @@ Build Tiptap-based lesson plan editor with per-program templates. Teachers creat
 
 ## Phase 4: Security & Polish (Weeks 13-16)
 
-**Priority**: Medium | **Status**: Pending
+**Priority**: Medium | **Status**: COMPLETE ✓
 
 ### Overview
-Add DRM protection to lesson content, create admin reports, implement Bunny.net video platform, add favorites feature. Production-ready polish.
+Add DRM protection to lesson content, create admin reports, implement R2 file storage for materials, add favorites feature. Production-ready polish.
 
 ### Key Deliverables
 1. DRM protection (watermark, page blur, right-click disable)
 2. Admin reports (user progress, course completion)
 3. Favorite courses feature (all authenticated roles)
-4. Bunny.net Stream integration (video platform upgrade)
+4. Cloudflare R2 file storage (PDF, images, audio materials)
 5. Session cleanup cron job
 6. Performance optimization & caching
 
@@ -392,6 +392,13 @@ Add DRM protection to lesson content, create admin reports, implement Bunny.net 
 - Quality options (auto, 720p, 1080p)
 - Bandwidth tracking (admin dashboard)
 
+**R2 Material Storage** (COMPLETE):
+- Upload materials to lessons (PDF, images, audio)
+- Presigned URL upload/download (direct to R2)
+- File validation (MIME types, size <100MB)
+- Materials rendered inside DRM zone (protected)
+- Admin delete capability
+
 **Cron Job**:
 - Automated session expiry cleanup (daily 3 AM)
 - Delete `sessions WHERE expiresAt < NOW()`
@@ -406,11 +413,18 @@ Add DRM protection to lesson content, create admin reports, implement Bunny.net 
 **Create**:
 - `components/course-player/drm-zone.tsx` — DRM wrapper
 - `components/shared/watermark.tsx` — Watermark component
+- `components/shared/materials-list.tsx` — Material download list (R2)
+- `components/admin/file-upload-widget.tsx` — File upload widget (R2)
+- `components/admin/lesson-edit-dialog.tsx` — Lesson edit dialog
 - `app/admin/reports/page.tsx` — Reports dashboard
 - `app/admin/reports/progress/page.tsx` — Progress report
 - `app/admin/reports/completion/page.tsx` — Completion report
 - `lib/actions/favorite-actions.ts` — Favorite toggle
+- `lib/actions/material-actions.ts` — Material upload/delete (R2)
 - `lib/services/bunny-service.ts` — Bunny.net API
+- `lib/services/r2-storage-service.ts` — R2 file operations
+- `lib/r2-client.ts` — R2 S3 client singleton
+- `lib/types/material.ts` — Material types
 - `lib/cron/session-cleanup.ts` — Cleanup job
 - `components/shared/favorite-button.tsx` — Favorite toggle UI
 

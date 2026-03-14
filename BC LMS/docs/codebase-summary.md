@@ -2,10 +2,11 @@
 
 ## Project Status
 
-**Status**: ALL 4 PHASES COMPLETE — Production Ready (2026-03-03)
-- 28 routes implemented (app/ pages + API)
-- 52 unit tests passing
+**Status**: ALL 4 PHASES COMPLETE — Production Ready (2026-03-04)
+- 44 routes implemented (app/ pages + API)
+- 123 unit tests passing (7 test files)
 - Build clean
+- R2 integration for material upload/download complete
 - Ready for deployment
 
 **Tech Stack**:
@@ -15,6 +16,7 @@
 - UI: shadcn/ui + Tailwind v4
 - Rich Editor: Tiptap (lesson content + lesson plans)
 - Video: Google Drive (Phase 1-4)
+- File Storage: Cloudflare R2 (materials: PDF, images, audio)
 - Deployment: Docker + Caddy reverse proxy
 
 ## Key Architectural Patterns
@@ -156,12 +158,26 @@ model Lesson {
   title      String
   content    String?  // Tiptap JSON
   videoUrl   String?
-  materials  Json?    // [{name, url, type}]
+  materials  Material[] // Lesson materials (PDF, images, audio)
   order      Int
   duration   Int?     // minutes
   isDeleted  Boolean  @default(false)
   progress   Progress[]
   @@unique([courseId, order])
+}
+```
+
+### Material (Phase 4 — R2 Storage)
+```prisma
+model Material {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  filename  String   // original filename
+  r2Key     String   // S3/R2 object key
+  mimeType  String   // MIME type (pdf, image/*, audio/*)
+  size      Int      // bytes
+  createdAt DateTime @default(now())
 }
 ```
 
@@ -282,7 +298,8 @@ lib/
 │   ├── progress-actions.ts
 │   ├── lesson-plan-actions.ts
 │   ├── template-actions.ts
-│   └── favorite-actions.ts
+│   ├── favorite-actions.ts
+│   └── material-actions.ts       # Material upload/delete (R2)
 ├── services/                    # Business logic
 │   ├── access-control-service.ts
 │   ├── role-permissions-service.ts  # Role-based permission map
@@ -291,6 +308,7 @@ lib/
 │   ├── progress-service.ts
 │   ├── template-service.ts
 │   ├── bunny-service.ts
+│   ├── r2-storage-service.ts     # R2 file operations
 │   └── query-helpers.ts
 ├── auth/                        # Auth utilities
 │   ├── auth-guard.ts
@@ -303,7 +321,9 @@ lib/
 │   ├── lesson.ts
 │   ├── progress.ts
 │   ├── auth.ts
+│   ├── material.ts              # Material types
 │   └── api.ts
+├── r2-client.ts                # R2 S3 client singleton
 ├── prisma.ts                   # Prisma client
 ├── logger.ts                   # Logging utility
 └── utils.ts                    # General utilities
@@ -320,7 +340,8 @@ components/
 │   ├── video-player.tsx
 │   ├── drm-zone.tsx
 │   ├── watermark.tsx
-│   └── lesson-sidebar.tsx
+│   ├── lesson-sidebar.tsx
+│   └── course-player-layout.tsx
 ├── lesson-plan/
 │   ├── editor.tsx
 │   ├── template-selector.tsx
@@ -330,12 +351,16 @@ components/
 │   ├── user-list.tsx
 │   ├── program-list.tsx
 │   ├── course-list.tsx
+│   ├── lesson-list.tsx
+│   ├── lesson-edit-dialog.tsx    # Extracted lesson editing dialog
+│   ├── file-upload-widget.tsx    # Drag-drop file upload (R2)
 │   └── reports-dashboard.tsx
 ├── tiptap/
 │   ├── editor.tsx
 │   └── menu-bar.tsx
 └── shared/
     ├── role-gate.tsx         # Conditional rendering by role
+    ├── materials-list.tsx    # Material download list (R2)
     ├── sidebar.tsx
     ├── header.tsx
     ├── skeleton.tsx
@@ -461,6 +486,10 @@ README.md
 ### Templates (Read-only)
 - `GET /api/templates/[programId]` — Get program template (Manager/Teacher/TA)
 
+### Materials (R2 File Storage)
+- `POST /api/upload/presign` — Generate presigned upload URL (Admin only)
+- `GET /api/materials/[id]/download` — Generate presigned download URL (Three-Gate check)
+
 ### Favorites
 - `POST /api/favorites` — Toggle favorite course
 - `GET /api/favorites` — List user's favorite courses
@@ -481,6 +510,12 @@ JWT_SECRET=random-32-char-string
 # App
 NEXT_PUBLIC_APP_URL=https://lms.buttercuplearning.com
 NODE_ENV=production
+
+# Cloudflare R2 (File Storage)
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_BUCKET_NAME=your-bucket-name
 
 # External (Phase 2+)
 GOOGLE_DRIVE_API_KEY=
@@ -507,10 +542,12 @@ CADDY_EMAIL=admin@buttercuplearning.com
 
 ## Current Development Status
 
-**Code Files**: 0 (project not yet started)
-**Database Migrations**: 0 (schema finalized, migrations pending)
-**Tests**: 0 (testing framework to be set up in Phase 1)
-**Documentation**: Complete (7 docs files + README)
+**Code Files**: 52 implementation + 11 R2 integration (63 total)
+**Test Files**: 7 (123 tests passing)
+**Database Models**: 11 (including Material)
+**API Routes**: 44
+**Build Status**: Clean
+**Status**: ALL PHASES COMPLETE (2026-03-04)
 
 ## Key References
 

@@ -11,6 +11,7 @@
 │  │  React Components (Next.js Client)                       │   │
 │  │  - Dashboard, Course Player, Lesson Plan Editor          │   │
 │  │  - Auth handling (JWT from httpOnly cookie)              │   │
+│  │  - File upload widget with XHR progress                  │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                              ↓
@@ -31,6 +32,7 @@
 │  │ - Program/Course CRUD                                 │    │
 │  │ - Progress tracking                                    │    │
 │  │ - Lesson plan CRUD                                     │    │
+│  │ - Material upload/download (R2)                        │    │
 │  └────────────────────────────────────────────────────────┘    │
 │                             ↓                                   │
 │  ┌────────────────────────────────────────────────────────┐    │
@@ -38,6 +40,7 @@
 │  │ - Business logic (access control, enrollment check)    │    │
 │  │ - Data transformation                                  │    │
 │  │ - Error handling & validation                          │    │
+│  │ - R2 file operations (presigned URLs)                  │    │
 │  └────────────────────────────────────────────────────────┘    │
 │                             ↓                                   │
 │  ┌────────────────────────────────────────────────────────┐    │
@@ -47,21 +50,12 @@
 │  └────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                  PostgreSQL Database                            │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │ Core Tables:                                           │    │
-│  │ - users (email, password hash, role)                   │    │
-│  │ - sessions (jti, invalidated, expiresAt)               │    │
-│  │ - programs (name, slug, lessonPlanTemplate)            │    │
-│  │ - user_programs (userId, programId) [access]           │    │
-│  │ - courses (programId, title, type, level, order)        │    │
-│  │ - lessons (courseId, title, content, videoUrl)         │    │
-│  │ - enrollments (userId, courseId)                       │    │
-│  │ - progress (userId, lessonId, watched, completed)      │    │
-│  │ - lesson_plans (userId, programId, content)            │    │
-│  └────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
+          ┌──────────────────┬──────────────────┐
+          ↓                  ↓                   ↓
+┌─────────────────────┐  ┌──────────────────┐  ┌──────────────┐
+│ PostgreSQL Database │  │ Cloudflare R2    │  │ Browser Cache│
+│  (Primary Data)     │  │ (File Storage)   │  │ (Static Ass.)│
+└─────────────────────┘  └──────────────────┘  └──────────────┘
 ```
 
 ## Layers & Responsibilities
@@ -114,6 +108,7 @@ try {
 - **EnrollmentService**: Enroll users, check access
 - **ProgressService**: Track watched time, completion
 - **TemplateService**: Program template management
+- **R2StorageService**: Cloudflare R2 file operations (presigned URLs, validation, delete)
 - **SoftDeleteService**: Query filtering (always WHERE isDeleted=false)
 
 ### 5. Persistence Layer (Prisma ORM)
@@ -444,7 +439,56 @@ await prisma.user.update({
 });
 ```
 
+
+
+## R2 Material File Storage (Phase 4)
+
+### Upload Flow (Admin)
+```
+Admin → POST /api/upload/presign {filename, mimeType, size}
+  ↓
+R2StorageService validates: file type, size (<100MB), MIME whitelist
+  ↓
+Generate presigned PUT URL + store r2Key in response
+  ↓
+Browser → PUT presigned URL directly to R2 (XHR with progress bar)
+  ↓
+Admin confirms upload → confirmMaterialUpload() server action
+  ↓
+HeadObject verify → prisma.material.create()
+```
+
+### Download Flow (Teacher)
+```
+Teacher → GET /api/materials/[id]/download (from lesson player)
+  ↓
+Three-Gate access check (UserProgram + Enrollment + CourseLevel)
+  ↓
+R2StorageService generates presigned GET URL (1-hour expiry)
+  ↓
+Response: {downloadUrl}
+  ↓
+Browser → window.open(downloadUrl) → download file
+```
+
+### Delete Flow (Admin)
+```
+Admin → deleteMaterial() server action {materialId}
+  ↓
+Delete R2 object (deleteR2Object)
+  ↓
+prisma.material.delete()
+```
+
+### Storage Structure
+- R2 key format: `materials/{courseId}/{lessonId}/{timestamp}-{sanitized-filename}`
+- ALLOWED_MIME_TYPES: PDF, PNG, JPEG, GIF, WebP, MP3, WAV, OGG
+- MAX_FILE_SIZE: 100MB
+- Materials rendered inside DrmZone (blur/watermark protection)
+
 ## DRM Architecture (Phase 4)
+
+### Content Protection Layers
 
 ### Content Protection Layers
 

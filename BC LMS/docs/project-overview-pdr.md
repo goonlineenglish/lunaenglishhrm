@@ -9,7 +9,7 @@
 
 Serves approximately 100 internal staff (teachers, teaching assistants, and managers) with structured courses, progress tracking, and collaborative lesson planning tools. Not student-facing; internal staff only.
 
-**Last Updated**: 2026-03-03 — ALL 4 PHASES COMPLETE
+**Last Updated**: 2026-03-04 — ALL 4 PHASES COMPLETE with R2 integration
 
 ### Who Uses It
 - **Teachers (Giao vien)**: Access assigned courses (basic + advanced), track progress, build lesson plans (giáo án), export as PDF/Word
@@ -147,6 +147,7 @@ Structured for 90-minute classroom sessions with activity breakdown.
 - Payment/billing system (internal training only)
 - Student accounts or student-facing features
 - Video upload/hosting (external services only: Google Drive, Bunny.net)
+- Large file uploads (max 100MB per material for R2)
 - Real-time collaboration on lesson plans
 - Advanced learning analytics (reports limited to progress tracking)
 - Mobile app (responsive web only)
@@ -222,6 +223,14 @@ Structured for 90-minute classroom sessions with activity breakdown.
    - Page blur on visibility change (tab switch, window blur)
    - Right-click disabled on video element
    - `.drm-zone` CSS isolation (prevents easy bypassing)
+
+8. **Material File Storage** (Phase 4 — R2)
+   - Admin uploads teaching materials (PDF, images, audio) to lessons
+   - Cloudflare R2 file storage with presigned URLs
+   - Teachers download materials through course player
+   - Materials protected inside DRM zone
+   - Supported types: PDF, PNG, JPEG, GIF, WebP, MP3, WAV, OGG
+   - Max file size: 100MB per material
 
 ## Key Non-Functional Requirements
 

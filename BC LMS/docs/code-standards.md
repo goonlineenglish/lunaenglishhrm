@@ -39,20 +39,26 @@ lib/
 │   ├── template-actions.ts
 │   ├── profile-actions.ts
 │   ├── report-actions.ts
-│   └── favorite-actions.ts
+│   ├── favorite-actions.ts
+│   └── material-actions.ts       # Material upload/delete (R2)
 ├── services/                # Business logic layer
 │   ├── access-control-service.ts
 │   ├── auth-service.ts
 │   ├── role-permissions-service.ts
 │   ├── soft-delete-service.ts
-│   └── progress-service.ts
+│   ├── progress-service.ts
+│   ├── template-service.ts
+│   ├── bunny-service.ts
+│   └── r2-storage-service.ts    # R2 file operations
 ├── types/                   # TypeScript type definitions
 │   ├── user.ts
 │   ├── course.ts
 │   ├── auth.ts
+│   ├── material.ts          # Material types (R2)
 │   └── index.ts
 ├── utils/                   # Utility functions
 │   └── sanitize-html.ts
+├── r2-client.ts            # R2 S3 client singleton
 ├── prisma.ts               # Prisma client instance
 └── utils.ts                # Misc utilities
 
@@ -67,6 +73,9 @@ components/
 │   ├── user-table.tsx
 │   ├── program-form.tsx
 │   ├── program-table.tsx
+│   ├── lesson-list.tsx
+│   ├── lesson-edit-dialog.tsx    # Extracted lesson editing (R2 upload)
+│   ├── file-upload-widget.tsx    # Drag-drop file upload (R2)
 │   └── report-table.tsx
 ├── dashboard/
 │   ├── dashboard-header.tsx
@@ -92,6 +101,7 @@ components/
     ├── role-badge.tsx
     ├── role-gate.tsx
     ├── favorite-button.tsx
+    ├── materials-list.tsx   # Material download list (R2)
     └── skeleton.tsx
 
 prisma/

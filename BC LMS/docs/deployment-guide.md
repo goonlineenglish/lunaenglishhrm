@@ -1,6 +1,6 @@
 # Deployment Guide
 
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-04
 
 ## Overview
 
@@ -63,6 +63,7 @@ DATABASE_URL=postgresql://bc_lms_user:secure_password_here@postgres:5432/bc_lms
 
 # JWT (generate with: openssl rand -base64 32)
 JWT_SECRET=your-random-secret-min-32-chars
+CRON_SECRET=your-random-cron-secret-min-32-chars
 
 # App
 NEXT_PUBLIC_APP_URL=https://lms.buttercuplearning.com
@@ -72,6 +73,12 @@ LOG_LEVEL=info
 # Caddy
 CADDY_DOMAIN=lms.buttercuplearning.com
 CADDY_EMAIL=admin@buttercuplearning.com
+
+# Cloudflare R2 (File Storage)
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key-id
+R2_SECRET_ACCESS_KEY=your-secret-access-key
+R2_BUCKET_NAME=your-bucket-name
 
 # Optional: External Services (Phase 2+)
 GOOGLE_DRIVE_API_KEY=
@@ -274,7 +281,7 @@ Create `Caddyfile` in project root:
   header X-Content-Type-Options nosniff
   header X-XSS-Protection "1; mode=block"
   header Referrer-Policy strict-origin-when-cross-origin
-  header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; media-src 'self' https://drive.google.com https://*.b-cdn.net; frame-src 'self' https://drive.google.com"
+  header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: https://*.r2.cloudflarestorage.com; media-src 'self' https://drive.google.com https://*.b-cdn.net; frame-src 'self' https://drive.google.com"
 
   # Compression
   encode gzip
@@ -651,5 +658,9 @@ docker-compose exec caddy caddy reload
 | LOG_LEVEL | info | No | Logging verbosity |
 | GOOGLE_DRIVE_API_KEY | (Phase 2+) | No | Google Drive video embed |
 | BUNNY_STREAM_API_KEY | (Phase 4) | No | Bunny.net video platform |
+| R2_ACCOUNT_ID | your-account-id | Yes (R2) | Cloudflare R2 account |
+| R2_ACCESS_KEY_ID | (generated) | Yes (R2) | R2 API access key |
+| R2_SECRET_ACCESS_KEY | (generated) | Yes (R2) | R2 API secret key |
+| R2_BUCKET_NAME | your-bucket-name | Yes (R2) | R2 bucket for materials |
 | CADDY_DOMAIN | lms.buttercuplearning.com | Yes (prod) | HTTPS domain |
 | CADDY_EMAIL | admin@example.com | Yes (prod) | Let's Encrypt email |

@@ -180,13 +180,13 @@ export async function initializePayslips(
     if (empErr) throw empErr
     const employees = (empRows ?? []) as EmployeeRow[]
 
-    // Fetch existing payslips to check is_reviewed status
+    // Fetch existing payslips to check is_reviewed status and class_breakdown population
     const { data: existingRows } = await sb
       .from('payslips')
-      .select('id, employee_id, is_reviewed')
+      .select('id, employee_id, is_reviewed, class_breakdown')
       .eq('payroll_period_id', periodId)
 
-    type ExistingPayslip = { id: string; employee_id: string; is_reviewed: boolean }
+    type ExistingPayslip = { id: string; employee_id: string; is_reviewed: boolean; class_breakdown: unknown[] | null }
     const existingMap = new Map<string, ExistingPayslip>()
     for (const p of ((existingRows as unknown[]) ?? [])) {
       const row = p as ExistingPayslip
@@ -200,8 +200,11 @@ export async function initializePayslips(
     const results = await Promise.all(employees.map(async (emp) => {
       const existing = existingMap.get(emp.id)
 
-      // Skip employees already reviewed — preserves accountant's manual work
-      if (existing?.is_reviewed) return { result: 'skipped' as const }
+      // Skip only if reviewed AND class_breakdown is already populated.
+      // Reviewed rows with empty breakdown (e.g. payslips created before migration 009)
+      // still need a partial update to show per-class rows in the spreadsheet.
+      const existingHasBreakdown = Array.isArray(existing?.class_breakdown) && (existing.class_breakdown as unknown[]).length > 0
+      if (existing?.is_reviewed && existingHasBreakdown) return { result: 'skipped' as const }
 
       const isOffice = emp.position === 'office' || emp.position === 'admin'
       const isTeaching = emp.position === 'teacher' || emp.position === 'assistant'
@@ -235,6 +238,19 @@ export async function initializePayslips(
         : emp.rate_per_session
 
       const substitutePay = calculateSubstitutePay(substituteSessions, emp.sub_rate)
+
+      // Partial update path: reviewed but class_breakdown is empty (e.g. payslip predates migration 009).
+      // Update ONLY class fields — never touch bhxh, bhyt, tncn, gross/net (accountant's manual work).
+      if (existing?.is_reviewed && isTeaching) {
+        const { error: patchErr } = await sb.from('payslips').update({
+          class_breakdown: classBreakdown,
+          sessions_worked: sessionsWorked,
+          rate_per_session: effectiveRate,
+          teaching_pay: teachingPay,
+        }).eq('id', existing.id)
+        if (patchErr) throw new Error(`Class breakdown patch failed for ${emp.employee_code}: ${patchErr.message}`)
+        return { result: 'created' as const }
+      }
 
       const payslipData = {
         payroll_period_id: periodId,

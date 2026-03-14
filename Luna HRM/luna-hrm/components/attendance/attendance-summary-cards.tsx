@@ -49,14 +49,15 @@ function SummaryContent({ items, useMonthClasses }: { items: AttendanceSummaryIt
     )
   }
 
-  // Branch footer totals
-  const teachingWeek = items
+  // Branch footer totals — match the display mode (week vs month)
+  const teachingTotal = items
     .filter((e) => e.position === 'teacher' || e.position === 'assistant')
-    .reduce((s, e) => s + e.total_week, 0)
-  const officeWeek = items
+    .reduce((s, e) => s + (useMonthClasses ? e.total_month : e.total_week), 0)
+  const officeTotal = items
     .filter((e) => e.position === 'office' || e.position === 'admin')
-    .reduce((s, e) => s + e.total_week, 0)
-  const totalWeek = teachingWeek + officeWeek
+    .reduce((s, e) => s + (useMonthClasses ? e.total_month : e.total_week), 0)
+  const grandTotal = teachingTotal + officeTotal
+  const periodLabel = useMonthClasses ? 'tháng' : 'tuần'
 
   return (
     <div className="space-y-2">
@@ -105,12 +106,12 @@ function SummaryContent({ items, useMonthClasses }: { items: AttendanceSummaryIt
       {/* Branch totals footer */}
       <div className="text-xs text-muted-foreground border-t pt-2 flex gap-3 flex-wrap">
         <span>
-          Tổng chi nhánh (tuần) — GV:{' '}
-          <span className="font-semibold text-foreground">{teachingWeek}</span>
+          Tổng chi nhánh ({periodLabel}) — GV:{' '}
+          <span className="font-semibold text-foreground">{teachingTotal}</span>
           {'  │  '}VP:{' '}
-          <span className="font-semibold text-foreground">{officeWeek}</span>
+          <span className="font-semibold text-foreground">{officeTotal}</span>
           {'  │  '}Tổng:{' '}
-          <span className="font-semibold text-foreground">{totalWeek}</span>
+          <span className="font-semibold text-foreground">{grandTotal}</span>
         </span>
       </div>
     </div>

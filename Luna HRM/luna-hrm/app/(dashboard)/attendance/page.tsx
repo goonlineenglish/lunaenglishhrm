@@ -42,6 +42,7 @@ export default function AttendancePage() {
   // Summary tab state — only fetched when tab is mounted (no forceMount = lazy render)
   const [summaryItems, setSummaryItems] = useState<AttendanceSummaryItem[]>([])
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
 
   // Detect role on mount — if BM, branchId is derived server-side from JWT
   useEffect(() => {
@@ -82,17 +83,32 @@ export default function AttendancePage() {
   const fetchSummary = useCallback(async () => {
     if (isAdmin && !branchId) return
     setSummaryLoading(true)
-    const month = weekStart.getMonth() + 1
-    const year = weekStart.getFullYear()
-    const res = await getAttendanceSummary(branchId, toISODate(weekStart), month, year)
-    if (res.success && res.data) setSummaryItems(res.data.items)
-    setSummaryLoading(false)
+    setSummaryError(null)
+    try {
+      const month = weekStart.getMonth() + 1
+      const year = weekStart.getFullYear()
+      const res = await getAttendanceSummary(branchId, toISODate(weekStart), month, year)
+      if (res.success && res.data) {
+        setSummaryItems(res.data.items)
+      } else {
+        setSummaryItems([])
+        setSummaryError(res.error ?? 'Lỗi tải tổng hợp công.')
+      }
+    } catch {
+      setSummaryItems([])
+      setSummaryError('Lỗi tải tổng hợp công.')
+    } finally {
+      setSummaryLoading(false)
+    }
   }, [weekStart, branchId, isAdmin])
 
-  // ISSUE-2 fix: re-fetch when branch/week changes while summary tab is active
+  // Single trigger for summary fetch — covers both:
+  //   1. Tab switch to 'summary' (activeTab changes)
+  //   2. Week/branch change while already on 'summary' tab
+  // No fetchSummary() call in onValueChange — avoids double-fetch (ISSUE-1 fix)
   useEffect(() => {
     if (activeTab === 'summary') fetchSummary()
-  }, [weekStart, branchId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, fetchSummary]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-4">
@@ -103,12 +119,12 @@ export default function AttendancePage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && (
-            <BranchSelector value={branchId} onChange={(id) => { setBranchId(id); setData(null); setSummaryItems([]) }} />
+            <BranchSelector value={branchId} onChange={(id) => { setBranchId(id); setData(null); setSummaryItems([]); setSummaryError(null) }} />
           )}
           <AttendanceWeekSelector
             weekStart={weekStart}
             isLocked={data?.isLocked ?? false}
-            onWeekChange={(d) => { setWeekStart(d); setSummaryItems([]) }}
+            onWeekChange={(d) => { setWeekStart(d); setSummaryItems([]); setSummaryError(null) }}
           />        </div>
       </div>
 
@@ -124,9 +140,7 @@ export default function AttendancePage() {
       )}
 
       <Tabs value={activeTab} onValueChange={(val) => {
-        const tab = val as 'grid' | 'summary'
-        setActiveTab(tab)
-        if (tab === 'summary') fetchSummary()
+        setActiveTab(val as 'grid' | 'summary')
       }}>
         <TabsList>
           <TabsTrigger value="grid">Chấm công</TabsTrigger>
@@ -164,6 +178,9 @@ export default function AttendancePage() {
 
         {/* Summary tab — no forceMount: only fetches when active (ISSUE-8 fix) */}
         <TabsContent value="summary" className="mt-3">
+          {summaryError && (
+            <Alert variant="destructive" className="mb-3"><p>{summaryError}</p></Alert>
+          )}
           <AttendanceSummaryCards items={summaryItems} loading={summaryLoading} />
         </TabsContent>
       </Tabs>

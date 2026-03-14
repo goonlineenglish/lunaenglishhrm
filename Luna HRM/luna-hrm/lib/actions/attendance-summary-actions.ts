@@ -33,12 +33,13 @@ async function queryTeachingSummary(
   endDate: string,
   employeeId?: string
 ): Promise<Map<string, Map<string, ClassSessionSummary>>> {
-  // Step 1: Get active class schedules for this branch
+  // Step 1: Get class schedules for this branch.
+  // NOTE: Do NOT filter by status='active' — attendance records may reference
+  // deactivated classes within the period, and payroll counts ALL sessions.
   const { data: schedules, error: schErr } = await sb
     .from('class_schedules')
     .select('id, class_code, class_name')
     .eq('branch_id', branchId)
-    .eq('status', 'active')
 
   if (schErr) throw schErr
   if (!schedules?.length) return new Map()
@@ -214,8 +215,15 @@ export async function getAttendanceSummary(
     const allowed = user.role === 'admin' || user.role === 'branch_manager' || user.role === 'accountant'
     if (!allowed) return { success: false, error: 'Bạn không có quyền xem tổng hợp công.' }
 
-    // BM branch guard
+    // BM/accountant: resolve effective branch from JWT first, then validate
     const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    if (!effectiveBranch) return { success: false, error: 'Chưa chọn chi nhánh.' }
+
+    // Input validation
+    if (month < 1 || month > 12 || !Number.isInteger(month)) return { success: false, error: 'Tháng không hợp lệ.' }
+    if (year < 2020 || year > 2099 || !Number.isInteger(year)) return { success: false, error: 'Năm không hợp lệ.' }
+
+    // BM branch guard — reject cross-branch requests
     if (user.role === 'branch_manager' && branchId && branchId !== user.branch_id) {
       return { success: false, error: 'Bạn chỉ có thể xem chi nhánh của mình.' }
     }
@@ -270,11 +278,13 @@ export async function getMyAttendanceSummary(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    if (user.role !== 'employee') {
-      return { success: false, error: 'Chỉ nhân viên mới có thể dùng tính năng này.' }
-    }
-
+    // Any authenticated user can view their own summary — not just 'employee' role.
+    // BM or admin who are also assigned to classes can see their own data too.
     if (!user.branch_id) return { success: false, error: 'Tài khoản chưa được gán chi nhánh.' }
+
+    // Input validation
+    if (month < 1 || month > 12 || !Number.isInteger(month)) return { success: false, error: 'Tháng không hợp lệ.' }
+    if (year < 2020 || year > 2099 || !Number.isInteger(year)) return { success: false, error: 'Năm không hợp lệ.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

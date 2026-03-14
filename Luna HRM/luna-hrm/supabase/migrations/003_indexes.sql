@@ -31,6 +31,13 @@ CREATE INDEX idx_office_attendance_employee_date
 CREATE INDEX idx_class_schedules_branch_status
   ON class_schedules (branch_id, status);
 
+-- FK indexes: teacher_id + assistant_id used in RLS policy JOIN and attendance summary queries
+CREATE INDEX idx_class_schedules_teacher_id
+  ON class_schedules (teacher_id);
+
+CREATE INDEX idx_class_schedules_assistant_id
+  ON class_schedules (assistant_id);
+
 -- ============================================================
 -- kpi_evaluations indexes
 -- ============================================================
@@ -45,6 +52,10 @@ CREATE INDEX idx_payslips_period_employee
 
 CREATE INDEX idx_payslips_employee_created
   ON payslips (employee_id, created_at DESC);
+
+-- branch_id used heavily in BM queries
+CREATE INDEX idx_payslips_branch_id
+  ON payslips (branch_id);
 
 -- ============================================================
 -- employee_weekly_notes indexes
@@ -114,3 +125,16 @@ CREATE INDEX idx_employee_notes_employee_id
 -- ============================================================
 CREATE INDEX idx_attendance_locks_branch_week
   ON attendance_locks (branch_id, week_start);
+
+-- ============================================================
+-- attendance: partial index on active records (ISSUE-5 fix)
+-- Two-step query in getAttendanceSummary reads status IN ('1','0.5')
+-- for date ranges. Partial index dramatically reduces scan size.
+-- ============================================================
+CREATE INDEX idx_attendance_status_present
+  ON attendance (schedule_id, date)
+  WHERE status IN ('1', '0.5');
+
+CREATE INDEX idx_office_attendance_status_present
+  ON office_attendance (branch_id, date)
+  WHERE status IN ('1', '0.5');

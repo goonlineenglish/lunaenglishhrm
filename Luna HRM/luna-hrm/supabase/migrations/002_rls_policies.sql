@@ -70,7 +70,7 @@ CREATE POLICY "branches_employee_select_own" ON branches
   FOR SELECT TO authenticated
   USING (
     get_user_role() = 'employee'
-    AND id = (SELECT branch_id FROM employees WHERE id = auth.uid())
+    AND id = (SELECT branch_id FROM employees WHERE id = (SELECT auth.uid()))
   );
 
 -- ============================================================
@@ -105,18 +105,18 @@ CREATE POLICY "employees_accountant_select" ON employees
 
 CREATE POLICY "employees_self_select" ON employees
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND id = auth.uid());
+  USING (get_user_role() = 'employee' AND id = (SELECT auth.uid()));
 
 CREATE POLICY "employees_self_update" ON employees
   FOR UPDATE TO authenticated
-  USING (get_user_role() = 'employee' AND id = auth.uid())
+  USING (get_user_role() = 'employee' AND id = (SELECT auth.uid()))
   -- ISSUE-2 fix: prevent self-escalation — employees cannot change authority fields.
   -- Only safe profile columns (phone, address, bank_account_number, etc.) can be updated.
   WITH CHECK (
-    get_user_role() = 'employee' AND id = auth.uid()
-    AND role = (SELECT role FROM employees WHERE id = auth.uid())
-    AND branch_id IS NOT DISTINCT FROM (SELECT branch_id FROM employees WHERE id = auth.uid())
-    AND is_active = (SELECT is_active FROM employees WHERE id = auth.uid())
+    get_user_role() = 'employee' AND id = (SELECT auth.uid())
+    AND role = (SELECT role FROM employees WHERE id = (SELECT auth.uid()))
+    AND branch_id IS NOT DISTINCT FROM (SELECT branch_id FROM employees WHERE id = (SELECT auth.uid()))
+    AND is_active = (SELECT is_active FROM employees WHERE id = (SELECT auth.uid()))
   );
 
 -- ============================================================
@@ -146,7 +146,7 @@ CREATE POLICY "class_schedules_employee_select" ON class_schedules
   FOR SELECT TO authenticated
   USING (
     get_user_role() = 'employee'
-    AND (teacher_id = auth.uid() OR assistant_id = auth.uid())
+    AND (teacher_id = (SELECT auth.uid()) OR assistant_id = (SELECT auth.uid()))
   );
 
 -- ============================================================
@@ -188,7 +188,7 @@ CREATE POLICY "attendance_accountant_select" ON attendance
 
 CREATE POLICY "attendance_employee_select_own" ON attendance
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: office_attendance
@@ -214,7 +214,7 @@ CREATE POLICY "office_attendance_accountant_select" ON office_attendance
 
 CREATE POLICY "office_attendance_employee_select_own" ON office_attendance
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: attendance_locks
@@ -242,7 +242,7 @@ CREATE POLICY "attendance_locks_employee_select" ON attendance_locks
   FOR SELECT TO authenticated
   USING (
     get_user_role() = 'employee'
-    AND branch_id = (SELECT branch_id FROM employees WHERE id = auth.uid())
+    AND branch_id = (SELECT branch_id FROM employees WHERE id = (SELECT auth.uid()))
   );
 
 -- ============================================================
@@ -274,7 +274,7 @@ CREATE POLICY "employee_weekly_notes_accountant_update_processed" ON employee_we
 
 CREATE POLICY "employee_weekly_notes_employee_select_own" ON employee_weekly_notes
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: kpi_evaluations
@@ -300,7 +300,7 @@ CREATE POLICY "kpi_evaluations_accountant_select" ON kpi_evaluations
 
 CREATE POLICY "kpi_evaluations_employee_select_own" ON kpi_evaluations
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: payroll_periods
@@ -348,7 +348,7 @@ CREATE POLICY "payslips_accountant_all" ON payslips
 
 CREATE POLICY "payslips_employee_select_own" ON payslips
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: salary_components
@@ -388,7 +388,7 @@ CREATE POLICY "salary_components_accountant_select" ON salary_components
 
 CREATE POLICY "salary_components_employee_select_own" ON salary_components
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: evaluation_templates
@@ -491,7 +491,7 @@ CREATE POLICY "employee_evaluations_accountant_select" ON employee_evaluations
 
 CREATE POLICY "employee_evaluations_employee_select_own" ON employee_evaluations
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'employee' AND employee_id = auth.uid());
+  USING (get_user_role() = 'employee' AND employee_id = (SELECT auth.uid()));
 
 -- ============================================================
 -- TABLE: evaluation_scores
@@ -538,7 +538,7 @@ CREATE POLICY "evaluation_scores_employee_select_own" ON evaluation_scores
     AND EXISTS (
       SELECT 1 FROM employee_evaluations ee
       WHERE ee.id = evaluation_scores.evaluation_id
-        AND ee.employee_id = auth.uid()
+        AND ee.employee_id = (SELECT auth.uid())
     )
   );
 

@@ -19,6 +19,7 @@ CREATE INDEX idx_audit_logs_user_created  ON audit_logs(user_id, created_at);
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Only admins can read audit logs; writes are done server-side (bypassing RLS via service role).
+-- Use get_user_role() helper for consistency with all other RLS policies.
 CREATE POLICY "admin_select_audit" ON audit_logs FOR SELECT USING (
-  (auth.jwt()->'app_metadata'->>'role') = 'admin'
+  get_user_role() = 'admin'
 );

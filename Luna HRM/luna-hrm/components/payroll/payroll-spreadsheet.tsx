@@ -2,23 +2,25 @@
 
 /**
  * Spreadsheet-style payroll editor.
- * - Read-only columns: auto-calculated (sessions, rate, teaching_pay, etc.)
- * - Editable columns: bhxh/bhyt/bhtn, tncn, gross, net, kpi, allowances, etc.
+ * - Teaching staff: grouped per-class rows (sessions/rate editable) + summary row
+ * - Office: single row per employee
+ * - Editable summary columns: bhxh/bhyt/bhtn, tncn, gross, net, kpi, allowances, etc.
  * - Batch save via batchUpdatePayslips()
  * - Dirty state tracking → disable Re-init / Confirm / Export when unsaved
  * - "Mark all reviewed" shortcut
  * - Read-only mode when period is confirmed
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Save, CheckSquare, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PayrollSpreadsheetRow, SPREADSHEET_COLUMNS } from './payroll-spreadsheet-row'
+import { PayrollClassRow } from './payroll-class-row'
 import { batchUpdatePayslips, markPayslipsReviewed } from '@/lib/actions/payroll-actions'
 import { formatVND } from '@/lib/utils/number-format'
 import type { PayslipWithEmployee } from '@/lib/actions/payroll-actions'
-import type { EditablePayslipFields } from '@/lib/types/database-payroll-types'
+import type { EditablePayslipFields, ClassBreakdownEntry } from '@/lib/types/database-payroll-types'
 
 type TabType = 'assistant' | 'teacher' | 'office'
 
@@ -41,6 +43,8 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
   const [markingReviewed, setMarkingReviewed] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<string | null>(null)
+  // Set of payslip IDs currently in class-edit mode
+  const [editingClasses, setEditingClasses] = useState<Set<string>>(new Set())
 
   const isLocked = periodStatus !== 'draft'
   const isDirty = edits.size > 0
@@ -67,6 +71,81 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
     []
   )
 
+  /** Toggle class-edit mode for a payslip, initialising the breakdown in edits */
+  const handleToggleClassEdit = useCallback((payslipId: string, currentBreakdown: ClassBreakdownEntry[]) => {
+    setEditingClasses((prev) => {
+      const next = new Set(prev)
+      if (next.has(payslipId)) {
+        next.delete(payslipId)
+      } else {
+        next.add(payslipId)
+        // Seed edits with a copy of current breakdown so edits are tracked
+        setEdits((e) => {
+          if (e.get(payslipId)?.class_breakdown) return e
+          const n = new Map(e)
+          const existing = n.get(payslipId) ?? {}
+          n.set(payslipId, { ...existing, class_breakdown: currentBreakdown.map((c) => ({ ...c })) })
+          return n
+        })
+      }
+      return next
+    })
+  }, [])
+
+  /** Edit a single class row field (sessions or rate) */
+  const handleClassEntryEdit = useCallback(
+    (payslipId: string, classIndex: number, field: 'sessions' | 'rate', value: number) => {
+      setEdits((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(payslipId) ?? {}
+        // Require seeded breakdown from handleToggleClassEdit — never fall back to payslips.find() (ISSUE-4 fix)
+        const baseBd = existing.class_breakdown
+        if (!baseBd) return prev
+        const updated = baseBd.map((c, i) => {
+          if (i !== classIndex) return c
+          const newEntry = { ...c, [field]: value, amount: field === 'sessions' ? value * c.rate : c.sessions * value }
+          return newEntry
+        })
+        // Recalc totals from breakdown
+        const totalSessions = updated.reduce((s, c) => s + c.sessions, 0)
+        const totalTeachingPay = updated.reduce((s, c) => s + c.amount, 0)
+        next.set(payslipId, {
+          ...existing,
+          class_breakdown: updated,
+          sessions_worked: totalSessions,
+          teaching_pay: totalTeachingPay,
+        })
+        return next
+      })
+      setSaveError(null)
+    },
+    []
+  )
+
+  /** Reset a class entry to defaults */
+  const handleClassEntryReset = useCallback((payslipId: string, classIndex: number) => {
+    setEdits((prev) => {
+      const next = new Map(prev)
+      const existing = next.get(payslipId) ?? {}
+      // Require seeded breakdown from handleToggleClassEdit — never fall back to payslips.find() (ISSUE-4 fix)
+      const baseBd = existing.class_breakdown
+      if (!baseBd) return prev
+      const updated = baseBd.map((c, i) => {
+        if (i !== classIndex) return c
+        return { ...c, sessions: c.default_sessions, rate: c.default_rate, amount: c.default_sessions * c.default_rate }
+      })
+      const totalSessions = updated.reduce((s, c) => s + c.sessions, 0)
+      const totalTeachingPay = updated.reduce((s, c) => s + c.amount, 0)
+      next.set(payslipId, {
+        ...existing,
+        class_breakdown: updated,
+        sessions_worked: totalSessions,
+        teaching_pay: totalTeachingPay,
+      })
+      return next
+    })
+  }, [])
+
   const handleSave = useCallback(async () => {
     if (edits.size === 0) return
     setSaving(true)
@@ -82,6 +161,7 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
     }
 
     setEdits(new Map())
+    setEditingClasses(new Set())
     setLastSaved(new Date().toLocaleTimeString('vi-VN'))
     onSaved()
   }, [edits, periodId, onSaved])
@@ -99,7 +179,14 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
     (col) => !col.showFor || col.showFor.includes(tab)
   )
 
+  const isTeachingTab = tab === 'teacher' || tab === 'assistant'
   const unreviewedCount = payslips.filter((p) => !p.is_reviewed).length
+  // +1 for # col, +1 for Lớp col (teaching tabs), - cols rendered in class row (5: #, name, class, sessions, rate, amount, reset = 7 total rendered)
+  // class row renders 7 tds; total cols = 1(#) + 1(Lớp) + visibleColumns.length
+  // class row has: 1(#) + 1(name) + 1(class) + 1(sessions) + 1(rate) + 1(amount) + 1(reset) = 7
+  // trailing filler = total - 7
+  const classRowFillerCols = Math.max(0, 1 + 1 + visibleColumns.length - 7) // 2 fixed + visible - 7 rendered
+
   // Footer totals: merge unsaved edits into sum (ISSUE-9)
   const totalGross = payslips.reduce((s, p) => {
     const edit = edits.get(p.id)
@@ -159,6 +246,9 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
           <thead className="sticky top-0 z-10 bg-muted">
             <tr>
               <th className="px-2 py-2 border-r border-b text-center text-xs w-8">#</th>
+              {isTeachingTab && (
+                <th className="px-2 py-2 border-r border-b text-xs text-left text-muted-foreground" style={{ minWidth: 90 }}>Lớp</th>
+              )}
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
@@ -176,22 +266,51 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
             </tr>
           </thead>
           <tbody>
-            {payslips.map((payslip, idx) => (
-              <PayrollSpreadsheetRow
-                key={payslip.id}
-                idx={idx}
-                payslip={payslip}
-                tab={tab}
-                edits={edits.get(payslip.id) ?? EMPTY_EDITS}
-                isLocked={isLocked}
-                onFieldChange={handleFieldChange}
-              />
-            ))}
+            {payslips.map((payslip, idx) => {
+              const payslipEdits = edits.get(payslip.id) ?? EMPTY_EDITS
+              const isEditing = editingClasses.has(payslip.id)
+              const breakdown = payslipEdits.class_breakdown ?? payslip.class_breakdown ?? []
+              const hasBreakdown = isTeachingTab && breakdown.length > 0
+
+              return (
+                <React.Fragment key={payslip.id}>
+                  {/* Per-class rows for teaching staff */}
+                  {hasBreakdown && breakdown.map((cls, clsIdx) => (
+                    <PayrollClassRow
+                      key={`${payslip.id}-cls-${clsIdx}`}
+                      entry={cls}
+                      index={clsIdx}
+                      editing={isEditing}
+                      isLocked={isLocked}
+                      fillerColSpan={classRowFillerCols}
+                      onEdit={(field, val) => handleClassEntryEdit(payslip.id, clsIdx, field, val)}
+                      onReset={() => handleClassEntryReset(payslip.id, clsIdx)}
+                    />
+                  ))}
+
+                  {/* Summary row */}
+                  <PayrollSpreadsheetRow
+                    key={payslip.id}
+                    idx={idx}
+                    payslip={payslip}
+                    tab={tab}
+                    edits={payslipEdits}
+                    isLocked={isLocked}
+                    isTeachingTab={isTeachingTab}
+                    isEditingClasses={isEditing}
+                    hasBreakdown={hasBreakdown}
+                    onFieldChange={handleFieldChange}
+                    onToggleClassEdit={() => handleToggleClassEdit(payslip.id, breakdown)}
+                  />
+                </React.Fragment>
+              )
+            })}
           </tbody>
           {/* Footer totals */}
           <tfoot className="sticky bottom-0 bg-muted/80">
             <tr className="text-xs font-semibold border-t-2">
               <td className="px-2 py-1.5 border-r text-center">{payslips.length}</td>
+              {isTeachingTab && <td className="px-2 py-1.5 border-r" />}
               {visibleColumns.map((col) => {
                 if (col.key === 'employee_code') return (
                   <td key={col.key} className="px-2 py-1.5 border-r" colSpan={2}>Tổng cộng</td>

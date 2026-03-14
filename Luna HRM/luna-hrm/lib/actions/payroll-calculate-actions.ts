@@ -9,7 +9,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import {
-  initializePayslipData,
   calculateTeachingPay,
   calculateSubstitutePay,
 } from '@/lib/services/payroll-calculation-service'
@@ -21,6 +20,7 @@ import {
 } from '@/lib/services/payroll-session-counter'
 import type { PayrollPeriod } from '@/lib/types/database'
 import type { ActionResult } from '@/lib/actions/employee-actions'
+import type { ClassBreakdownEntry } from '@/lib/types/database-payroll-types'
 import { getMonthBounds } from '@/lib/utils/date-helpers'
 
 type EmployeeRow = {
@@ -32,6 +32,72 @@ type EmployeeRow = {
   sub_rate: number
   has_labor_contract: boolean
   dependent_count: number
+}
+
+/**
+ * Build class_breakdown[] for a teaching employee.
+ * Queries attendance per class for the payroll month,
+ * resolves rate from schedule or employee default.
+ */
+async function buildClassBreakdown(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: any,
+  employeeId: string,
+  branchId: string,
+  position: string,
+  defaultRate: number,
+  startDate: string,
+  endDate: string
+): Promise<ClassBreakdownEntry[]> {
+  const roleCol = position === 'teacher' ? 'teacher_id' : 'assistant_id'
+  const rateCol = position === 'teacher' ? 'teacher_rate' : 'assistant_rate'
+
+  // Do NOT filter by status='active' — deactivated classes with attendance in month must still appear
+  const { data: schedules, error: schErr } = await sb
+    .from('class_schedules')
+    .select(`id, class_code, class_name, ${rateCol}`)
+    .eq('branch_id', branchId)
+    .eq(roleCol, employeeId)
+
+  if (schErr) throw schErr
+  if (!schedules?.length) return []
+
+  const scheduleIds = schedules.map((s: any) => s.id) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  const { data: rows, error: attErr } = await sb
+    .from('attendance')
+    .select('schedule_id, status')
+    .eq('employee_id', employeeId)
+    .in('schedule_id', scheduleIds)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .in('status', ['1', '0.5'])
+
+  if (attErr) throw attErr
+
+  const sessionMap = new Map<string, number>()
+  for (const row of rows ?? []) {
+    const current = sessionMap.get(row.schedule_id) ?? 0
+    sessionMap.set(row.schedule_id, current + (row.status === '0.5' ? 0.5 : 1))
+  }
+
+  return schedules
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((sch: any) => {
+      const sessions = sessionMap.get(sch.id) ?? 0
+      const rate = sch[rateCol] ?? defaultRate
+      return {
+        class_code: sch.class_code,
+        class_name: sch.class_name,
+        sessions,
+        rate,
+        amount: sessions * rate,
+        default_sessions: sessions,
+        default_rate: rate,
+      }
+    })
+    .filter((e: ClassBreakdownEntry) => e.sessions > 0) // Intentional: classes with 0 sessions produce 0 pay, omit from breakdown. Accountant can override totals via summary row if needed.
+    .sort((a: ClassBreakdownEntry, b: ClassBreakdownEntry) => a.class_code.localeCompare(b.class_code))
 }
 
 /** Sync period total_gross / total_net from current payslip rows. Exported for reuse in payslip actions. */
@@ -138,38 +204,55 @@ export async function initializePayslips(
       if (existing?.is_reviewed) return { result: 'skipped' as const }
 
       const isOffice = emp.position === 'office' || emp.position === 'admin'
+      const isTeaching = emp.position === 'teacher' || emp.position === 'assistant'
       const isAssistant = emp.position === 'assistant'
       const payslipPosition = isOffice ? 'office' : isAssistant ? 'assistant' : 'teacher'
 
-      const [sessionsWorked, substituteSessions, prefill] = await Promise.all([
-        isOffice
-          ? countOfficeDays(sb, emp.id, startDate, endDate)
-          : countTeachingSessions(sb, emp.id, startDate, endDate),
+      let classBreakdown: ClassBreakdownEntry[] = []
+      let sessionsWorked: number
+      let teachingPay: number
+
+      const [substituteSessions, prefill] = await Promise.all([
         getSubstituteSessions(sb, emp.id, startDate, endDate),
         fetchPrefillData(sb, emp.id, startDate, endDate),
       ])
 
-      const initData = initializePayslipData(
-        { position: payslipPosition, sessionsWorked, ratePerSession: emp.rate_per_session, substituteSessions, substituteRate: emp.sub_rate },
-        prefill
-      )
+      if (isTeaching) {
+        classBreakdown = await buildClassBreakdown(
+          sb, emp.id, period.branch_id, emp.position,
+          emp.rate_per_session, startDate, endDate
+        )
+        sessionsWorked = classBreakdown.reduce((sum, e) => sum + e.sessions, 0)
+        teachingPay = classBreakdown.reduce((sum, e) => sum + e.amount, 0)
+      } else {
+        sessionsWorked = await countOfficeDays(sb, emp.id, startDate, endDate)
+        teachingPay = sessionsWorked * emp.rate_per_session
+      }
+
+      // Weighted average rate for multi-class teachers; fallback to employee default
+      const effectiveRate = isTeaching && sessionsWorked > 0
+        ? Math.round(teachingPay / sessionsWorked)
+        : emp.rate_per_session
+
+      const substitutePay = calculateSubstitutePay(substituteSessions, emp.sub_rate)
 
       const payslipData = {
         payroll_period_id: periodId,
         employee_id: emp.id,
         branch_id: period.branch_id,
         position: payslipPosition,
-        sessions_worked: initData.sessions_worked,
-        rate_per_session: initData.rate_per_session,
-        teaching_pay: initData.teaching_pay,
-        substitute_sessions: initData.substitute_sessions,
-        substitute_rate: initData.substitute_rate,
-        substitute_pay: initData.substitute_pay,
-        other_pay: initData.other_pay,
-        kpi_bonus: initData.kpi_bonus,
-        allowances: initData.allowances,
-        deductions: initData.deductions,
-        penalties: initData.penalties,
+        sessions_worked: sessionsWorked,
+        rate_per_session: effectiveRate,
+        teaching_pay: teachingPay,
+        substitute_sessions: substituteSessions,
+        substitute_rate: emp.sub_rate,
+        substitute_pay: substitutePay,
+        other_pay: prefill.other_pay,
+        kpi_bonus: prefill.kpi_bonus,
+        allowances: prefill.allowances,
+        deductions: prefill.deductions,
+        penalties: prefill.penalties,
+        class_breakdown: classBreakdown,
         gross_pay: 0,
         bhxh: 0,
         bhyt: 0,
@@ -269,38 +352,55 @@ export async function reinitializePayslips(
     // Parallelize across employees
     await Promise.all(employees.map(async (emp) => {
       const isOffice = emp.position === 'office' || emp.position === 'admin'
+      const isTeaching = emp.position === 'teacher' || emp.position === 'assistant'
       const isAssistant = emp.position === 'assistant'
       const payslipPosition = isOffice ? 'office' : isAssistant ? 'assistant' : 'teacher'
 
-      const [sessionsWorked, substituteSessions, prefill] = await Promise.all([
-        isOffice
-          ? countOfficeDays(sb, emp.id, startDate, endDate)
-          : countTeachingSessions(sb, emp.id, startDate, endDate),
+      let classBreakdown: ClassBreakdownEntry[] = []
+      let sessionsWorked: number
+      let teachingPay: number
+
+      const [substituteSessions, prefill] = await Promise.all([
         getSubstituteSessions(sb, emp.id, startDate, endDate),
         fetchPrefillData(sb, emp.id, startDate, endDate),
       ])
 
-      const initData = initializePayslipData(
-        { position: payslipPosition, sessionsWorked, ratePerSession: emp.rate_per_session, substituteSessions, substituteRate: emp.sub_rate },
-        prefill
-      )
+      if (isTeaching) {
+        classBreakdown = await buildClassBreakdown(
+          sb, emp.id, period.branch_id, emp.position,
+          emp.rate_per_session, startDate, endDate
+        )
+        sessionsWorked = classBreakdown.reduce((sum, e) => sum + e.sessions, 0)
+        teachingPay = classBreakdown.reduce((sum, e) => sum + e.amount, 0)
+      } else {
+        sessionsWorked = await countOfficeDays(sb, emp.id, startDate, endDate)
+        teachingPay = sessionsWorked * emp.rate_per_session
+      }
+
+      // Weighted average rate for multi-class teachers; fallback to employee default
+      const effectiveRate = isTeaching && sessionsWorked > 0
+        ? Math.round(teachingPay / sessionsWorked)
+        : emp.rate_per_session
+
+      const substitutePay = calculateSubstitutePay(substituteSessions, emp.sub_rate)
 
       const payslipData = {
         payroll_period_id: periodId,
         employee_id: emp.id,
         branch_id: period.branch_id,
         position: payslipPosition,
-        sessions_worked: initData.sessions_worked,
-        rate_per_session: initData.rate_per_session,
-        teaching_pay: initData.teaching_pay,
-        substitute_sessions: initData.substitute_sessions,
-        substitute_rate: initData.substitute_rate,
-        substitute_pay: initData.substitute_pay,
-        other_pay: initData.other_pay,
-        kpi_bonus: initData.kpi_bonus,
-        allowances: initData.allowances,
-        deductions: initData.deductions,
-        penalties: initData.penalties,
+        sessions_worked: sessionsWorked,
+        rate_per_session: effectiveRate,
+        teaching_pay: teachingPay,
+        substitute_sessions: substituteSessions,
+        substitute_rate: emp.sub_rate,
+        substitute_pay: substitutePay,
+        other_pay: prefill.other_pay,
+        kpi_bonus: prefill.kpi_bonus,
+        allowances: prefill.allowances,
+        deductions: prefill.deductions,
+        penalties: prefill.penalties,
+        class_breakdown: classBreakdown,
         gross_pay: 0,
         bhxh: 0,
         bhyt: 0,

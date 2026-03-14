@@ -12,7 +12,7 @@ import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { buildAuditLogEntries, insertAuditLogs } from '@/lib/services/payroll-audit-service'
 import { syncPeriodTotals } from '@/lib/actions/payroll-calculate-actions'
 import type { Payslip } from '@/lib/types/database'
-import type { EditablePayslipFields } from '@/lib/types/database-payroll-types'
+import type { EditablePayslipFields, ClassBreakdownEntry } from '@/lib/types/database-payroll-types'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 
 // ─── Extended types ───────────────────────────────────────────────────────────
@@ -114,8 +114,8 @@ export async function getPayslipDetail(
 
 // ─── Editable field whitelist (ISSUE-6: runtime security) ─────────────────────
 
-const EDITABLE_KEYS = ['kpi_bonus', 'allowances', 'deductions', 'penalties', 'other_pay', 'bhxh', 'bhyt', 'bhtn', 'tncn', 'gross_pay', 'net_pay', 'extra_notes'] as const
-const NUMERIC_EDITABLE_KEYS = new Set<string>(['kpi_bonus', 'allowances', 'deductions', 'penalties', 'other_pay', 'bhxh', 'bhyt', 'bhtn', 'tncn', 'gross_pay', 'net_pay'])
+const EDITABLE_KEYS = ['kpi_bonus', 'allowances', 'deductions', 'penalties', 'other_pay', 'bhxh', 'bhyt', 'bhtn', 'tncn', 'gross_pay', 'net_pay', 'extra_notes', 'class_breakdown', 'teaching_pay', 'sessions_worked'] as const
+const NUMERIC_EDITABLE_KEYS = new Set<string>(['kpi_bonus', 'allowances', 'deductions', 'penalties', 'other_pay', 'bhxh', 'bhyt', 'bhtn', 'tncn', 'gross_pay', 'net_pay', 'teaching_pay', 'sessions_worked'])
 const MAX_BATCH_SIZE = 200
 
 /** Whitelist + validate a single item's fields. Returns sanitized object or error string. */
@@ -124,6 +124,24 @@ function sanitizeBatchFields(fields: Record<string, unknown>): EditablePayslipFi
   for (const k of EDITABLE_KEYS) {
     if (!(k in fields)) continue
     const v = fields[k]
+
+    // JSONB validation for class_breakdown
+    if (k === 'class_breakdown') {
+      if (!Array.isArray(v)) return 'class_breakdown phải là mảng.'
+      if ((v as unknown[]).length > 50) return 'class_breakdown quá lớn (tối đa 50 lớp).'
+      const validated: ClassBreakdownEntry[] = []
+      for (const entry of v as ClassBreakdownEntry[]) {
+        if (typeof entry.sessions !== 'number' || entry.sessions < 0) return 'class_breakdown: sessions không hợp lệ.'
+        if (typeof entry.rate !== 'number' || entry.rate < 0) return 'class_breakdown: rate không hợp lệ.'
+        if (typeof entry.class_code !== 'string' || !entry.class_code.trim()) return 'class_breakdown: class_code không hợp lệ.'
+        if (typeof entry.class_name !== 'string') return 'class_breakdown: class_name không hợp lệ.'
+        // Server-side recalculation — never trust client-sent amount
+        validated.push({ ...entry, amount: entry.sessions * entry.rate })
+      }
+      safe[k] = validated
+      continue
+    }
+
     if (NUMERIC_EDITABLE_KEYS.has(k)) {
       if (v !== undefined && v !== null && (typeof v !== 'number' || !isFinite(v as number))) {
         return `Giá trị ${k} không hợp lệ.`

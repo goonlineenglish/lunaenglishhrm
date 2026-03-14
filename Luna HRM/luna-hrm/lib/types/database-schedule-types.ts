@@ -17,12 +17,17 @@ export interface ClassSchedule {
   days_of_week: number[]     // [2,4,6] = Mon,Wed,Fri (ISO: 1=Mon..7=Sun)
   teacher_id: string
   assistant_id: string
+  teacher_rate: number | null   // override rate for teacher (NULL = use employee default)
+  assistant_rate: number | null // override rate for assistant (NULL = use employee default)
   status: ClassStatus
   created_at: string
   updated_at: string
 }
 
-export type ClassScheduleInsert = Omit<ClassSchedule, 'id' | 'created_at' | 'updated_at'>
+export type ClassScheduleInsert = Omit<ClassSchedule, 'id' | 'created_at' | 'updated_at' | 'teacher_rate' | 'assistant_rate'> & {
+  teacher_rate?: number | null
+  assistant_rate?: number | null
+}
 export type ClassScheduleUpdate = Partial<ClassScheduleInsert>
 
 // ─── 4. attendance ───────────────────────────────────────────────────────────

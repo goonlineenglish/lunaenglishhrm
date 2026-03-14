@@ -1,14 +1,15 @@
 'use client'
 
 /**
- * Single row of the payroll spreadsheet.
- * Read-only cells: bg-muted, formatted number.
+ * Single summary row of the payroll spreadsheet.
+ * Teaching staff: shows totals (sessions_worked, teaching_pay) + "Sửa lớp" toggle.
+ * Office: shows individual columns.
  * Editable cells: white bg, number input, dirty = amber left border.
- * Notes column: icon button → inline popover.
+ * Notes column: icon button → inline dialog.
  */
 
 import React, { memo, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, ChevronDown, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -24,7 +25,7 @@ export interface SpreadsheetColumn {
   editable: boolean
   numeric: boolean
   minWidth?: number
-  showFor?: ('assistant' | 'teacher' | 'office')[] // undefined = always show
+  showFor?: ('assistant' | 'teacher' | 'office')[]
 }
 
 export const SPREADSHEET_COLUMNS: SpreadsheetColumn[] = [
@@ -55,10 +56,21 @@ interface Props {
   tab: 'assistant' | 'teacher' | 'office'
   edits: Partial<EditablePayslipFields>
   isLocked: boolean
+  /** Whether this payslip is a teaching tab */
+  isTeachingTab?: boolean
+  /** Whether class rows are currently expanded for editing */
+  isEditingClasses?: boolean
+  /** Whether there are class breakdown rows to show */
+  hasBreakdown?: boolean
   onFieldChange: (payslipId: string, field: keyof EditablePayslipFields, value: number | string | null) => void
+  onToggleClassEdit?: () => void
 }
 
-function PayrollSpreadsheetRowInner({ idx, payslip, tab, edits, isLocked, onFieldChange }: Props) {
+function PayrollSpreadsheetRowInner({
+  idx, payslip, tab, edits, isLocked,
+  isTeachingTab, isEditingClasses, hasBreakdown,
+  onFieldChange, onToggleClassEdit,
+}: Props) {
   const [notesOpen, setNotesOpen] = useState(false)
   const [notesValue, setNotesValue] = useState('')
 
@@ -75,13 +87,38 @@ function PayrollSpreadsheetRowInner({ idx, payslip, tab, edits, isLocked, onFiel
     return col.editable && col.key in edits
   }
 
+  // Reflect class_breakdown edits in sessions_worked / teaching_pay columns
+  function getDisplayValue(col: SpreadsheetColumn): number | string | null {
+    if (col.key === 'sessions_worked' && edits.sessions_worked !== undefined) return edits.sessions_worked
+    if (col.key === 'teaching_pay' && edits.teaching_pay !== undefined) return edits.teaching_pay
+    return currentValue(col)
+  }
+
   return (
-    <tr className="border-b hover:bg-muted/20 transition-colors">
+    <tr className={cn('border-b hover:bg-muted/20 transition-colors', isTeachingTab && 'font-medium bg-muted/5')}>
       {/* Row number */}
       <td className="px-2 py-1 text-center text-xs text-muted-foreground border-r w-8 shrink-0">{idx + 1}</td>
 
+      {/* Class edit toggle (teaching tabs only) */}
+      {isTeachingTab && (
+        <td className="px-1 py-1 border-r text-center" style={{ minWidth: 90 }}>
+          {hasBreakdown && !isLocked ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-1.5 text-xs gap-0.5"
+              onClick={onToggleClassEdit}
+              title={isEditingClasses ? 'Thu gọn lớp' : 'Sửa theo lớp'}
+            >
+              {isEditingClasses ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              Lớp
+            </Button>
+          ) : null}
+        </td>
+      )}
+
       {visibleColumns.map((col) => {
-        const val = currentValue(col)
+        const val = getDisplayValue(col)
         const dirty = isDirty(col)
 
         // Notes column — icon button opens dialog
@@ -123,7 +160,7 @@ function PayrollSpreadsheetRowInner({ idx, payslip, tab, edits, isLocked, onFiel
           )
         }
 
-        // Read-only cell
+        // Read-only cell (auto-calculated)
         if (!col.editable) {
           return (
             <td

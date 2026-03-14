@@ -38,12 +38,15 @@ interface FormState {
   teacher_id: string
   assistant_code: string
   assistant_id: string
+  teacher_rate: string
+  assistant_rate: string
 }
 
 const EMPTY: FormState = {
   class_code: '', class_name: '', shift_time: '',
   days_of_week: [], teacher_code: '', teacher_id: '',
   assistant_code: '', assistant_id: '',
+  teacher_rate: '', assistant_rate: '',
 }
 
 export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, onSaved }: Props) {
@@ -55,6 +58,8 @@ export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, 
       days_of_week: editSchedule.days_of_week,
       teacher_code: '', teacher_id: editSchedule.teacher_id,
       assistant_code: '', assistant_id: editSchedule.assistant_id,
+      teacher_rate: editSchedule.teacher_rate?.toString() ?? '',
+      assistant_rate: editSchedule.assistant_rate?.toString() ?? '',
     } : EMPTY
   )
   const [saving, setSaving] = useState(false)
@@ -98,6 +103,8 @@ export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, 
       assistant_id: form.assistant_id,
       branch_id: branchId,
       status: 'active' as const,
+      teacher_rate: form.teacher_rate.trim() !== '' ? parseFloat(form.teacher_rate) : null,
+      assistant_rate: form.assistant_rate.trim() !== '' ? parseFloat(form.assistant_rate) : null,
     }
 
     const result = editSchedule
@@ -173,6 +180,30 @@ export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, 
                 onSelect={handleAssistant}
                 position="assistant"
                 placeholder="Mã TG"
+              />
+            </div>
+          </div>
+
+          {/* Đơn giá theo lớp — ghi đè đơn giá mặc định từ hồ sơ nhân viên */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Đơn giá GV (tùy chọn)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="Mặc định từ hồ sơ NV"
+                value={form.teacher_rate}
+                onChange={(e) => setForm((prev) => ({ ...prev, teacher_rate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Đơn giá TG (tùy chọn)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="Mặc định từ hồ sơ NV"
+                value={form.assistant_rate}
+                onChange={(e) => setForm((prev) => ({ ...prev, assistant_rate: e.target.value }))}
               />
             </div>
           </div>

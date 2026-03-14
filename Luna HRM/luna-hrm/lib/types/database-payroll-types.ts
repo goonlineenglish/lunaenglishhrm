@@ -59,6 +59,19 @@ export interface PayrollPeriod {
 export type PayrollPeriodInsert = Omit<PayrollPeriod, 'id' | 'created_at' | 'updated_at'>
 export type PayrollPeriodUpdate = Partial<PayrollPeriodInsert>
 
+// ─── Class breakdown snapshot (per-class rows in payslip) ──────────────────
+
+/** Per-class session/rate snapshot stored in payslips.class_breakdown JSONB */
+export interface ClassBreakdownEntry {
+  class_code: string
+  class_name: string
+  sessions: number          // editable — default from attendance
+  rate: number              // editable — default from schedule/employee
+  amount: number            // computed: sessions × rate
+  default_sessions: number  // original attendance count (for reset)
+  default_rate: number      // original rate (for reset)
+}
+
 // ─── 10. payslips ────────────────────────────────────────────────────────────
 
 export type PayslipPosition = 'teacher' | 'assistant' | 'office'
@@ -88,6 +101,7 @@ export interface Payslip {
   net_pay: number
   extra_notes: string | null
   is_reviewed: boolean          // set true when accountant saves/reviews row; gates confirmPayrollPeriod
+  class_breakdown: ClassBreakdownEntry[] // per-class session/rate snapshot
   email_sent_at: string | null
   created_at: string
   updated_at: string
@@ -116,6 +130,7 @@ export interface PayslipInitData {
   substitute_sessions: number
   substitute_rate: number
   substitute_pay: number
+  class_breakdown: ClassBreakdownEntry[]
   // Pre-filled from source data (editable in UI)
   kpi_bonus: number
   allowances: number
@@ -145,6 +160,9 @@ export interface EditablePayslipFields {
   gross_pay?: number
   net_pay?: number
   extra_notes?: string | null
+  class_breakdown?: ClassBreakdownEntry[]
+  teaching_pay?: number
+  sessions_worked?: number
 }
 
 /** Single field-level audit entry for payslip_audit_logs */

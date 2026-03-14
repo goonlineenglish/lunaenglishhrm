@@ -277,6 +277,52 @@ npm run build && npm start
 - **Tests:** 130+ unit tests passing
 - **Build:** 24 routes, 0 errors, clean
 
+### Feature 4: Payroll Per-Class Rows (Tính Lương Theo Từng Lớp)
+- **Status:** ✅ Complete
+- **Completion Date:** 2026-03-14
+- **Description:** Per-class payroll breakdown with class-specific rates and flat-table spreadsheet display. Each employee's payroll is broken down by class with individual session counts and rates.
+- **Scope:**
+  - Per-class rates in class schedules (teacher_rate, assistant_rate — nullable)
+  - class_breakdown JSONB snapshot in payslips (schema migration)
+  - Flat spreadsheet layout: N class rows per employee + KPI badge + summary row
+  - Class-level session/rate edits with auto-recalculation
+  - Excel export with per-class row expansion
+- **Key Implementation Files:**
+  - `supabase/migrations/009_payroll_class_breakdown.sql` (NEW)
+  - `lib/types/database-payroll-types.ts` (EXTENDED — ClassBreakdownEntry)
+  - `components/class-schedules/class-schedule-form.tsx` (EXTENDED — teacher_rate, assistant_rate fields)
+  - `lib/actions/payroll-calculate-actions.ts` (EXTENDED — buildClassBreakdown helper)
+  - `lib/services/payroll-prefill-service.ts` (EXTENDED — populate class_breakdown)
+  - `components/payroll/payroll-class-row.tsx` (NEW — per-class row component)
+  - `components/payroll/payroll-spreadsheet.tsx` (EXTENDED — class-grouped layout, KPI badge)
+  - `components/payroll/payroll-spreadsheet-row.tsx` (EXTENDED — summary row with class toggle)
+  - `lib/actions/payroll-payslip-actions.ts` (EXTENDED — class_breakdown validation + save)
+  - `lib/utils/excel-payroll-export.ts` (EXTENDED — per-class row expansion)
+- **Review Status:**
+  - Plan review: 20 issues → all fixed
+- **Tests:** 130 unit tests passing (payroll-calc suite extended)
+- **Build:** 24 routes, 0 errors, clean
+- **Status:** ✅ Complete
+- **Completion Date:** 2026-03-14
+- **Description:** UX enhancements to attendance grid with calendar dates in header (DD/MM under day names) and admin/BM ability to override auto-locked weeks.
+- **Scope:**
+  - Calendar dates in header (phase 1): DD/MM display under day names in both class and office attendance grids
+  - Lock override system (phase 2): Admin + BM can override auto-locked weeks via `is_override=true` flag on `attendance_locks` table
+  - Cross-month payroll guard: prevent editing attendance if payroll confirmed
+  - Multi-row lock query: both manual and override rows coexist
+- **Key Implementation Files:**
+  - `supabase/migrations/008_attendance_lock_override.sql` (NEW)
+  - `lib/actions/attendance-lock-actions.ts` (NEW — extracted: `unlockWeek`, `overrideAutoLock`, `removeOverride`)
+  - `lib/actions/attendance-query-actions.ts` (EXTENDED — multi-row lock query, `lockType` + `hasOverride`)
+  - `lib/actions/office-attendance-actions.ts` (EXTENDED — identical multi-row lock patterns)
+  - `components/attendance/attendance-grid.tsx` (EXTENDED — calendar dates + unlock/override buttons)
+  - `components/office-attendance/office-attendance-grid.tsx` (EXTENDED — same features)
+  - `app/(dashboard)/attendance/page.tsx`, `office-attendance/page.tsx` (UPDATED — removed client-side auto-lock merge)
+- **Review Status:**
+  - Adversarial code review: 14 issues → all fixed
+- **Tests:** 130+ unit tests passing
+- **Build:** 24 routes, 0 errors, clean
+
 
 
 ### Feature 1: Semi-Manual Payroll Mode

@@ -50,6 +50,7 @@ export function initializePayslipData(
     substitute_sessions: employee.substituteSessions,
     substitute_rate: employee.substituteRate,
     substitute_pay,
+    class_breakdown: [], // populated by payroll-calculate-actions for teaching staff
     // Pre-filled from source data
     kpi_bonus: prefill.kpi_bonus,
     allowances: prefill.allowances,

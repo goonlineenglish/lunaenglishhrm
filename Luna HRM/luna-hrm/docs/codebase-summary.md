@@ -45,10 +45,11 @@ luna-hrm/
 │   ├── employees/                       # Form, profile-info, profile-tabs, notes
 │   ├── payroll/                         # Period form, slip preview, export button, attendance summary
 │   │   ├── payroll-period-form.tsx
-│   │   ├── payroll-spreadsheet.tsx      # Semi-manual payslip entry (Feature: Semi-Manual Payroll)
+│   │   ├── payroll-spreadsheet.tsx      # Semi-manual payslip entry + class-grouped layout (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
+│   │   ├── payroll-class-row.tsx        # Per-class row component (Feature: Payroll Per-Class Rows, 2026-03-14)
 │   │   ├── payslip-preview.tsx
 │   │   ├── payslip-excel-export.tsx
-│   │   └── payroll-attendance-summary.tsx
+│   │   └── payroll-attendance-summary.tsx # Attendance summary panel (Feature: Summary by Class, 2026-03-11)
 │   ├── kpi/                             # Grid, submission form, history chart
 │   ├── evaluations/                     # Template, period, score input, form, history
 │   └── shared/                          # Common UI (dialogs, alerts, loaders)
@@ -61,8 +62,8 @@ luna-hrm/
 │   │   ├── office-attendance-actions.ts # Query + save office attendance
 │   │   ├── employee-actions.ts         # CRUD employees
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
-│   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + review (Feature: Semi-Manual Payroll)
-│   │   ├── payroll-calculate-actions.ts # Prefill logic (Feature: Semi-Manual Payroll)
+│   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + class_breakdown (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
+│   │   ├── payroll-calculate-actions.ts # Prefill logic + class breakdown init (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── kpi-save-actions.ts         # KPI submission
 │   │   ├── evaluation-actions.ts       # Query evaluations
 │   │   ├── evaluation-save-actions.ts  # Save evaluations
@@ -75,8 +76,8 @@ luna-hrm/
 │   ├── types/
 │   │   ├── employee.ts                 # Employee types
 │   │   ├── attendance.ts               # Attendance types
-│   │   ├── attendance-summary-types.ts # Attendance summary types (Feature: Summary by Class)
-│   │   ├── payroll.ts                  # Payroll types
+│   │   ├── attendance-summary-types.ts # Attendance summary types (Feature: Summary by Class, 2026-03-11)
+│   │   ├── payroll.ts                  # Payroll types + ClassBreakdownEntry (Feature: Payroll Per-Class Rows, 2026-03-14)
 │   │   ├── kpi.ts                      # KPI types
 │   │   ├── evaluation.ts               # Evaluation UI view types
 │   │   └── index.ts                    # Barrel export
@@ -115,7 +116,8 @@ luna-hrm/
 │   │   ├── 004_add_payslip_deductions_column.sql  # Payslip deductions
 │   │   ├── 005_audit_logs.sql          # Audit log table + RLS
 │   │   ├── 006_payslip_audit_logs.sql  # Audit logs for manual payslip edits (Feature: Semi-Manual Payroll, 2026-03-11)
-│   │   └── 008_attendance_lock_override.sql  # Lock override + multi-row lock query (Feature: Calendar + Lock Override, 2026-03-14)
+│   │   ├── 007_attendance_lock_override.sql  # Lock override + multi-row lock query (Feature: Calendar + Lock Override, 2026-03-14)
+│   │   ├── 008_payroll_class_breakdown.sql   # Per-class rates + class_breakdown JSONB (Feature: Payroll Per-Class Rows, 2026-03-14)
 │   └── seed.sql                        # 21 employees, 10 classes, sample data
 ├── public/
 │   ├── manifest.json                   # PWA manifest
@@ -185,6 +187,8 @@ luna-hrm/
   - Semi-manual mode: auto-fill attendance + rates, manual entry for deductions (Feature: 2026-03-11)
   - Spreadsheet-like UI with column classification (read-only / pre-filled / manual entry)
   - Field types: auto-calculated (sessions, rates), pre-filled (KPI bonus, allowances), manual (BHXH, BHYT, BHTN, TNCN, gross, net)
+  - Per-class breakdown: flat table with N class rows + KPI badge + summary row per employee (Feature: 2026-03-14)
+  - Class-level session/rate edits with auto-recalculation (Feature: 2026-03-14)
   - 3 formulas: Office / Teacher / Teaching Assistant (with KPI bonus)
   - NUMERIC sessions (supports 0.5)
   - BHXH (8%), BHYT (1.5%), BHTN (1%) conditional on labor contract
@@ -193,7 +197,7 @@ luna-hrm/
   - >20% salary change alert
   - Double-confirm before lock
   - 24h undo capability
-  - Excel export
+  - Excel export (per-class rows)
   - Audit logs for manual payslip edits (fire-and-forget)
   - Attendance summary by class (collapsible panel)
 
@@ -336,4 +340,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-14 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override features
+**Last Updated:** 2026-03-14 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows features

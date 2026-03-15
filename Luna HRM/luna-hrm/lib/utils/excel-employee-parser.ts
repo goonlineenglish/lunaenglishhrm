@@ -49,15 +49,25 @@ const VALID_ROLES = new Set(['admin', 'branch_manager', 'accountant', 'employee'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Parse date string (multiple formats) to YYYY-MM-DD or null */
+/** Parse date string (multiple formats) to YYYY-MM-DD or null. Validates calendar correctness. */
 function parseDate(raw: string): string | null {
   if (!raw.trim()) return null
   // Try DD/MM/YYYY
   const dmy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
+  if (dmy) {
+    const isoStr = `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
+    const d = new Date(isoStr)
+    // Validate calendar date: new Date('2026-02-31') → invalid
+    if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== isoStr) return null
+    return isoStr
+  }
   // Try YYYY-MM-DD
   const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (iso) return raw
+  if (iso) {
+    const d = new Date(raw)
+    if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== raw) return null
+    return raw
+  }
   return null
 }
 
@@ -146,7 +156,7 @@ export function parseEmployeeExcel(file: ArrayBuffer): EmployeeParseResult {
         rate_per_session: parseFloat(str(6)) || 0,
         sub_rate: parseFloat(str(7)) || 0,
         has_labor_contract: parseBool(str(8)),
-        dependent_count: parseInt(str(9), 10) || 0,
+        dependent_count: Math.max(0, parseInt(str(9), 10) || 0), // clamp ≥ 0 (DB CHECK constraint)
         join_date: parseDate(str(10)),
         id_number: str(11) || null,
         id_issue_date: parseDate(str(12)),

@@ -135,6 +135,11 @@ export async function updateEmployee(
       }
     }
 
+    // Server-side self-deactivation guard (ISSUE-1 fix)
+    if (safeData.is_active === false && id === user.id) {
+      return { success: false, error: 'Không thể tự vô hiệu hóa tài khoản của mình.' }
+    }
+
     const { data: employee, error } = await sb
       .from('employees').update(safeData).eq('id', id).select().single()
 

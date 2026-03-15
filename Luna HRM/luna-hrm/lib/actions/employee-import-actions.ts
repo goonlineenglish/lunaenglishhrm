@@ -7,7 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { createAuthUser, deleteAuthUser } from '@/lib/supabase/admin'
+import { createAdminClient, createAuthUser, deleteAuthUser } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { logAudit } from '@/lib/services/audit-log-service'
 import type { ParsedEmployee } from '@/lib/utils/excel-employee-parser'
@@ -79,8 +79,9 @@ export async function batchImportEmployees(
       ((existingInBranch ?? []) as { employee_code: string }[]).map((e) => e.employee_code)
     )
 
-    // Pre-validate: existing emails globally (email unique across all branches)
-    const { data: allEmps, error: emailErr } = await sb
+    // Pre-validate: existing emails globally via admin client (bypasses BM RLS — ISSUE-3 fix)
+    const adminSb = createAdminClient()
+    const { data: allEmps, error: emailErr } = await adminSb
       .from('employees')
       .select('email')
     if (emailErr) throw emailErr

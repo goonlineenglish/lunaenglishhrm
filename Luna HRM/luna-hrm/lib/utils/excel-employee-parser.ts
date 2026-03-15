@@ -113,7 +113,7 @@ export function parseEmployeeExcel(file: ArrayBuffer): EmployeeParseResult {
 
       const employee_code = str(0)
       const full_name = str(1)
-      const email = str(2)
+      const email = str(2).toLowerCase() // normalize to lowercase (DB unique index is case-insensitive)
       const phone = str(3) || null
       const position = str(4).toLowerCase()
       const role = str(5).toLowerCase() || 'employee'

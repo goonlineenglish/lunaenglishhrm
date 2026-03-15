@@ -43,7 +43,7 @@ export async function createEmployee(
     const branchId = user.role === 'branch_manager' ? user.branch_id : (input.branch_id ?? null)
 
     const authUser = await createAuthUser({
-      email: input.email,
+      email: input.email.toLowerCase(), // normalize to lowercase (matches DB lower(email) unique index)
       password: input.password,
       role: input.role,
       branchId: branchId ?? undefined,
@@ -58,7 +58,7 @@ export async function createEmployee(
       id: authUser.id,
       employee_code: input.employee_code,
       full_name: input.full_name,
-      email: input.email,
+      email: input.email.toLowerCase(), // normalized
       phone: input.phone ?? null,
       position: input.position,
       role: input.role,

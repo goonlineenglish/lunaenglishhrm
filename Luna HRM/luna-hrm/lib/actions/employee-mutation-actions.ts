@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAuthUser, deleteAuthUser, updateAuthUserMetadata } from '@/lib/supabase/admin'
+import { createAuthUser, deleteAuthUser, updateAuthUserMetadata, createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { logAudit } from '@/lib/services/audit-log-service'
 import type { Employee, UserRole } from '@/lib/types/database'

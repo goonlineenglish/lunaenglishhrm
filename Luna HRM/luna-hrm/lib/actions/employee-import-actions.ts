@@ -79,11 +79,14 @@ export async function batchImportEmployees(
       ((existingInBranch ?? []) as { employee_code: string }[]).map((e) => e.employee_code)
     )
 
-    // Pre-validate: existing emails globally via admin client (bypasses BM RLS — ISSUE-3 fix)
+    // Pre-validate: check only candidate emails via admin client (ISSUE-3+ISSUE-2 fix)
+    // Admin client bypasses BM RLS; targeted IN query avoids full-table scan per chunk
     const adminSb = createAdminClient()
+    const candidateEmails = rows.map((r) => r.email.toLowerCase())
     const { data: allEmps, error: emailErr } = await adminSb
       .from('employees')
       .select('email')
+      .in('email', candidateEmails)
     if (emailErr) throw emailErr
     const existingEmails = new Set(
       ((allEmps ?? []) as { email: string }[]).map((e) => e.email.toLowerCase())

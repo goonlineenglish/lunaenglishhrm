@@ -146,6 +146,14 @@ export function parseEmployeeExcel(file: ArrayBuffer): EmployeeParseResult {
       seenCodes.add(employee_code)
       seenEmails.add(email.toLowerCase())
 
+      // Validate optional date fields: non-blank but invalid → row error (ISSUE-1 fix)
+      const joinDateRaw = str(10)
+      const join_date = joinDateRaw ? parseDate(joinDateRaw) : null
+      if (joinDateRaw && join_date === null) {
+        errors.push({ row: excelRow, message: `Ngày vào không hợp lệ: "${joinDateRaw}". Dùng DD/MM/YYYY.` })
+        continue
+      }
+
       valid.push({
         employee_code,
         full_name,
@@ -157,7 +165,7 @@ export function parseEmployeeExcel(file: ArrayBuffer): EmployeeParseResult {
         sub_rate: parseFloat(str(7)) || 0,
         has_labor_contract: parseBool(str(8)),
         dependent_count: Math.max(0, parseInt(str(9), 10) || 0), // clamp ≥ 0 (DB CHECK constraint)
-        join_date: parseDate(str(10)),
+        join_date, // null if blank (will use today as default in action)
         id_number: str(11) || null,
         id_issue_date: parseDate(str(12)),
         id_issue_place: str(13) || null,

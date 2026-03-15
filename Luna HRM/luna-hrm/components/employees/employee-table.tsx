@@ -1,15 +1,17 @@
 'use client'
 
 /**
- * Employee data table with search + filter by position/branch.
+ * Employee data table with search + filter by position/branch/status.
  * Clicking a row navigates to /employees/[id].
+ * Optional onToggleActive prop enables inline active/inactive toggle button.
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search } from 'lucide-react'
+import { Search, UserX, UserCheck } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -25,23 +27,39 @@ interface EmployeeTableProps {
   branches: Branch[]
   /** Show branch filter — admin only */
   showBranchFilter?: boolean
+  /** Callback to toggle is_active on a given employee */
+  onToggleActive?: (id: string, currentActive: boolean) => Promise<void>
 }
 
-export function EmployeeTable({ employees, branches, showBranchFilter = false }: EmployeeTableProps) {
+export function EmployeeTable({
+  employees,
+  branches,
+  showBranchFilter = false,
+  onToggleActive,
+}: EmployeeTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [branchFilter, setBranchFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active')
+
+  // Suppress unused-variable warning — useCallback kept for future memoised handlers
+  const handleRowClick = useCallback(
+    (id: string) => router.push(`/employees/${id}`),
+    [router]
+  )
 
   const filtered = employees.filter((emp) => {
     const matchSearch =
       emp.full_name.toLowerCase().includes(search.toLowerCase()) ||
       emp.email.toLowerCase().includes(search.toLowerCase())
-
     const matchPosition = positionFilter === 'all' || emp.position === positionFilter
     const matchBranch = branchFilter === 'all' || emp.branch_id === branchFilter
-
-    return matchSearch && matchPosition && matchBranch
+    const matchStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && emp.is_active) ||
+      (statusFilter === 'inactive' && !emp.is_active)
+    return matchSearch && matchPosition && matchBranch && matchStatus
   })
 
   return (
@@ -84,6 +102,18 @@ export function EmployeeTable({ employees, branches, showBranchFilter = false }:
             </SelectContent>
           </Select>
         )}
+
+        {/* Status filter */}
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'active' | 'inactive' | 'all')}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Hoạt động</SelectItem>
+            <SelectItem value="inactive">Đã nghỉ</SelectItem>
+            <SelectItem value="all">Tất cả</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -97,12 +127,13 @@ export function EmployeeTable({ employees, branches, showBranchFilter = false }:
               <TableHead>Email</TableHead>
               <TableHead>Vai trò</TableHead>
               <TableHead>Trạng thái</TableHead>
+              <TableHead className="w-16">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Không tìm thấy nhân viên nào.
                 </TableCell>
               </TableRow>
@@ -111,7 +142,7 @@ export function EmployeeTable({ employees, branches, showBranchFilter = false }:
                 <TableRow
                   key={emp.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/employees/${emp.id}`)}
+                  onClick={() => handleRowClick(emp.id)}
                 >
                   <TableCell className="font-medium">{emp.full_name}</TableCell>
                   <TableCell>{POSITION_LABELS[emp.position]}</TableCell>
@@ -124,8 +155,25 @@ export function EmployeeTable({ employees, branches, showBranchFilter = false }:
                   </TableCell>
                   <TableCell>
                     <Badge variant={emp.is_active ? 'default' : 'secondary'}>
-                      {emp.is_active ? 'Hoạt động' : 'Vô hiệu'}
+                      {emp.is_active ? 'Hoạt động' : 'Đã nghỉ'}
                     </Badge>
+                  </TableCell>
+                  {/* Stop row-click propagation so button click doesn't navigate */}
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {onToggleActive && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title={emp.is_active ? 'Đánh dấu đã nghỉ' : 'Kích hoạt lại'}
+                        onClick={() => onToggleActive(emp.id, emp.is_active)}
+                      >
+                        {emp.is_active
+                          ? <UserX className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          : <UserCheck className="h-4 w-4 text-muted-foreground hover:text-green-600" />
+                        }
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

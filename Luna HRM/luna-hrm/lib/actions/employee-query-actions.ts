@@ -15,7 +15,8 @@ export interface EmployeeWithBranch extends Employee {
 }
 
 export async function getEmployees(
-  branchId?: string
+  branchId?: string,
+  isActive?: boolean
 ): Promise<ActionResult<EmployeeWithBranch[]>> {
   try {
     const user = await getCurrentUser()
@@ -34,6 +35,11 @@ export async function getEmployees(
       query = query.eq('branch_id', user.branch_id)
     } else if (branchId && user.role !== 'branch_manager') {
       query = query.eq('branch_id', branchId)
+    }
+
+    // Filter by is_active if specified (undefined = return all)
+    if (isActive !== undefined) {
+      query = query.eq('is_active', isActive)
     }
 
     const { data, error } = await query
@@ -85,5 +91,38 @@ export async function getEmployeeById(
   } catch (err) {
     console.error('[getEmployeeById]', err)
     return { success: false, error: 'Không thể tải thông tin nhân viên.' }
+  }
+}
+
+export async function checkEmployeeClassAssignments(
+  employeeId: string
+): Promise<ActionResult<string[]>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Chưa đăng nhập.' }
+
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+
+    let query = sb
+      .from('class_schedules')
+      .select('class_code')
+      .eq('status', 'active')
+      .or(`teacher_id.eq.${employeeId},assistant_id.eq.${employeeId}`)
+
+    // BM: scope to own branch only
+    if (user.role === 'branch_manager' && user.branch_id) {
+      query = query.eq('branch_id', user.branch_id)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const codes = ((data ?? []) as { class_code: string }[]).map((d) => d.class_code)
+    return { success: true, data: codes }
+  } catch (err) {
+    console.error('[checkEmployeeClassAssignments]', err)
+    return { success: false, error: 'Không thể kiểm tra lịch lớp.' }
   }
 }

@@ -43,6 +43,14 @@
 | Unit Tests (101 tests) | ✅ Pass | 2026-03-07 | tax-calculator, payroll-calc, kpi-calc, date-helpers |
 | Build Verification | ✅ Pass | 2026-03-07 | 0 errors, 24 routes, ESLint clean |
 
+### Employee Module Enhancements Phase (Complete)
+
+| Item | Status | Date | Notes |
+|------|--------|------|-------|
+| Phase 1: Soft Delete + Status Filter | ✅ Done | 2026-03-15 | is_active toggle, status filter, class assignment warning |
+| Phase 2: Bulk Import from Excel | ✅ Done | 2026-03-15 | Template download, batch import, auth creation, rollback on failure |
+| All Features Complete | ✅ Done | 2026-03-15 | 3 new files, 5 edits, 130 unit tests passing |
+
 ---
 
 ## Feature Completion Summary
@@ -55,6 +63,8 @@
 - [x] Payroll calculation (3 formulas, tax, insurance, adjustments)
 - [x] KPI scoring system (5 criteria, bonus calculation)
 - [x] Employee profiles (extended fields: CCCD, DOB, bank, qualifications)
+- [x] Employee soft delete + status filter (is_active toggle, class assignment warning)
+- [x] Bulk employee import from Excel (template, batch import, auth rollback)
 - [x] Evaluation system (template-based, period-based, ad-hoc notes)
 - [x] Employee portal (own attendance, payslips, profile)
 - [x] Audit logging (all CRUD operations)

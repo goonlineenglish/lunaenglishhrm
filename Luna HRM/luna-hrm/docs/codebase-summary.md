@@ -43,6 +43,13 @@ luna-hrm/
 │   ├── attendance/                      # Grid, notes panel, diff viewer, summary cards, calendar dates, lock override
 │   ├── office-attendance/               # Daily grid, helpers
 │   ├── employees/                       # Form, profile-info, profile-tabs, notes
+│   │   ├── employee-form.tsx
+│   │   ├── employee-import-dialog.tsx  # Bulk import dialog (Employee Module Enhancements)
+│   │   ├── employee-table.tsx
+│   │   ├── employee-profile-info.tsx
+│   │   ├── employee-profile-tabs.tsx
+│   │   ├── employee-detail.tsx
+│   │   └── employee-notes-list.tsx
 │   ├── payroll/                         # Period form, slip preview, export button, attendance summary
 │   │   ├── payroll-period-form.tsx
 │   │   ├── payroll-spreadsheet.tsx      # Semi-manual payslip entry + class-grouped layout (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
@@ -61,6 +68,8 @@ luna-hrm/
 │   │   ├── attendance-lock-actions.ts   # Lock override actions (Feature: Calendar + Lock Override)
 │   │   ├── office-attendance-actions.ts # Query + save office attendance
 │   │   ├── employee-actions.ts         # CRUD employees
+│   │   ├── employee-query-actions.ts   # Employee queries with filtering (Employee Module Enhancements)
+│   │   ├── employee-import-actions.ts  # Bulk import employees from Excel (Employee Module Enhancements)
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
 │   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + class_breakdown (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── payroll-calculate-actions.ts # Prefill logic + class breakdown init (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
@@ -96,6 +105,7 @@ luna-hrm/
 │   │   └── use-mobile.ts               # Mobile detection (SSR-safe)
 │   ├── utils/
 │   │   ├── excel-schedule-parser.ts    # .xlsx class schedule import
+│   │   ├── excel-employee-parser.ts    # .xlsx employee bulk import (Employee Module Enhancements)
 │   │   ├── excel-payroll-export.ts     # Export payroll to .xlsx
 │   │   ├── date-helpers.ts             # parseIsoDateLocal, getWeekStart, getMonthBounds, isWeekLocked, getWeekDates
 │   │   ├── format-helpers.ts           # Format numbers, dates
@@ -340,4 +350,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-14 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows features
+**Last Updated:** 2026-03-15 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows + Employee Module Enhancements (soft delete, status filter, bulk import)

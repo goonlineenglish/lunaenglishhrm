@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { getMonthBounds } from '@/lib/utils/date-helpers'
+import { countTeachingSessions, getSubstituteSessions, countScheduledSessions } from '@/lib/services/payroll-session-counter'
 import type { KpiEvaluation } from '@/lib/types/database'
 import type { AssistantKpiStatus } from '@/lib/types/kpi'
 import type { ActionResult } from '@/lib/actions/employee-actions'
@@ -175,5 +177,58 @@ export async function getKpiHistory(
   } catch (err) {
     console.error('[getKpiHistory]', err)
     return { success: false, error: 'Không thể tải lịch sử KPI.' }
+  }
+}
+
+// ─── Attendance sessions for KPI bonus calculation ────────────────────────────
+
+export interface KpiAttendanceSessions {
+  sessionsWorked: number
+  substituteSessions: number
+  totalScheduled: number
+}
+
+/**
+ * Fetch attendance data needed for KPI bonus calculation.
+ * Returns sessions_worked, substitute_sessions, total_scheduled_sessions for the month.
+ * Used by KPI form to display live bonus preview and by save action.
+ */
+export async function getAssistantAttendanceSessions(
+  employeeId: string,
+  month: number,
+  year: number,
+): Promise<ActionResult<KpiAttendanceSessions>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Chưa đăng nhập.' }
+    if (!canAccessKpi(user.role)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
+
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+
+    // Branch ownership check — same pattern as getKpiEvaluation / getPreviousKpi
+    if (user.role === 'branch_manager') {
+      const { data: emp } = await sb.from('employees').select('branch_id').eq('id', employeeId).maybeSingle()
+      if (!emp || emp.branch_id !== user.branch_id) {
+        return { success: false, error: 'Bạn không có quyền xem dữ liệu công của nhân viên này.' }
+      }
+    }
+
+    const { startDate, endDate } = getMonthBounds(month, year)
+
+    const [worked, sub, scheduled] = await Promise.all([
+      countTeachingSessions(sb, employeeId, startDate, endDate),
+      getSubstituteSessions(sb, employeeId, startDate, endDate),
+      countScheduledSessions(sb, employeeId, startDate, endDate),
+    ])
+
+    return {
+      success: true,
+      data: { sessionsWorked: worked, substituteSessions: sub, totalScheduled: scheduled },
+    }
+  } catch (err) {
+    console.error('[getAssistantAttendanceSessions]', err)
+    return { success: false, error: 'Không thể tải dữ liệu công của trợ giảng.' }
   }
 }

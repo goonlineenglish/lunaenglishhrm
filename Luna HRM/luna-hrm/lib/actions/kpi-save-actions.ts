@@ -3,12 +3,15 @@
 /**
  * KPI evaluation save (upsert) action.
  * Validates scores, calculates totals, and upserts to kpi_evaluations.
+ * Attendance sessions are recomputed server-side — client-provided values are ignored.
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { logAudit } from '@/lib/services/audit-log-service'
 import { calculateTotalScore, calculateKpiBonus, validateAllScores } from '@/lib/services/kpi-calculation-service'
+import { getMonthBounds } from '@/lib/utils/date-helpers'
+import { countTeachingSessions, getSubstituteSessions, countScheduledSessions } from '@/lib/services/payroll-session-counter'
 import type { KpiEvaluation, KpiEvaluationInsert } from '@/lib/types/database'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 
@@ -59,12 +62,30 @@ export async function saveKpiEvaluation(
       student: data.student_score,
       demeanor: data.demeanor_score,
     })
-    const bonus_amount = calculateKpiBonus(total_score, data.base_pass)
+
+    // Server-side attendance recompute — ignore client-provided values to prevent manipulation
+    const { startDate, endDate } = getMonthBounds(data.month, data.year)
+    const [sessions_worked, substitute_sessions, total_scheduled_sessions] = await Promise.all([
+      countTeachingSessions(sb, data.employee_id, startDate, endDate),
+      getSubstituteSessions(sb, data.employee_id, startDate, endDate),
+      countScheduledSessions(sb, data.employee_id, startDate, endDate),
+    ])
+
+    const bonus_amount = calculateKpiBonus(
+      total_score,
+      data.base_pass,
+      sessions_worked,
+      substitute_sessions,
+      total_scheduled_sessions,
+    )
 
     const payload: KpiEvaluationInsert = {
       ...data,
       total_score,
       bonus_amount,
+      sessions_worked,
+      substitute_sessions,
+      total_scheduled_sessions,
       evaluated_by: user.id,
     }
 

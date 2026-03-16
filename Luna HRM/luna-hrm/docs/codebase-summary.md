@@ -1,6 +1,6 @@
 # Luna HRM Codebase Summary
 
-**Status:** All 7 phases complete. Production-ready MVP with 24 routes, ~100+ files.
+**Status:** All 7 phases complete + Post-MVP Enhancements + Phase 6 (Email Confirmation) planning. Production-ready MVP with 24 routes, ~135+ files.
 
 ## Project Structure
 
@@ -34,7 +34,11 @@ luna-hrm/
 │   │   ├── evaluation/                 # Save evaluation, query history
 │   │   ├── employee-notes/             # CRUD notes
 │   │   ├── audit/                      # Audit log endpoints
-│   │   └── cron/                       # Scheduled tasks (auto-fill, lock, reminders)
+│   │   ├── cron/                       # Scheduled tasks (auto-fill, lock, reminders)
+│   │   │   ├── weekly-reminder/        # Weekend reminder for unsaved attendance
+│   │   │   ├── kpi-reminder/           # KPI reminder on 25th
+│   │   │   ├── **auto-confirm-payslips/** | **Auto-confirm payslips after 3 days (Phase 6)**
+│   │   │   └── **payslip-reminder/**   | **Remind employees on day 2 (Phase 6)**
 │   ├── globals.css                      # Tailwind base styles
 │   └── layout.tsx                       # Root layout
 ├── components/
@@ -73,6 +77,8 @@ luna-hrm/
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
 │   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + class_breakdown (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── payroll-calculate-actions.ts # Prefill logic + class breakdown init (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
+│   │   ├── **payroll-notification-actions.ts** | **Send payslips to employees, finalize period (Phase 6)**
+│   │   ├── **employee-confirmation-actions.ts** | **Confirm/dispute payslip endpoints (Phase 6)**
 │   │   ├── kpi-save-actions.ts         # KPI submission
 │   │   ├── evaluation-actions.ts       # Query evaluations
 │   │   ├── evaluation-save-actions.ts  # Save evaluations
@@ -97,7 +103,8 @@ luna-hrm/
 │   │   ├── payroll-audit-service.ts    # Audit logs for manual payslip edits (Feature: Semi-Manual Payroll)
 │   │   ├── payroll-prefill-service.ts  # Pre-fill suggestions from KPI/notes (Feature: Semi-Manual Payroll)
 │   │   ├── audit-log-service.ts        # Fire-and-forget logging
-│   │   └── file-service.ts             # Image/file upload
+│   │   ├── **email-service.ts**        # **Email sending via Resend (Phase 6)**
+│   │   └── **email-templates.ts**      # **Payslip + reminder email templates (Phase 6)**
 │   ├── hooks/
 │   │   ├── use-auth.ts                 # Auth context hook
 │   │   ├── use-permissions.ts          # Role/branch checks
@@ -128,7 +135,9 @@ luna-hrm/
 │   │   ├── 006_payslip_audit_logs.sql  # Audit logs for manual payslip edits (Feature: Semi-Manual Payroll, 2026-03-11)
 │   │   ├── 007_attendance_lock_override.sql  # Lock override + multi-row lock query (Feature: Calendar + Lock Override, 2026-03-14)
 │   │   ├── 008_payroll_class_breakdown.sql   # Per-class rates + class_breakdown JSONB (Feature: Payroll Per-Class Rows, 2026-03-14)
-│   └── seed.sql                        # 21 employees, 10 classes, sample data
+│   │   ├── 009_security_and_index_improvements.sql  # Security/index improvements
+│   │   ├── 010_fix_rls_recursion.sql   # RLS infinite recursion fix (SECURITY DEFINER, 2026-03-15)
+│   │   └── seed.sql                    # 21 employees, 10 classes, sample data
 ├── public/
 │   ├── manifest.json                   # PWA manifest
 │   └── sw.js                           # Service worker (static assets only)
@@ -136,6 +145,9 @@ luna-hrm/
 │   ├── attendance-lock.test.ts         # Unit tests
 │   ├── payroll-calculation.test.ts
 │   ├── kpi-bonus.test.ts
+│   └── **email-confirmation.test.ts**  # **Email confirm/dispute/auto-confirm tests (Phase 6)**
+│   ├── payroll-audit-service.test.ts   # Audit logging tests
+│   ├── payroll-prefill-service.test.ts # Prefill logic tests
 │   └── attendance-summary.test.ts      # Attendance summary tests (Feature: 2026-03-11)
 ├── package.json                        # Dependencies
 ├── tsconfig.json                       # TypeScript config
@@ -324,9 +336,9 @@ npm run lint
 ## Build Status
 
 - **Routes:** 24 total
-- **Components:** ~39-45 custom components (69 .tsx files including variants)
+- **Components:** ~70+ custom components (74 .tsx files including variants)
 - **Files:** ~115+ (code, types, actions, services, hooks, utils)
-- **Tests:** 130 unit tests (5 suites: tax-calculator, payroll-calc, kpi-calc, date-helpers, attendance-summary) — all passing
+- **Tests:** 130+ unit tests (6 suites: tax-calculator, payroll-calc, kpi-calc, date-helpers, payroll-audit-service, payroll-prefill-service, attendance-summary) — all passing
 - **Build:** Clean, 0 errors
 
 ## Dev/Test Setup
@@ -350,4 +362,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-15 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows + Employee Module Enhancements (soft delete, status filter, bulk import)
+**Last Updated:** 2026-03-15 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows + Employee Module Enhancements (soft delete, status filter, bulk import) + RLS Recursion Fix

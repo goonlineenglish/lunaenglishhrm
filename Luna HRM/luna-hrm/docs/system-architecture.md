@@ -1,8 +1,9 @@
 # Luna HRM System Architecture
 
 **Project:** Luna HRM (Lightweight HRM for English Language Centers)
-**Status:** Complete (All 7 phases)
-**Last Updated:** 2026-03-07
+**Status:** Complete (All 7 phases + Post-MVP Enhancements + Email Confirmation planning)
+**Last Updated:** 2026-03-16
+**Migrations:** 12 files (000-011), Phase 6 scheduled (012_employee_payslip_confirmation)
 
 ---
 
@@ -28,8 +29,8 @@
 ┌─────────────────────────────────────────────────────────────┐
 │              Supabase Cloud (PostgreSQL + Auth)             │
 │  ├─ Auth (Email/password, JWT with app_metadata)           │
-│  ├─ Database (17 tables)                                    │
-│  ├─ RLS Policies (68 policies for role-based access)       │
+│  ├─ Database (18 tables: 17 data + 1 audit)                │
+│  ├─ RLS Policies (70+ policies for role-based access)      │
 │  └─ Edge Functions (Email sending, cron jobs)              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -76,7 +77,7 @@
 
 ---
 
-## Database Architecture (17 Tables)
+## Database Architecture (18 Tables)
 
 ### Data Relationships
 
@@ -105,7 +106,7 @@ branches (root)
 
 ### Critical Tables
 
-#### `employees` (Extended Profile)
+#### `employees` (Extended Profile, Soft Delete)
 ```sql
 CREATE TABLE employees (
   id UUID PRIMARY KEY = auth.users.id,
@@ -124,7 +125,7 @@ CREATE TABLE employees (
 
   -- Employment flags
   has_labor_contract BOOLEAN DEFAULT FALSE,
-  is_active BOOLEAN DEFAULT TRUE,
+  is_active BOOLEAN DEFAULT TRUE,    -- Soft delete toggle
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -339,11 +340,17 @@ CREATE TABLE employee_notes (
 - **Data Validation:** Input validation before DB writes
 
 **Key Action Files:**
-- `class-schedule-actions.ts` — Create, update, delete, list, import .xlsx
+- `class-schedule-actions.ts` — Create, update, delete, list, import .xlsx, reactivate
 - `attendance-actions.ts` — Query grid, save grid, lock/unlock, normalize week_start
+- `attendance-summary-actions.ts` — Per-class aggregation (Feature: 2026-03-11)
+- `attendance-lock-actions.ts` — Lock override, multi-row lock (Feature: 2026-03-14)
 - `payroll-period-actions.ts` — Calculate payroll, preview, confirm, undo, recalc
+- `payroll-payslip-actions.ts` — Semi-manual payslip save + class_breakdown (Feature: 2026-03-11/14)
+- `payroll-calculate-actions.ts` — Prefill logic + class breakdown init
 - `kpi-save-actions.ts` — Submit KPI scores
 - `evaluation-save-actions.ts` — Create evaluations
+- `employee-mutation-actions.ts` — Create/update/toggle active (Feature: 2026-03-15)
+- `employee-import-actions.ts` — Bulk import from Excel (Feature: 2026-03-15)
 - `employee-profile-actions.ts` — Update profile fields
 - `employee-notes-actions.ts` — CRUD notes
 - `audit-log-service.ts` — Fire-and-forget logging
@@ -554,22 +561,33 @@ Mobile: Bottom nav, CSS-responsive layout
 PWA: Service worker (static assets only)
 ```
 
-### Employee Profile Module (Phase 6)
+### Employee Profile Module (Phase 6 + Enhancements)
 ```
 Routes: /employees, /employees/[id]
 ├─ EmployeeForm (CRUD)
 ├─ EmployeeProfileInfo
 ├─ EmployeeProfileTabs (Basic, Extended, Evaluations, Notes)
 ├─ EmployeeNotesList
-└─ EmployeeNoteForm
+├─ EmployeeImportDialog (bulk import from Excel)
+├─ EmployeeStatusFilter (active/inactive toggle)
 
 Actions:
-├─ employee-actions.ts (CRUD employee)
+├─ employee-actions.ts (legacy CRUD)
+├─ employee-query-actions.ts (employee queries with filtering)
+├─ employee-mutation-actions.ts (create/update/toggle active)
+├─ employee-import-actions.ts (bulk import from Excel)
 ├─ employee-profile-actions.ts (profile fields)
 ├─ employee-notes-actions.ts (CRUD notes)
 
 Database: employees (extended fields), employee_notes
-Extended Fields: cccd, dob, bank_account, qualifications, characteristics
+Extended Fields: cccd, dob, bank_account, qualifications, characteristics, is_active
+Features:
+  - Soft delete (is_active toggle)
+  - Status filter (active/inactive employees)
+  - Bulk import from Excel with validation
+  - Class assignment warning (cannot assign inactive employees to classes)
+  - Search + filtering by status
+  - Reactivate class schedules (toggle is_active)
 RLS: BM can edit own branch, admin can edit all
 ```
 
@@ -602,11 +620,12 @@ RLS: All employees can view own actions, admin/accountant view all
 
 ### Authorization (RLS)
 - **Policy Type:** Row-level security on all 17 tables
-- **Enforcement:** 68 RLS policies
+- **Enforcement:** 70+ RLS policies (grew from security hardening)
 - **Key Functions:**
   - `get_user_role()` — from JWT app_metadata.role
   - `get_user_branch_id()` — from JWT app_metadata.branch_id
   - `get_user_id()` — from JWT sub
+  - `get_current_user_is_active()` — SECURITY DEFINER, RLS recursion safe
 
 ### Data Protection
 - **Password Hashing:** Supabase handles (bcrypt)
@@ -693,6 +712,10 @@ RESEND_API_KEY=...
 - `tests/attendance-lock.test.ts` — Lock enforcement logic
 - `tests/payroll-calculation.test.ts` — 3 formula calculations
 - `tests/kpi-bonus.test.ts` — Bonus calculation with base_pass rule
+- `tests/payroll-audit-service.test.ts` — Audit logging for payslip changes
+- `tests/payroll-prefill-service.test.ts` — Prefill logic from KPI + notes
+- `tests/attendance-summary.test.ts` — Per-class, per-employee aggregation
+- **Total:** 130+ unit tests, 6 suites, all passing
 
 ### Integration Tests
 - RLS policy validation (role-based access)
@@ -768,6 +791,25 @@ RESEND_API_KEY=...
 **Why:** Avoid stale API responses
 **Trade-off:** API always fresh (network must be available)
 
+### 8. RLS Recursion Prevention
+**Decision:** Use `SECURITY DEFINER` functions to bypass RLS within policy evaluation
+**Why:** PostgreSQL evaluates ALL permissive WITH CHECK clauses on UPDATE, causing infinite recursion when policies query the same table
+**Pattern:** Create helper function `get_current_user_is_active()` to check user status without triggering RLS
+**Code-Level Bypass:** `createAdminClient()` for specific high-trust operations with app-level security checks
+**Trade-off:** Requires careful auditing to prevent abuse
+
+### 9. Email Case-Insensitive Uniqueness
+**Decision:** Normalize all employee emails to lowercase at write time
+**Why:** Supabase creates case-sensitive unique indexes by default
+**Pattern:** Use `LOWER(email)` in unique constraint and normalize on INSERT/UPDATE
+**Trade-off:** Business logic must remember to normalize reads as well
+
+### 10. Admin Client Bypass for Recursive RLS
+**Decision:** Provide `createAdminClient()` function that uses service_role key for specific recursive-RLS operations
+**Why:** Some operations (e.g., user deactivation checks) require elevated permissions to avoid RLS loops
+**Pattern:** Wrap in try-catch, validate all inputs, audit with `logAudit()`
+**Trade-off:** Requires strict code review to prevent privilege escalation
+
 ---
 
 ## Monitoring & Logging
@@ -790,6 +832,98 @@ RESEND_API_KEY=...
 
 ---
 
+## Email Service Architecture (Phase 6 — In Planning)
+
+### Overview
+**Purpose:** Send payslips to employees for confirmation, track employee acknowledgment
+**Provider:** Resend (free 100/day, VietNamese support via Zalo)
+**Workflow:** Period confirmed → send emails → employee confirms → period finalizes
+
+### Email Service Components
+
+```
+┌─────────────────────────────────────────────────────┐
+│            Email Service Layer                      │
+│                                                     │
+│  ├─ email-service.ts                               │
+│  │   └─ sendEmail(to, subject, html)               │
+│  │       └─ Uses Resend SDK + retry logic          │
+│  │                                                 │
+│  ├─ email-templates.ts                             │
+│  │   ├─ buildPayslipEmailHtml(...)                 │
+│  │   │   └─ Employee payslip + confirm button      │
+│  │   └─ buildReminderEmailHtml(...)                │
+│  │       └─ Payslip reminder (day 2)               │
+│  │                                                 │
+│  └─ Cron endpoints                                 │
+│      ├─ auto-confirm-payslips                      │
+│      │   └─ Auto-confirm after 3 days no action    │
+│      └─ payslip-reminder                           │
+│          └─ Remind on day 2 if no action           │
+└─────────────────────────────────────────────────────┘
+```
+
+### Database Schema (Migration 012)
+
+**Payslips Extended:**
+- `employee_status` ENUM: pending → sent → confirmed | disputed (max 2)
+- `employee_confirmed_at` TIMESTAMPTZ: when employee confirmed
+- `employee_feedback` TEXT: dispute reason if disputed
+- `confirmation_token` UUID: per-payslip verification code
+- `dispute_count` INT: tracked at DB level (CHECK <= 2)
+- `reminder_sent_at` TIMESTAMPTZ: idempotent reminder tracking
+
+**Payroll Periods Extended:**
+- `status` updated: 'draft' → 'confirmed' → 'pending_confirmation' → 'finalized'
+- `confirmation_deadline` TIMESTAMPTZ: auto-confirm deadline (now() + 3 days)
+
+### Workflow State Machine
+
+```
+Admin/Accountant:
+  payroll_period: 'draft' → 'confirmed'
+  sendPayslipEmails()
+    ├─ Payslips without email → auto-confirm immediately
+    ├─ For each valid email → send via Resend
+    ├─ Update payslip.employee_status='sent', email_sent_at=NOW()
+    └─ If all sent: period.status='pending_confirmation'
+
+Employee:
+  Receives email with /my-payslips/{id}?token={token}
+  └─ Confirm OR Dispute (max 2 times)
+     └─ If dispute → admin/accountant fixes and resends
+     └─ If confirm → employee_status='confirmed'
+
+Cron (daily 9:00 AM):
+  auto-confirm-payslips:
+    └─ Find payslips WHERE employee_status='sent'
+       AND email_sent_at < NOW() - 3 days
+       └─ Auto-confirm: employee_status='confirmed'
+
+  payslip-reminder:
+    └─ Find payslips WHERE employee_status='sent'
+       AND reminder_sent_at IS NULL
+       AND email_sent_at BETWEEN NOW()-48h AND NOW()-24h
+       └─ Send reminder email, set reminder_sent_at=NOW()
+
+Admin/Accountant:
+  finalizePayrollPeriod()
+    └─ Check all payslips.employee_status='confirmed'
+    └─ If yes: period.status='finalized' (immutable)
+```
+
+### Security Considerations
+
+| Risk | Mitigation |
+|------|------------|
+| Token leaked | UUID per payslip, owned by employee, single-use verification (with employee_status guard) |
+| Employee tampering salary | All mutations via admin client (createAdminClient), RLS audit logging |
+| Duplicate emails | Batch send with 100ms delay, track email_sent_at and reminder_sent_at |
+| Email spam filter | Verify Resend domain (DKIM/SPF/DMARC) before production |
+| Concurrent disputes | DB CHECK constraint (dispute_count <= 2) + app-level check |
+
+---
+
 ## Documentation References
 
 - **Code Standards:** `/docs/code-standards.md`
@@ -798,7 +932,20 @@ RESEND_API_KEY=...
 - **Deployment Guide:** `/docs/deployment-guide.md`
 - **Project Roadmap:** `/docs/project-roadmap.md`
 
+### 10. Admin Client Bypass for Recursive RLS
+**Decision:** Provide `createAdminClient()` function that uses service_role key for specific recursive-RLS operations
+**Why:** Some operations (e.g., user deactivation checks) require elevated permissions to avoid RLS loops
+**Pattern:** Wrap in try-catch, validate all inputs, audit with `logAudit()`
+**Trade-off:** Requires strict code review to prevent privilege escalation
+
+### 11. `.maybeSingle()` Update-and-Verify Pattern
+**Decision:** Use `.maybeSingle()` instead of `.single()` for update operations
+**Why:** `.single()` throws if 0 rows found; `.maybeSingle()` allows explicit not-found handling
+**Pattern:** Update → check if data exists → explicit error or success
+**Code:** `const { data: updated, error } = await supabase.from('table').update(data).eq('id', id).maybeSingle();`
+**Trade-off:** More verbose but safer for concurrent updates
+
 ---
 
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-15
 **Maintained By:** Luna HRM Team

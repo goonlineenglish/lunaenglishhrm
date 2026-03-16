@@ -1,9 +1,9 @@
 # Luna HRM — Project Overview & Product Development Requirements (PDR)
 
 **Project Name:** Luna HRM (Lightweight Human Resources Management)
-**Version:** 1.0 MVP
+**Version:** 1.1 (Post-MVP Enhancements)
 **Status:** Complete & Production-Ready
-**Completion Date:** 2026-03-07
+**Completion Date:** 2026-03-15
 
 ---
 
@@ -60,7 +60,7 @@ English Language Centers need efficient HRM without heavyweight enterprise solut
 | Feature | Requirement | Status |
 |---------|------------|--------|
 | Create Schedule | Class code, name, time, days (Mon/Wed/Fri), teacher, assistant | ✅ Done |
-| Update Schedule | Edit all fields, mark inactive | ✅ Done |
+| Update Schedule | Edit all fields, mark inactive, reactivate | ✅ Done |
 | Delete Schedule | Soft or hard delete with impact warning | ✅ Done |
 | List Schedules | Filter by branch, search by class code | ✅ Done |
 | Excel Import | .xlsx with columns: class_code, name, time, days, teacher_email, assistant_email | ✅ Done |
@@ -68,7 +68,7 @@ English Language Centers need efficient HRM without heavyweight enterprise solut
 | Bulk Operations | Update multiple schedules at once | ⬜ Future |
 
 ### 2. Attendance Tracking (Chấm Công)
-**Requirement:** Track class-based attendance (1/0/KP/0.5 statuses) + separate VP staff daily attendance.
+**Requirement:** Track class-based attendance (1/0/KP/0.5 statuses) + separate VP staff daily attendance + calendar dates + lock override.
 
 | Feature | Requirement | Status |
 |---------|------------|--------|
@@ -81,6 +81,8 @@ English Language Centers need efficient HRM without heavyweight enterprise solut
 | Week Lock | BM/Admin locks week after finalization | ✅ Done |
 | Lock History | View who locked when | ✅ Done |
 | Unlock | Admin/BM can unlock (audit logged) | ✅ Done |
+| Calendar Dates | DD/MM display in grid header (2026-03-14) | ✅ Done |
+| Lock Override | Admin/BM can override auto-locked weeks (2026-03-14) | ✅ Done |
 | VP Daily Attendance | Separate table for office staff (Mon-Sat daily) | ✅ Done |
 | Cron Auto-lock | Sunday 11pm auto-lock per branch | ✅ Done |
 | Cron Reminder | Friday 3pm reminder email | ✅ Done |
@@ -88,7 +90,7 @@ English Language Centers need efficient HRM without heavyweight enterprise solut
 | Notes Integration | Link to employee_weekly_notes | ✅ Done |
 
 ### 3. Payroll Calculation Engine (Tính Lương)
-**Requirement:** 3 salary formulas with tax/insurance, adjustments from notes, preview + confirm + undo.
+**Requirement:** 3 salary formulas with tax/insurance, adjustments from notes, preview + confirm + undo + per-class breakdown + semi-manual mode.
 
 | Feature | Requirement | Status |
 |---------|------------|--------|
@@ -101,12 +103,14 @@ English Language Centers need efficient HRM without heavyweight enterprise solut
 | BHTN Deduction | 1% of gross (if has_labor_contract) | ✅ Done |
 | Income Tax (TNCN) | 7-bracket progressive after 11M deduction | ✅ Done |
 | Adjustment Source | employee_weekly_notes only (typed: substitute/bonus/penalty/extra_job) | ✅ Done |
+| Semi-Manual Mode | Auto-fill attendance + rates, manual entry for deductions (2026-03-11) | ✅ Done |
+| Per-Class Breakdown | Class-specific rates + session counts + flat spreadsheet layout (2026-03-14) | ✅ Done |
 | Payslip Preview | Month-to-month comparison, >20% alert | ✅ Done |
 | Recalculate | Re-run formula, preserve manual fields, reset calculated | ✅ Done |
 | Confirm | Double-confirm, immutable after lock | ✅ Done |
 | Undo | Revert within 24 hours | ✅ Done |
 | Send Email | Accountant sends payslips via Resend/Email | ✅ Done |
-| Excel Export | Export all payslips to .xlsx | ✅ Done |
+| Excel Export | Export all payslips to .xlsx with per-class rows | ✅ Done |
 
 ### 4. KPI Evaluation System (KPI Trợ Giảng)
 **Requirement:** Teaching assistants scored on Part A (pass/fail) + Part B (5 criteria /10), bonus = score × 50k.
@@ -138,12 +142,14 @@ English Language Centers need efficient HRM without heavyweight enterprise solut
 | Service Worker | Cache static assets, exclude /api/* | ✅ Done |
 
 ### 6. Employee Profile + Evaluation (Hồ Sơ & Đánh Giá NV)
-**Requirement:** Extended profiles + template-based evaluations + ad-hoc notes.
+**Requirement:** Extended profiles + template-based evaluations + ad-hoc notes + soft delete + bulk import.
 
 | Feature | Requirement | Status |
 |---------|------------|--------|
 | Basic Profile | Full name, employee code, position, rate, branch, is_active | ✅ Done |
 | Extended Profile | CCCD, DOB, bank account, qualifications, characteristics | ✅ Done |
+| Soft Delete | is_active toggle, status filter in UI, class assignment warning | ✅ Done |
+| Bulk Import | Excel template, batch import, auth creation, validation | ✅ Done |
 | Add/Edit | Admin/BM can CRUD employees | ✅ Done |
 | Evaluation Templates | Admin creates criteria templates | ✅ Done |
 | Evaluation Periods | Admin creates evaluation windows + assigns template | ✅ Done |
@@ -428,9 +434,10 @@ All documented in `system-architecture.md` with relationships, constraints, and 
 ### Appendix B: Database Migration Checklist
 
 - [x] Create 17 tables with constraints
-- [x] Add 68 RLS policies
+- [x] Add 70+ RLS policies
 - [x] Create indexes on key columns
 - [x] Add trigger for employee→auth sync
+- [x] Run 12 migration files (000-011)
 - [x] Seed test data (optional)
 
 ### Appendix C: Deployment Checklist
@@ -449,6 +456,6 @@ All documented in `system-architecture.md` with relationships, constraints, and 
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2026-03-07
+**Document Version:** 1.1
+**Last Updated:** 2026-03-15
 **Maintained By:** Luna HRM Project

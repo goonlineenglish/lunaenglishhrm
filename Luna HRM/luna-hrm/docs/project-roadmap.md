@@ -1,8 +1,8 @@
 # Luna HRM Project Roadmap
 
-**Current Status:** All 7 implementation phases complete. MVP ready for production.
+**Current Status:** All 7 implementation phases complete + Post-MVP enhancements. MVP ready for production.
 
-**Completion Date:** 2026-03-07
+**Completion Date:** 2026-03-15
 
 ---
 
@@ -32,6 +32,7 @@
 | 5 | Employee Self-Service Portal | ✅ Done | 2026-03-07 | 2026-03-07 | PWA, CSS-responsive, own data views |
 | 6 | Employee Profile + Evaluation | ✅ Done | 2026-03-07 | 2026-03-07 | Profile CRUD, template-based eval, notes, history |
 | 7 | Polish + Localization | ✅ Done | 2026-03-07 | 2026-03-07 | Audit logs, i18n, keyboard shortcuts, Excel I/O |
+| **8** | **Email Notification + Confirmation** | 📋 **Planning** | TBD | TBD | **Codex-approved (5 rounds), admin/accountant send payslips, employee confirm/dispute, auto-confirm cron** |
 
 ### Production Review Phase (Complete)
 
@@ -69,6 +70,17 @@
 - [x] Employee portal (own attendance, payslips, profile)
 - [x] Audit logging (all CRUD operations)
 - [x] Excel import/export (class schedules, payroll)
+
+### Phase 8 Features (📋 Planning)
+
+- [ ] Email notification service (Resend API integration)
+- [ ] Payslip email with confirmation button
+- [ ] Employee confirmation/dispute workflow (max 2 disputes)
+- [ ] Auto-confirm after 3 days no action
+- [ ] Reminder email on day 2
+- [ ] Payroll period finalization (all confirmed → finalized state)
+- [ ] Admin/accountant send payslips UI
+- [ ] Employee payslip confirmation UI
 
 ### Optimization Features (100% Complete)
 
@@ -261,7 +273,7 @@ npm run build && npm start
 | Dev server | `npm run dev` → `http://localhost:3000` |
 | Production | `npm start -- -p 3001` |
 | Supabase | `btwwqeemwedtbnskjcem.supabase.co` |
-| Tests | `npm test` → 101 tests, 4 suites |
+| Tests | `npm test` → 130+ tests, 6 suites |
 | Seed data | `supabase/seed.sql` (21 employees, 10 classes) |
 | Test password | `Luna@2026` (dev only) |
 
@@ -312,28 +324,44 @@ npm run build && npm start
   - Plan review: 20 issues → all fixed
 - **Tests:** 130 unit tests passing (payroll-calc suite extended)
 - **Build:** 24 routes, 0 errors, clean
+
+### Feature 5: Employee Module Enhancements
 - **Status:** ✅ Complete
-- **Completion Date:** 2026-03-14
-- **Description:** UX enhancements to attendance grid with calendar dates in header (DD/MM under day names) and admin/BM ability to override auto-locked weeks.
+- **Completion Date:** 2026-03-15
+- **Description:** Employee soft delete + status filter + bulk Excel import with validation.
 - **Scope:**
-  - Calendar dates in header (phase 1): DD/MM display under day names in both class and office attendance grids
-  - Lock override system (phase 2): Admin + BM can override auto-locked weeks via `is_override=true` flag on `attendance_locks` table
-  - Cross-month payroll guard: prevent editing attendance if payroll confirmed
-  - Multi-row lock query: both manual and override rows coexist
+  - Soft delete: `is_active` toggle (inactive employees hidden from class assignments)
+  - Status filter: show active/inactive employees in list
+  - Bulk import: Excel template with columns (employee_code, full_name, position, rate_per_session, email, etc.)
+  - Validation: duplicate email check, rate validation, required fields
+  - Auth creation: auto-create Supabase auth user on import
+  - Rollback on failure: transaction-style (all or nothing)
 - **Key Implementation Files:**
-  - `supabase/migrations/008_attendance_lock_override.sql` (NEW)
-  - `lib/actions/attendance-lock-actions.ts` (NEW — extracted: `unlockWeek`, `overrideAutoLock`, `removeOverride`)
-  - `lib/actions/attendance-query-actions.ts` (EXTENDED — multi-row lock query, `lockType` + `hasOverride`)
-  - `lib/actions/office-attendance-actions.ts` (EXTENDED — identical multi-row lock patterns)
-  - `components/attendance/attendance-grid.tsx` (EXTENDED — calendar dates + unlock/override buttons)
-  - `components/office-attendance/office-attendance-grid.tsx` (EXTENDED — same features)
-  - `app/(dashboard)/attendance/page.tsx`, `office-attendance/page.tsx` (UPDATED — removed client-side auto-lock merge)
-- **Review Status:**
-  - Adversarial code review: 14 issues → all fixed
+  - `lib/actions/employee-import-actions.ts` (NEW)
+  - `lib/actions/employee-query-actions.ts` (NEW)
+  - `lib/actions/employee-mutation-actions.ts` (NEW)
+  - `lib/utils/excel-employee-parser.ts` (NEW)
+  - `components/employees/employee-import-dialog.tsx` (NEW)
+  - Employee table enhanced with status filter + is_active toggle
 - **Tests:** 130+ unit tests passing
 - **Build:** 24 routes, 0 errors, clean
 
-
+### Feature 6: RLS Recursion Fix + Security Hardening
+- **Status:** ✅ Complete
+- **Completion Date:** 2026-03-15
+- **Description:** Fix PostgreSQL RLS infinite recursion issue (error 42P17) when policies query the same table.
+- **Scope:**
+  - SECURITY DEFINER function: `get_current_user_is_active()` for safe user status checks
+  - Admin client bypass: `createAdminClient()` using service_role key for recursive operations
+  - Email normalization: lowercase at write time to match case-insensitive unique index
+  - Audit logging: all mutations logged with actor + changes
+- **Key Implementation Files:**
+  - `supabase/migrations/011_fix_rls_recursion.sql` (NEW)
+  - `lib/actions/branch-access-helpers.ts` (NEW — branch access validation)
+  - Employee update actions: added RLS recursion guard
+  - Service: enhanced error handling for RLS violations
+- **Tests:** 130+ unit tests passing
+- **Build:** 24 routes, 0 errors, clean
 
 ### Feature 1: Semi-Manual Payroll Mode
 - **Status:** ✅ Complete
@@ -355,7 +383,7 @@ npm run build && npm start
 - **Review Status:**
   - Codex review: 3 rounds → APPROVE
   - Code review: 15 issues → 12 fixed, 3 acknowledged
-- **Tests:** 101 unit tests passing
+- **Tests:** 130+ unit tests passing
 - **Build:** 24 routes, 0 errors, clean
 
 ### Feature 2: Attendance Summary by Class (Tổng Hợp Công Theo Lớp)
@@ -377,5 +405,5 @@ npm run build && npm start
   - Query attendance by schedule IDs → branch/employee scoped, aggregate in-memory
 - **Review Status:**
   - Adversarial review: 11 issues → all fixed
-- **Tests:** 130 unit tests (attendance-summary suite added)
+- **Tests:** 130+ unit tests (attendance-summary suite added)
 - **Build:** 24 routes, 0 errors, clean

@@ -1,8 +1,8 @@
 # Luna HRM Code Standards & Best Practices
 
 **Project:** Luna HRM
-**Status:** All 7 phases complete
-**Last Updated:** 2026-03-07
+**Status:** All 7 phases complete + Post-MVP Enhancements + Phase 6 (Email Confirmation) planning
+**Last Updated:** 2026-03-16
 
 ---
 
@@ -121,6 +121,14 @@ luna-hrm/
 │   │   ├── 001_initial_schema.sql
 │   │   ├── 002_rls_policies.sql
 │   │   ├── 003_audit_logs.sql
+│   │   ├── 004_add_payslip_deductions_column.sql
+│   │   ├── 005_audit_logs.sql
+│   │   ├── 006_fix_table_permissions.sql
+│   │   ├── 007_payslip_audit_logs.sql
+│   │   ├── 008_attendance_lock_override.sql
+│   │   ├── 009_payroll_class_breakdown.sql
+│   │   ├── 010_security_and_index_improvements.sql
+│   │   ├── 011_fix_rls_recursion.sql
 │   │   └── seed.ts
 ├── public/
 │   ├── manifest.json
@@ -597,6 +605,7 @@ export const saveAttendanceGrid = async (
 
 - **Naming:** `{table}_{action}_{role}` or `{table}_{scope}`
 - **Clarity:** Write policies for each role explicitly
+- **Recursion Prevention:** Use SECURITY DEFINER functions (migration 011) for policies that query same table
   ```sql
   ✅
   CREATE POLICY "employees_select_branch_manager"
@@ -604,8 +613,36 @@ export const saveAttendanceGrid = async (
   TO authenticated
   USING (branch_id = (SELECT auth.jwt() -> 'app_metadata' ->> 'branch_id')::uuid);
 
+  ✅ (SECURITY DEFINER for recursion safety)
+  CREATE FUNCTION get_current_user_is_active() RETURNS BOOLEAN AS $$
+    SELECT is_active FROM employees WHERE id = auth.uid()
+  $$ LANGUAGE SQL STABLE SECURITY DEFINER;
+
   ❌
   CREATE POLICY "select_policy" ON employees ...
+  ```
+
+### Update-and-Verify Pattern
+
+- **Use `.maybeSingle()` instead of `.single()`** for update operations
+  ```typescript
+  ✅
+  const { data: updated, error } = await supabase
+    .from('table')
+    .update(data)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!updated) {
+    throw new Error('Record not found or update failed');
+  }
+
+  ❌ (throws if 0 rows)
+  const { data: updated } = await supabase
+    .from('table')
+    .update(data)
+    .eq('id', id)
+    .single();
   ```
 
 ---
@@ -645,6 +682,88 @@ export const saveAttendanceGrid = async (
 
   ❌
   if (!canEdit) return null; // No server check
+  ```
+
+### Admin Client Bypass (RLS Recursion)
+
+- **When to use:** Some operations (e.g., user deactivation, employee payslip confirmation) have RLS circular dependencies or require elevated permissions
+- **Use `createAdminClient()`** with service_role key, but ALWAYS validate input + audit log
+  ```typescript
+  ✅ (with validation + logging)
+  export const updateEmployee = async (id: string, data: any) => {
+    // Validate input
+    if (!id || typeof id !== 'string') throw new Error('Invalid ID');
+
+    // Use admin client for RLS bypass
+    const adminClient = createAdminClient();
+    const { data: updated, error } = await adminClient
+      .from('employees')
+      .update(data)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    // Audit the change
+    await logAudit('UPDATE', 'employees', id, { updated_fields: Object.keys(data) });
+
+    return updated;
+  };
+
+  ❌ (no validation, no logging)
+  const adminClient = createAdminClient();
+  await adminClient.from('employees').update(data).eq('id', userInput.id);
+  ```
+
+### Sensitive Mutations Pattern (Email Confirmation — Phase 6)
+
+- **Pattern:** For operations that modify employee data (e.g., payslip confirmation, dispute tracking), always use `createAdminClient()` instead of direct RLS UPDATE
+- **Why:** Prevents employees from tampering with salary/confirmation fields via direct updates
+- **Example:** Employee confirm/dispute payslip
+  ```typescript
+  ✅ (Admin client ensures columns can't be bypassed)
+  export const confirmMyPayslip = async (payslipId: string, token: string) => {
+    // 1. Verify token ownership (app-level guard)
+    const adminClient = createAdminClient();
+    const { data: payslip } = await adminClient
+      .from('payslips')
+      .select('confirmation_token, employee_id')
+      .eq('id', payslipId)
+      .maybeSingle();
+
+    if (!payslip || payslip.confirmation_token !== token) {
+      throw new Error('Invalid token');
+    }
+
+    // 2. Verify employee ownership
+    const user = await getCurrentUser();
+    if (payslip.employee_id !== user.id) {
+      throw new Error('Unauthorized');
+    }
+
+    // 3. Update via admin client (safe from column tampering)
+    const { error } = await adminClient
+      .from('payslips')
+      .update({
+        employee_status: 'confirmed',
+        employee_confirmed_at: new Date().toISOString()
+      })
+      .eq('id', payslipId);
+
+    if (error) throw error;
+
+    // 4. Audit
+    await logAudit('UPDATE', 'payslips', payslipId, {
+      employee_status: 'confirmed',
+      source: 'employee_confirmation'
+    });
+  };
+
+  ❌ (Direct RLS UPDATE allows column tampering via app-level bypass)
+  const { error } = await supabase
+    .from('payslips')
+    .update({ employee_status: 'confirmed', gross_salary: 999999999 })
+    .eq('id', payslipId);
   ```
 
 ---
@@ -908,5 +1027,5 @@ export const ACTIONS = {
 
 ---
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-15
 **Maintained By:** Luna HRM Team

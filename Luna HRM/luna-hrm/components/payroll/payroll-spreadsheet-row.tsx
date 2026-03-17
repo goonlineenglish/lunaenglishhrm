@@ -12,6 +12,7 @@ import React, { memo, useState } from 'react'
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -64,6 +65,13 @@ interface Props {
   hasBreakdown?: boolean
   onFieldChange: (payslipId: string, field: keyof EditablePayslipFields, value: number | string | null) => void
   onToggleClassEdit?: () => void
+}
+
+const EMP_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  pending_send: { label: '–', className: 'text-muted-foreground' },
+  sent:         { label: 'Chờ', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  confirmed:    { label: 'Đã XN', className: 'bg-green-100 text-green-800 border-green-200' },
+  disputed:     { label: 'Khiếu nại', className: 'bg-red-100 text-red-800 border-red-200' },
 }
 
 function PayrollSpreadsheetRowInner({
@@ -195,6 +203,16 @@ function PayrollSpreadsheetRowInner({
           </td>
         )
       })}
+      {/* Employee confirmation status */}
+      <td className="px-2 py-1 text-center" style={{ minWidth: 100 }}>
+        {(() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const status = (payslip as any).employee_status as string | undefined ?? 'pending_send'
+          const cfg = EMP_STATUS_CONFIG[status] ?? EMP_STATUS_CONFIG.pending_send
+          if (status === 'pending_send') return <span className="text-xs text-muted-foreground">–</span>
+          return <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${cfg.className}`}>{cfg.label}</Badge>
+        })()}
+      </td>
     </tr>
   )
 }

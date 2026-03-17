@@ -5,7 +5,10 @@
 
 // ─── Payroll enums ────────────────────────────────────────────────────────────
 
-export type PayrollStatus = 'draft' | 'confirmed' | 'sent'
+export type PayrollStatus = 'draft' | 'confirmed' | 'sent' | 'finalized'
+
+/** Employee-facing status on a payslip after notification is sent */
+export type PayslipEmployeeStatus = 'pending_send' | 'sent' | 'confirmed' | 'disputed'
 
 // ─── 8. kpi_evaluations ──────────────────────────────────────────────────────
 
@@ -58,6 +61,7 @@ export interface PayrollPeriod {
   created_by: string
   confirmed_at: string | null
   sent_at: string | null
+  confirmation_deadline: string | null
   created_at: string
   updated_at: string
 }
@@ -109,6 +113,13 @@ export interface Payslip {
   is_reviewed: boolean          // set true when accountant saves/reviews row; gates confirmPayrollPeriod
   class_breakdown: ClassBreakdownEntry[] // per-class session/rate snapshot
   email_sent_at: string | null
+  // ─── Employee confirmation fields (Phase 015) ───
+  employee_status: PayslipEmployeeStatus
+  employee_confirmed_at: string | null
+  employee_feedback: string | null
+  confirmation_token: string | null
+  dispute_count: number
+  reminder_sent_at: string | null
   created_at: string
   updated_at: string
 }

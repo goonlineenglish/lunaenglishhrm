@@ -43,10 +43,12 @@ export const PAYROLL_STATUS_LABELS: Record<PayrollStatus, string> = {
   draft: 'Nháp',
   confirmed: 'Đã xác nhận',
   sent: 'Đã gửi',
+  finalized: 'Đã chốt',
 }
 
 export const PAYROLL_STATUS_COLORS: Record<PayrollStatus, string> = {
   draft: 'secondary',
   confirmed: 'default',
   sent: 'outline',
+  finalized: 'outline',
 }

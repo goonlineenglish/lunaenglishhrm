@@ -12,9 +12,10 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { Save, CheckSquare, Loader2 } from 'lucide-react'
+import { Save, CheckSquare, Loader2, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { PayrollSpreadsheetRow, SPREADSHEET_COLUMNS } from './payroll-spreadsheet-row'
 import { PayrollClassRow } from './payroll-class-row'
 import { batchUpdatePayslips, markPayslipsReviewed } from '@/lib/actions/payroll-actions'
@@ -262,6 +263,10 @@ export function PayrollSpreadsheet({ payslips, tab, periodId, periodStatus, onSa
                   )}
                 </th>
               ))}
+              {/* Employee confirmation status column */}
+              <th className="px-2 py-2 border-b text-xs text-muted-foreground text-center whitespace-nowrap" style={{ minWidth: 100 }}>
+                <div className="flex items-center justify-center gap-1"><Mail className="h-3 w-3" />XN NV</div>
+              </th>
             </tr>
           </thead>
           <tbody>

@@ -212,3 +212,63 @@ export async function undoPayrollPeriod(periodId: string): Promise<ActionResult>
     return { success: false, error: 'Không thể hoàn tác kỳ lương.' }
   }
 }
+
+/**
+ * Finalize a payroll period (sent → finalized).
+ * All payslips must be confirmed or auto-confirmed before calling.
+ */
+export async function finalizePayrollPeriod(periodId: string): Promise<ActionResult> {
+  try {
+    const auth = await requirePayrollRole('chốt kỳ lương')
+    if (auth.error) return auth.error
+    const sb = await getSupabaseClient()
+
+    const { data: period, error: fetchErr } = await sb
+      .from('payroll_periods')
+      .select('status')
+      .eq('id', periodId)
+      .maybeSingle()
+
+    if (fetchErr) throw fetchErr
+    if (!period) return { success: false, error: 'Không tìm thấy kỳ lương.' }
+    if ((period as { status: string }).status !== 'sent') {
+      return { success: false, error: 'Chỉ có thể chốt kỳ lương đang ở trạng thái đã gửi.' }
+    }
+
+    // Check that all payslips are confirmed or disputed (not pending/sent)
+    const { count, error: countErr } = await sb
+      .from('payslips')
+      .select('id', { count: 'exact', head: true })
+      .eq('payroll_period_id', periodId)
+      .in('employee_status', ['pending_send', 'sent'])
+
+    if (countErr) throw countErr
+    const pending = count ?? 0
+    if (pending > 0) {
+      return {
+        success: false,
+        error: `Còn ${pending} phiếu lương chưa được xác nhận. Vui lòng chờ hoặc dùng auto-confirm.`,
+      }
+    }
+
+    const { error } = await sb
+      .from('payroll_periods')
+      .update({ status: 'finalized' })
+      .eq('id', periodId)
+
+    if (error) throw error
+
+    logAudit({
+      tableName: 'payroll_periods',
+      recordId: periodId,
+      action: 'UPDATE',
+      userId: auth.user!.id,
+      userEmail: auth.user!.email,
+      newData: { status: 'finalized' },
+    })
+    return { success: true }
+  } catch (err) {
+    console.error('[finalizePayrollPeriod]', err)
+    return { success: false, error: 'Không thể chốt kỳ lương.' }
+  }
+}

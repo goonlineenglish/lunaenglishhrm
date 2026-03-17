@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { DollarSign, Calculator, RefreshCw, Check, Undo2, AlertTriangle } from 'lucide-react'
+import { DollarSign, Calculator, RefreshCw, Check, Undo2, AlertTriangle, Mail, Lock } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -21,6 +21,8 @@ import { ReinitializeConfirmDialog } from '@/components/payroll/reinitialize-con
 import { ExcelExportButton } from '@/components/payroll/excel-export-button'
 import { PayrollAttendanceSummary } from '@/components/payroll/payroll-attendance-summary'
 import { getPayrollPeriod, getPayslipsByPeriod, initializePayslips, undoPayrollPeriod } from '@/lib/actions/payroll-actions'
+import { sendPayslipEmails, SendPayslipEmailsResult } from '@/lib/actions/payroll-notification-actions'
+import { finalizePayrollPeriod } from '@/lib/actions/payroll-period-actions'
 import { formatVND } from '@/lib/utils/number-format'
 import type { PayrollPeriodWithCount, PayslipWithEmployee } from '@/lib/actions/payroll-actions'
 
@@ -44,6 +46,7 @@ export default function PayrollPeriodPage() {
   const [dirtyTabs, setDirtyTabs] = useState<Record<TabType, boolean>>({ assistant: false, teacher: false, office: false })
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [reinitOpen, setReinitOpen] = useState(false)
+  const [emailResult, setEmailResult] = useState<SendPayslipEmailsResult | null>(null)
 
   const isDirty = dirtyTabs.assistant || dirtyTabs.teacher || dirtyTabs.office
 
@@ -93,6 +96,8 @@ export default function PayrollPeriodPage() {
   }
 
   const isDraft = period?.status === 'draft'
+  const isSent = period?.status === 'sent'
+  const isConfirmed = period?.status === 'confirmed'
   const hasPayslips = payslips.length > 0
 
   if (loading) return <LoadingSpinner />
@@ -199,6 +204,52 @@ export default function PayrollPeriodPage() {
                 <Undo2 className="h-4 w-4 mr-1" />Hoàn tác
               </Button>
             )}
+
+            {/* Send payslip emails — available when confirmed or sent */}
+            {(isConfirmed || isSent) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actionLoading || isDirty}
+                      onClick={async () => {
+                        if (!confirm(`Gửi email phiếu lương cho ${payslips.length} nhân viên?`)) return
+                        setActionLoading(true); setError(null); setEmailResult(null)
+                        const r = await sendPayslipEmails(periodId)
+                        setActionLoading(false)
+                        if (!r.success) { setError(r.error ?? 'Lỗi gửi email.'); return }
+                        setEmailResult(r.data ?? null)
+                        fetchData()
+                      }}
+                    >
+                      <Mail className="h-4 w-4 mr-1" />Gửi email NV
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isDirty && <TooltipContent>Lưu thay đổi trước khi gửi email</TooltipContent>}
+              </Tooltip>
+            )}
+
+            {/* Finalize period — available when sent */}
+            {isSent && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={actionLoading}
+                onClick={async () => {
+                  if (!confirm('Chốt bảng lương? Tất cả phiếu chưa phản hồi cần được auto-confirm trước.')) return
+                  setActionLoading(true); setError(null)
+                  const r = await finalizePayrollPeriod(periodId)
+                  setActionLoading(false)
+                  if (!r.success) setError(r.error ?? 'Lỗi chốt lương.')
+                  else fetchData()
+                }}
+              >
+                <Lock className="h-4 w-4 mr-1" />Chốt lương
+              </Button>
+            )}
           </div>
         </div>
 
@@ -206,6 +257,17 @@ export default function PayrollPeriodPage() {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <p>{error}</p>
+          </Alert>
+        )}
+
+        {emailResult && (
+          <Alert className="border-green-200 bg-green-50 text-green-900">
+            <Mail className="h-4 w-4" />
+            <p className="text-sm">
+              Đã gửi email: <strong>{emailResult.sent}</strong> thành công
+              {emailResult.skipped > 0 && `, ${emailResult.skipped} bỏ qua`}
+              {emailResult.failed > 0 && `, ${emailResult.failed} thất bại`}
+            </p>
           </Alert>
         )}
 

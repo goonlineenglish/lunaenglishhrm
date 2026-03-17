@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { fetchPrefillData } from '@/lib/services/payroll-prefill-service'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -99,13 +99,10 @@ describe('fetchPrefillData — KPI bonus', () => {
 describe('fetchPrefillData — salary_components aggregation', () => {
   it('multiple allowances summed correctly', async () => {
     // salary_components is queried twice (allowances + deductions) — return different data
-    let callCount = 0
     const from = (table: string) => {
       const chain = {
         select: () => chain,
-        eq: (_: string, val: unknown) => {
-          if (table === 'salary_components' && val === 'allowance') callCount++
-          return chain
+        eq: () => chain,
         },
         in: () => chain,
         not: () => chain,

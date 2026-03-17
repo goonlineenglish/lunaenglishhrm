@@ -12,8 +12,10 @@ import type { MyPayslipDetail } from '@/lib/actions/employee-portal-actions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { formatVND, formatVNDFull } from '@/lib/utils/number-format'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CheckCircle, AlertCircle, Clock } from 'lucide-react'
+import type { PayslipEmployeeStatus } from '@/lib/types/database-payroll-types'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -25,6 +27,22 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className={`text-sm ${highlight ? 'text-foreground text-base' : ''}`}>{value}</span>
     </div>
+  )
+}
+
+function EmployeeStatusBadge({ status }: { status: PayslipEmployeeStatus | undefined }) {
+  if (!status || status === 'pending_send') return null
+  const config: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
+    sent: { label: 'Chờ xác nhận', icon: <Clock className="h-3 w-3" />, className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    confirmed: { label: 'Đã xác nhận', icon: <CheckCircle className="h-3 w-3" />, className: 'bg-green-100 text-green-800 border-green-200' },
+    disputed: { label: 'Đang khiếu nại', icon: <AlertCircle className="h-3 w-3" />, className: 'bg-red-100 text-red-800 border-red-200' },
+  }
+  const c = config[status]
+  if (!c) return null
+  return (
+    <Badge variant="outline" className={`flex items-center gap-1 ${c.className}`}>
+      {c.icon}{c.label}
+    </Badge>
   )
 }
 
@@ -43,6 +61,10 @@ export default async function MyPayslipDetailPage({ params }: PageProps) {
 
   const p = result.data
   const hasInsurance = p.bhxh > 0 || p.bhyt > 0 || p.bhtn > 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const empStatus = (p as any).employee_status as PayslipEmployeeStatus | undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const empFeedback = (p as any).employee_feedback as string | null
 
   return (
     <div className="space-y-4 max-w-lg mx-auto">
@@ -59,7 +81,10 @@ export default async function MyPayslipDetailPage({ params }: PageProps) {
       {/* Header card */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Phiếu lương tháng {p.period_month}/{p.period_year}</CardTitle>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="text-base">Phiếu lương tháng {p.period_month}/{p.period_year}</CardTitle>
+            <EmployeeStatusBadge status={empStatus} />
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-bold text-foreground">{formatVNDFull(p.net_pay)}</p>
@@ -141,6 +166,20 @@ export default async function MyPayslipDetailPage({ params }: PageProps) {
           <span className="text-xl font-bold text-primary">{formatVNDFull(p.net_pay)}</span>
         </CardContent>
       </Card>
+
+      {/* Dispute feedback if any */}
+      {empStatus === 'disputed' && empFeedback && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-red-700 font-medium uppercase tracking-wide">
+              Nội dung khiếu nại
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap text-red-800">{empFeedback}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Notes */}
       {p.extra_notes && (

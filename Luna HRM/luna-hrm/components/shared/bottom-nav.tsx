@@ -8,7 +8,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CalendarCheck, Wallet, User } from 'lucide-react'
+import { Home, CalendarCheck, Wallet, User, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface BottomNavTab {
@@ -21,6 +21,7 @@ const EMPLOYEE_TABS: BottomNavTab[] = [
   { label: 'Trang chủ', href: '/dashboard', icon: Home },
   { label: 'Chấm công', href: '/my-attendance', icon: CalendarCheck },
   { label: 'Phiếu lương', href: '/my-payslips', icon: Wallet },
+  { label: 'KPI', href: '/my-kpi', icon: TrendingUp },
   { label: 'Hồ sơ', href: '/my-profile', icon: User },
 ]
 

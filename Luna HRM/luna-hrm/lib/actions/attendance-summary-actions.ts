@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getWeekStart, getWeekEnd, parseIsoDateLocal, toISODate, getMonthBounds } from '@/lib/utils/date-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/attendance-query-actions'
 import type { AttendanceSummaryData, AttendanceSummaryItem, ClassSessionSummary } from '@/lib/types/attendance-summary-types'
 
@@ -212,11 +213,12 @@ export async function getAttendanceSummary(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const allowed = user.role === 'admin' || user.role === 'branch_manager' || user.role === 'accountant'
+    const allowed = hasAnyRole(user, 'admin', 'branch_manager', 'accountant')
     if (!allowed) return { success: false, error: 'Bạn không có quyền xem tổng hợp công.' }
 
-    // BM/accountant: resolve effective branch from JWT first, then validate
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    // BM in roles means branch-scoped (even if also accountant)
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     if (!effectiveBranch) return { success: false, error: 'Chưa chọn chi nhánh.' }
 
     // Input validation
@@ -224,11 +226,11 @@ export async function getAttendanceSummary(
     if (year < 2020 || year > 2099 || !Number.isInteger(year)) return { success: false, error: 'Năm không hợp lệ.' }
 
     // BM branch guard — reject cross-branch requests
-    if (user.role === 'branch_manager' && branchId && branchId !== user.branch_id) {
+    if (user.roles.includes('branch_manager') && branchId && branchId !== user.branch_id) {
       return { success: false, error: 'Bạn chỉ có thể xem chi nhánh của mình.' }
     }
-    // Accountant branch guard
-    if (user.role === 'accountant' && user.branch_id && branchId !== user.branch_id) {
+    // Pure accountant (no BM) branch guard
+    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && branchId !== user.branch_id) {
       return { success: false, error: 'Bạn chỉ có thể xem chi nhánh của mình.' }
     }
 

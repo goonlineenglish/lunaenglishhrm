@@ -27,7 +27,7 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'> = {
 export default async function MyPayslipsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'employee') redirect('/dashboard')
+  if (!user.roles?.includes("employee")) redirect('/dashboard')
 
   const result = await getMyPayslips()
   const payslips = result.data ?? []

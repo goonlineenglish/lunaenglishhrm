@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import {
   calculateTeachingPay,
   calculateSubstitutePay,
@@ -140,7 +141,7 @@ export async function initializePayslips(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'accountant') {
+    if (!hasAnyRole(user, 'admin', 'accountant')) {
       return { success: false, error: 'Bạn không có quyền khởi tạo bảng lương.' }
     }
 
@@ -163,8 +164,8 @@ export async function initializePayslips(
       return { success: false, error: 'Chỉ có thể khởi tạo kỳ lương ở trạng thái nháp.' }
     }
 
-    // Branch guard: accountant can only init their own branch
-    if (user.role === 'accountant' && user.branch_id && period.branch_id !== user.branch_id) {
+    // Branch guard: pure accountant (no BM) can only init their own branch
+    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && period.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền khởi tạo kỳ lương này.' }
     }
 
@@ -315,7 +316,7 @@ export async function reinitializePayslips(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'accountant') {
+    if (!hasAnyRole(user, 'admin', 'accountant')) {
       return { success: false, error: 'Bạn không có quyền khởi tạo lại bảng lương.' }
     }
 
@@ -337,8 +338,8 @@ export async function reinitializePayslips(
       return { success: false, error: 'Chỉ có thể khởi tạo lại kỳ lương đang ở trạng thái nháp.' }
     }
 
-    // Branch guard: accountant can only reinit their own branch
-    if (user.role === 'accountant' && user.branch_id && period.branch_id !== user.branch_id) {
+    // Branch guard: pure accountant (no BM) can only reinit their own branch
+    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && period.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền khởi tạo lại kỳ lương này.' }
     }
 

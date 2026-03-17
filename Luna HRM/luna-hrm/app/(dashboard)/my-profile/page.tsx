@@ -26,7 +26,7 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 export default async function MyProfilePage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'employee') redirect('/dashboard')
+  if (!user.roles?.includes("employee")) redirect('/dashboard')
 
   // Employee can call getEmployeeById with their own ID
   // The action checks RLS; for employee role it allows reading own profile

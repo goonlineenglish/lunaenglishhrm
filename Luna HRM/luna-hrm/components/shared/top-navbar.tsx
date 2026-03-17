@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { logoutAction } from '@/lib/actions/auth-actions'
 import { ROLE_LABELS } from '@/lib/constants/roles'
-import { getNavItemsForRole } from '@/lib/constants/navigation'
+import { getNavItemsForRoles } from '@/lib/constants/navigation'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import type { SessionUser } from '@/lib/types/user'
@@ -28,7 +28,7 @@ interface TopNavbarProps {
 export function TopNavbar({ user }: TopNavbarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const navItems = getNavItemsForRole(user.role)
+  const navItems = getNavItemsForRoles(user.roles)
 
   // Get initials for avatar
   const initials = user.full_name

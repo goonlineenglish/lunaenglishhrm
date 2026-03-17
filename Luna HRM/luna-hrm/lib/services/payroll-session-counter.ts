@@ -62,6 +62,30 @@ export async function countOfficeDays(
   return rows.reduce((sum, row) => sum + (row.status === '0.5' ? 0.5 : 1), 0)
 }
 
+// ─── Scheduled session count (for KPI attendance ratio) ──────────────────────
+
+/**
+ * Count total scheduled TKB slots for an employee in a date range.
+ * Counts ALL attendance records regardless of status (1, 0, 0.5, KP).
+ * Used in KPI bonus formula: denominator of attendance_ratio.
+ */
+export async function countScheduledSessions(
+  sb: SupabaseClient,
+  employeeId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  const { count, error } = await sb
+    .from('attendance')
+    .select('id', { count: 'exact', head: true })
+    .eq('employee_id', employeeId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+
+  if (error) throw new Error(`[countScheduledSessions] ${error.message}`)
+  return count ?? 0
+}
+
 // ─── Substitute session info ──────────────────────────────────────────────────
 
 /**

@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { checkBmBranchAccess } from '@/lib/actions/branch-access-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 import type { EmployeeNote, EmployeeNoteType } from '@/lib/types/database-evaluation-types'
 
@@ -20,7 +21,7 @@ export async function getEmployeeNotes(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role === 'employee' || user.role === 'accountant') {
+    if (user.roles.includes('employee') || (user.roles.includes('accountant') && !user.roles.includes('admin') && !user.roles.includes('branch_manager'))) {
       return { success: false, error: 'Bạn không có quyền xem ghi chú nhân viên.' }
     }
 
@@ -29,7 +30,7 @@ export async function getEmployeeNotes(
     const sb = supabase as any
 
     // BM: branch scoping
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const err = await checkBmBranchAccess(sb, employeeId, user.branch_id ?? null)
       if (err) return { success: false, error: err }
     }
@@ -64,7 +65,7 @@ export async function createEmployeeNote(input: {
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Không có quyền thêm ghi chú.' }
     }
     if (!input.content.trim()) return { success: false, error: 'Nội dung ghi chú không được để trống.' }
@@ -74,7 +75,7 @@ export async function createEmployeeNote(input: {
     const sb = supabase as any
 
     // BM: branch scoping
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const err = await checkBmBranchAccess(sb, input.employee_id, user.branch_id ?? null)
       if (err) return { success: false, error: err }
     }
@@ -104,7 +105,7 @@ export async function deleteEmployeeNote(noteId: string): Promise<ActionResult> 
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Không có quyền xóa ghi chú.' }
     }
 
@@ -121,7 +122,7 @@ export async function deleteEmployeeNote(noteId: string): Promise<ActionResult> 
     if (!note) return { success: false, error: 'Ghi chú không tồn tại.' }
 
     // BM: must be author and own the employee's branch
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       if (note.author_id !== user.id) {
         return { success: false, error: 'Bạn chỉ có thể xóa ghi chú do mình tạo.' }
       }

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { Branch, BranchInsert, BranchUpdate } from '@/lib/types/database'
 
 export interface ActionResult<T = void> {
@@ -27,13 +28,13 @@ export async function getBranches(): Promise<ActionResult<Branch[]>> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
-    if (user.role === 'admin' || user.role === 'accountant') {
+    if (hasAnyRole(user, 'admin', 'accountant')) {
       const { data, error } = await sb.from('branches').select('*').order('name')
       if (error) throw error
       return { success: true, data: (data ?? []) as Branch[] }
     }
 
-    if (user.role === 'branch_manager' && user.branch_id) {
+    if (user.roles.includes('branch_manager') && user.branch_id) {
       const { data, error } = await sb
         .from('branches')
         .select('*')
@@ -58,7 +59,7 @@ export async function createBranch(
 ): Promise<ActionResult<Branch>> {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || !user.roles.includes('admin')) {
       return { success: false, error: 'Chỉ admin mới có thể tạo chi nhánh.' }
     }
 
@@ -88,7 +89,7 @@ export async function updateBranch(
 ): Promise<ActionResult<Branch>> {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || !user.roles.includes('admin')) {
       return { success: false, error: 'Chỉ admin mới có thể sửa chi nhánh.' }
     }
 

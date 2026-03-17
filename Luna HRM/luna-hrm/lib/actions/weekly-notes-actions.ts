@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getWeekStart, toISODate, parseIsoDateLocal } from '@/lib/utils/date-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import type {
   EmployeeWeeklyNote, EmployeeWeeklyNoteInsert,
 } from '@/lib/types/database'
@@ -31,10 +32,11 @@ export async function getWeeklyNotes(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canView = user.role === 'admin' || user.role === 'branch_manager' || user.role === 'accountant'
+    const canView = hasAnyRole(user, 'admin', 'branch_manager', 'accountant')
     if (!canView) return { success: false, error: 'Bạn không có quyền xem ghi chú.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     // Normalize weekStartStr to Monday (ISO week start)
     const normalizedWeekStart = toISODate(getWeekStart(parseIsoDateLocal(weekStartStr)))
     const supabase = await createClient()
@@ -79,17 +81,18 @@ export async function createWeeklyNote(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canCreate = user.role === 'admin' || user.role === 'branch_manager'
+    const canCreate = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canCreate) return { success: false, error: 'Bạn không có quyền tạo ghi chú.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
-    const branchId = user.role === 'branch_manager' ? user.branch_id! : data.branch_id
+    const isBM = user.roles.includes('branch_manager')
+    const branchId = isBM ? user.branch_id! : data.branch_id
 
     // BM: validate employee belongs to own branch
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: emp } = await sb
         .from('employees')
         .select('branch_id')
@@ -127,7 +130,7 @@ export async function deleteWeeklyNote(id: string): Promise<ActionResult> {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canDelete = user.role === 'admin' || user.role === 'branch_manager'
+    const canDelete = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canDelete) return { success: false, error: 'Bạn không có quyền xoá ghi chú.' }
 
     const supabase = await createClient()
@@ -135,7 +138,7 @@ export async function deleteWeeklyNote(id: string): Promise<ActionResult> {
     const sb = supabase as any
 
     // BM: verify the note belongs to own branch
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: noteRow } = await sb
         .from('employee_weekly_notes')
         .select('branch_id')
@@ -162,7 +165,7 @@ export async function markNoteProcessed(id: string): Promise<ActionResult> {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canProcess = user.role === 'admin' || user.role === 'accountant'
+    const canProcess = hasAnyRole(user, 'admin', 'accountant')
     if (!canProcess) return { success: false, error: 'Chỉ kế toán mới duyệt ghi chú.' }
 
     const supabase = await createClient()

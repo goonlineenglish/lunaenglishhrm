@@ -43,7 +43,10 @@ export interface Employee {
   email: string
   phone: string | null
   position: EmployeePosition
+  /** Legacy single-role (deprecated — use roles[] for multi-role RBAC) */
   role: UserRole
+  /** Multi-role array (migration 014+) */
+  roles: UserRole[]
   rate_per_session: number      // VND per session (BIGINT in DB)
   sub_rate: number              // substitute rate (BIGINT in DB)
   has_labor_contract: boolean

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getWeekDates, getWeekStart, parseIsoDateLocal, toISODate, isWeekLocked } from '@/lib/utils/date-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import type { AttendanceStatus } from '@/lib/types/database'
 import type { ActionResult } from './attendance-query-actions'
 
@@ -22,12 +23,13 @@ export async function saveAttendanceBatch(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canEdit = user.role === 'admin' || user.role === 'branch_manager'
+    const canEdit = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canEdit) return { success: false, error: 'Bạn không có quyền lưu chấm công.' }
 
     if (records.length === 0) return { success: true }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,10 +143,11 @@ export async function lockWeek(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canLock = user.role === 'admin' || user.role === 'branch_manager'
+    const canLock = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canLock) return { success: false, error: 'Bạn không có quyền khoá tuần.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     const canonicalWeekStart = toISODate(getWeekStart(parseIsoDateLocal(weekStartStr)))
 
     const supabase = await createClient()

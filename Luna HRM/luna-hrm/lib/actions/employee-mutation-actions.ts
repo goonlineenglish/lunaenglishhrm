@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAuthUser, deleteAuthUser, updateAuthUserMetadata, createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { logAudit } from '@/lib/services/audit-log-service'
+import { hasAnyRole } from '@/lib/types/user'
 import type { Employee, UserRole } from '@/lib/types/database'
 import type { ActionResult } from './employee-query-actions'
 
@@ -33,14 +34,15 @@ export async function createEmployee(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canCreate = user.role === 'admin' || user.role === 'branch_manager'
+    const canCreate = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canCreate) return { success: false, error: 'Bạn không có quyền tạo nhân viên.' }
 
-    if (user.role === 'branch_manager' && !BM_ALLOWED_ROLES.includes(input.role)) {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin') && !BM_ALLOWED_ROLES.includes(input.role)) {
       return { success: false, error: 'Bạn không có quyền gán vai trò này.' }
     }
 
-    const branchId = user.role === 'branch_manager' ? user.branch_id : (input.branch_id ?? null)
+    const isBM = user.roles.includes('branch_manager')
+    const branchId = isBM ? user.branch_id : (input.branch_id ?? null)
 
     const authUser = await createAuthUser({
       email: input.email.toLowerCase(), // normalize to lowercase (matches DB lower(email) unique index)
@@ -99,7 +101,7 @@ export async function updateEmployee(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canEdit = user.role === 'admin' || user.role === 'branch_manager'
+    const canEdit = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canEdit) return { success: false, error: 'Bạn không có quyền sửa nhân viên.' }
 
     // Field allowlist — prevent arbitrary column injection (P1-3)
@@ -116,7 +118,7 @@ export async function updateEmployee(
       return { success: false, error: 'Không có trường hợp lệ để cập nhật.' }
     }
 
-    if (user.role === 'branch_manager' && safeData.role !== undefined) {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin') && safeData.role !== undefined) {
       if (!BM_ALLOWED_ROLES.includes(safeData.role as UserRole)) {
         return { success: false, error: 'Bạn không có quyền gán vai trò này.' }
       }
@@ -126,7 +128,7 @@ export async function updateEmployee(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: existing } = await sb
         .from('employees').select('branch_id').eq('id', id).maybeSingle()
       const e = existing as { branch_id: string | null } | null

@@ -4,12 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getMonthBounds } from '@/lib/utils/date-helpers'
 import { countTeachingSessions, getSubstituteSessions, countScheduledSessions } from '@/lib/services/payroll-session-counter'
+import { hasAnyRole } from '@/lib/types/user'
 import type { KpiEvaluation } from '@/lib/types/database'
 import type { AssistantKpiStatus } from '@/lib/types/kpi'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 
-function canAccessKpi(role: string): boolean {
-  return role === 'admin' || role === 'branch_manager'
+function canAccessKpi(user: { roles: string[] }): boolean {
+  return hasAnyRole(user as Parameters<typeof hasAnyRole>[0], 'admin', 'branch_manager')
 }
 
 export async function getAssistantsWithKpiStatus(
@@ -20,9 +21,9 @@ export async function getAssistantsWithKpiStatus(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (!canAccessKpi(user.role)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
+    if (!canAccessKpi(user)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? (user.branch_id ?? branchId) : branchId
+    const effectiveBranch = user.roles.includes('branch_manager') ? (user.branch_id ?? branchId) : branchId
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
@@ -90,13 +91,13 @@ export async function getKpiEvaluation(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (!canAccessKpi(user.role)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
+    if (!canAccessKpi(user)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: emp } = await sb.from('employees').select('branch_id').eq('id', employeeId).maybeSingle()
       if (!emp || emp.branch_id !== user.branch_id) return { success: false, error: 'Bạn không có quyền xem KPI này.' }
     }
@@ -122,7 +123,7 @@ export async function getPreviousKpi(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (!canAccessKpi(user.role)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
+    if (!canAccessKpi(user)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
 
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
@@ -131,7 +132,7 @@ export async function getPreviousKpi(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: emp } = await sb.from('employees').select('branch_id').eq('id', employeeId).maybeSingle()
       if (!emp || emp.branch_id !== user.branch_id) return { success: false, error: 'Bạn không có quyền xem KPI này.' }
     }
@@ -156,14 +157,14 @@ export async function getKpiHistory(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (!canAccessKpi(user.role)) return { success: false, error: 'Bạn không có quyền xem lịch sử KPI.' }
+    if (!canAccessKpi(user)) return { success: false, error: 'Bạn không có quyền xem lịch sử KPI.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
     let query = sb.from('kpi_evaluations').select('*').eq('employee_id', employeeId)
-    if (user.role === 'branch_manager' && user.branch_id) {
+    if (user.roles.includes('branch_manager') && user.branch_id) {
       query = query.eq('branch_id', user.branch_id)
     }
 
@@ -201,14 +202,14 @@ export async function getAssistantAttendanceSessions(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (!canAccessKpi(user.role)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
+    if (!canAccessKpi(user)) return { success: false, error: 'Bạn không có quyền xem KPI.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
     // Branch ownership check — same pattern as getKpiEvaluation / getPreviousKpi
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: emp } = await sb.from('employees').select('branch_id').eq('id', employeeId).maybeSingle()
       if (!emp || emp.branch_id !== user.branch_id) {
         return { success: false, error: 'Bạn không có quyền xem dữ liệu công của nhân viên này.' }
@@ -230,5 +231,38 @@ export async function getAssistantAttendanceSessions(
   } catch (err) {
     console.error('[getAssistantAttendanceSessions]', err)
     return { success: false, error: 'Không thể tải dữ liệu công của trợ giảng.' }
+  }
+}
+
+// ─── Employee self-service: my KPI history ────────────────────────────────────
+
+/**
+ * Employee portal: returns own KPI evaluation history (last N months).
+ * Accessible by employees with 'assistant' position.
+ */
+export async function getMyKpiHistory(
+  months = 6
+): Promise<ActionResult<KpiEvaluation[]>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Chưa đăng nhập.' }
+
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+
+    const { data, error } = await sb
+      .from('kpi_evaluations')
+      .select('*')
+      .eq('employee_id', user.id)
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .limit(months)
+    if (error) throw error
+
+    return { success: true, data: (data ?? []) as KpiEvaluation[] }
+  } catch (err) {
+    console.error('[getMyKpiHistory]', err)
+    return { success: false, error: 'Không thể tải lịch sử KPI.' }
   }
 }

@@ -5,7 +5,7 @@
  * Shows class_code, class_name, shift_time, days, teacher, assistant, status.
  */
 
-import { Pencil, XCircle } from 'lucide-react'
+import { Pencil, XCircle, PlayCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -23,9 +23,10 @@ interface Props {
   schedules: ScheduleWithNames[]
   onEdit: (schedule: ClassSchedule) => void
   onDeactivate: (id: string) => void
+  onReactivate: (id: string) => void
 }
 
-export function ClassScheduleTable({ schedules, onEdit, onDeactivate }: Props) {
+export function ClassScheduleTable({ schedules, onEdit, onDeactivate, onReactivate }: Props) {
   if (schedules.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground border rounded-md">
@@ -70,9 +71,13 @@ export function ClassScheduleTable({ schedules, onEdit, onDeactivate }: Props) {
                   <Button variant="ghost" size="icon" onClick={() => onEdit(s)} title="Sửa">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  {s.status === 'active' && (
+                  {s.status === 'active' ? (
                     <Button variant="ghost" size="icon" onClick={() => onDeactivate(s.id)} title="Ngừng lớp">
                       <XCircle className="h-4 w-4 text-destructive" />
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="icon" onClick={() => onReactivate(s.id)} title="Mở lại lớp">
+                      <PlayCircle className="h-4 w-4 text-green-600" />
                     </Button>
                   )}
                 </div>

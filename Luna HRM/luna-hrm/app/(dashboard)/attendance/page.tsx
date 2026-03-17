@@ -48,7 +48,7 @@ export default function AttendancePage() {
   useEffect(() => {
     getCurrentUser().then((user) => {
       if (user?.role === 'admin') setIsAdmin(true)
-      if (user?.role) setUserRole(user.role)
+      if (user?.roles?.[0]) setUserRole(user.roles[0])
       setRoleLoaded(true)
     })
   }, [])

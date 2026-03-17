@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 import type { Employee } from '@/lib/types/database'
 
@@ -26,7 +27,7 @@ export async function updateEmployeeProfile(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canEdit = user.role === 'admin' || user.role === 'branch_manager'
+    const canEdit = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canEdit) return { success: false, error: 'Bạn không có quyền cập nhật hồ sơ nhân viên.' }
 
     // Filter to only allowed profile keys — prevent privilege escalation
@@ -42,7 +43,7 @@ export async function updateEmployeeProfile(
     const sb = supabase as any
 
     // BM: branch scope check
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: existing } = await sb
         .from('employees').select('branch_id').eq('id', id).maybeSingle()
       const e = existing as { branch_id: string | null } | null

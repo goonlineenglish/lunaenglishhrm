@@ -31,6 +31,7 @@ export default function KpiEvalPage() {
   const {
     form, history, loading, saving, error,
     prefilled, saveSuccess, totalScore, basePassed,
+    attendance,
     handleFormField, handleChecks, handleSave,
   } = useKpiEvalForm(employeeId, month, year)
 
@@ -80,7 +81,7 @@ export default function KpiEvalPage() {
       )}
 
       {/* Score summary */}
-      <KpiScoreDisplay totalScore={totalScore} basePassed={basePassed} />
+      <KpiScoreDisplay totalScore={totalScore} basePassed={basePassed} attendance={attendance} />
 
       {/* Part A */}
       <Card>

@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { checkBmBranchAccess } from '@/lib/actions/branch-access-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 import type { ScoreInput } from '@/lib/types/evaluation'
 
@@ -26,7 +27,7 @@ export async function createEvaluation(input: {
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Không có quyền tạo đánh giá.' }
     }
 
@@ -35,7 +36,7 @@ export async function createEvaluation(input: {
     const sb = supabase as any
 
     // BM: verify target employee is in own branch
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const err = await checkBmBranchAccess(sb, input.employee_id, user.branch_id ?? null)
       if (err) return { success: false, error: err }
     }

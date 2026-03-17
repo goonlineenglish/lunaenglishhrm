@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { buildAuditLogEntries, insertAuditLogs } from '@/lib/services/payroll-audit-service'
 import { syncPeriodTotals } from '@/lib/actions/payroll-calculate-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { Payslip } from '@/lib/types/database'
 import type { EditablePayslipFields, ClassBreakdownEntry } from '@/lib/types/database-payroll-types'
 import type { ActionResult } from '@/lib/actions/employee-actions'
@@ -36,7 +37,7 @@ export async function getPayslipsByPeriod(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'accountant') {
+    if (!hasAnyRole(user, 'admin', 'accountant')) {
       return { success: false, error: 'Bạn không có quyền xem phiếu lương.' }
     }
 
@@ -78,7 +79,7 @@ export async function getPayslipDetail(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'accountant') {
+    if (!hasAnyRole(user, 'admin', 'accountant')) {
       return { success: false, error: 'Bạn không có quyền xem phiếu lương.' }
     }
 
@@ -171,7 +172,7 @@ export async function batchUpdatePayslips(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'accountant') {
+    if (!hasAnyRole(user, 'admin', 'accountant')) {
       return { success: false, error: 'Bạn không có quyền chỉnh sửa phiếu lương.' }
     }
 
@@ -194,8 +195,8 @@ export async function batchUpdatePayslips(
       return { success: false, error: 'Phiếu lương đã xác nhận, không thể chỉnh sửa.' }
     }
 
-    // Branch guard: accountant can only edit their own branch's payslips
-    if (user.role === 'accountant' && user.branch_id && pRow.branch_id !== user.branch_id) {
+    // Branch guard: pure accountant (no BM) can only edit their own branch's payslips
+    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && pRow.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền chỉnh sửa kỳ lương này.' }
     }
 
@@ -273,7 +274,7 @@ export async function markPayslipsReviewed(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'accountant') {
+    if (!hasAnyRole(user, 'admin', 'accountant')) {
       return { success: false, error: 'Bạn không có quyền xác nhận phiếu lương.' }
     }
 
@@ -296,8 +297,8 @@ export async function markPayslipsReviewed(
       return { success: false, error: 'Kỳ lương đã xác nhận, không thể thay đổi.' }
     }
 
-    // Branch guard: accountant can only mark their own branch's payslips
-    if (user.role === 'accountant' && user.branch_id && mRow.branch_id !== user.branch_id) {
+    // Branch guard: pure accountant (no BM) can only mark their own branch's payslips
+    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && mRow.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền xác nhận kỳ lương này.' }
     }
 
@@ -330,7 +331,7 @@ export async function updatePayslipManualFields(
   const user = await getCurrentUser()
   if (!user) return { success: false, error: 'Chưa đăng nhập.' }
   // Role check before any DB access
-  if (user.role !== 'admin' && user.role !== 'accountant') {
+  if (!hasAnyRole(user, 'admin', 'accountant')) {
     return { success: false, error: 'Bạn không có quyền chỉnh sửa phiếu lương.' }
   }
 

@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { checkBmBranchAccess } from '@/lib/actions/branch-access-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 import type { EvaluationListRow, EvaluationDetail } from '@/lib/types/evaluation'
 
@@ -21,9 +22,9 @@ export async function getEmployeeEvaluations(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role === 'accountant') return { success: false, error: 'Bạn không có quyền xem đánh giá nhân viên.' }
+    if (user.roles.includes('accountant') && !hasAnyRole(user, 'admin', 'branch_manager')) return { success: false, error: 'Bạn không có quyền xem đánh giá nhân viên.' }
     // Employee: only own evaluations
-    if (user.role === 'employee' && user.id !== employeeId) {
+    if (user.roles.includes('employee') && !hasAnyRole(user, 'admin', 'branch_manager') && user.id !== employeeId) {
       return { success: false, error: 'Bạn chỉ có thể xem đánh giá của mình.' }
     }
 
@@ -32,7 +33,7 @@ export async function getEmployeeEvaluations(
     const sb = supabase as any
 
     // BM: verify branch ownership
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const err = await checkBmBranchAccess(sb, employeeId, user.branch_id ?? null)
       if (err) return { success: false, error: err }
     }
@@ -79,7 +80,7 @@ export async function getEvaluationDetail(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role === 'accountant') return { success: false, error: 'Bạn không có quyền xem đánh giá nhân viên.' }
+    if (user.roles.includes('accountant') && !hasAnyRole(user, 'admin', 'branch_manager')) return { success: false, error: 'Bạn không có quyền xem đánh giá nhân viên.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,12 +102,12 @@ export async function getEvaluationDetail(
     if (!data) return { success: false, error: 'Không tìm thấy đánh giá.' }
 
     // Employee: only own evaluations
-    if (user.role === 'employee' && data.employee_id !== user.id) {
+    if (user.roles.includes('employee') && !hasAnyRole(user, 'admin', 'branch_manager') && data.employee_id !== user.id) {
       return { success: false, error: 'Bạn chỉ có thể xem đánh giá của mình.' }
     }
 
     // BM: branch scoping
-    if (user.role === 'branch_manager') {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const err = await checkBmBranchAccess(sb, data.employee_id, user.branch_id ?? null)
       if (err) return { success: false, error: err }
     }

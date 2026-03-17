@@ -15,7 +15,7 @@ import { ClassScheduleTable } from '@/components/class-schedules/class-schedule-
 import { ClassScheduleForm } from '@/components/class-schedules/class-schedule-form'
 import { ExcelImportDialog } from '@/components/class-schedules/excel-import-dialog'
 import {
-  getClassSchedules, deactivateClassSchedule,
+  getClassSchedules, deactivateClassSchedule, reactivateClassSchedule,
 } from '@/lib/actions/class-schedule-actions'
 import type { ClassSchedule } from '@/lib/types/database'
 
@@ -54,6 +54,13 @@ export default function ClassSchedulesPage() {
     else fetchData()
   }
 
+  async function handleReactivate(id: string) {
+    if (!confirm('Bạn có chắc muốn mở lại lớp này?')) return
+    const result = await reactivateClassSchedule(id)
+    if (!result.success) alert(result.error ?? 'Lỗi mở lại lớp.')
+    else fetchData()
+  }
+
   if (loading) return <LoadingSpinner />
   if (error) return <Alert variant="destructive"><p>{error}</p></Alert>
 
@@ -80,6 +87,7 @@ export default function ClassSchedulesPage() {
         schedules={schedules}
         onEdit={openEdit}
         onDeactivate={handleDeactivate}
+        onReactivate={handleReactivate}
       />
 
       <ClassScheduleForm

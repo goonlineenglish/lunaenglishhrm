@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ClassSchedule, ClassScheduleInsert, ClassScheduleUpdate } from '@/lib/types/database'
 import type { ActionResult } from './class-schedule-query-actions'
 
@@ -36,10 +37,11 @@ export async function createClassSchedule(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canCreate = user.role === 'admin' || user.role === 'branch_manager'
+    const canCreate = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canCreate) return { success: false, error: 'Bạn không có quyền tạo lịch lớp.' }
 
-    const branchId = user.role === 'branch_manager' ? user.branch_id! : data.branch_id
+    const isBM = user.roles.includes('branch_manager')
+    const branchId = isBM ? user.branch_id! : data.branch_id
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,7 +80,7 @@ export async function updateClassSchedule(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canEdit = user.role === 'admin' || user.role === 'branch_manager'
+    const canEdit = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canEdit) return { success: false, error: 'Bạn không có quyền sửa lịch lớp.' }
 
     const supabase = await createClient()
@@ -92,7 +94,8 @@ export async function updateClassSchedule(
       .single()
     if (fetchErr || !existing) return { success: false, error: 'Lịch lớp không tồn tại.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : existing.branch_id
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : existing.branch_id
 
     const empChecks: { id: string; requiredPosition: string; label: string }[] = []
     if (data.teacher_id) empChecks.push({ id: data.teacher_id, requiredPosition: 'teacher', label: 'Giáo viên' })
@@ -140,22 +143,55 @@ export async function deactivateClassSchedule(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canEdit = user.role === 'admin' || user.role === 'branch_manager'
+    const canEdit = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canEdit) return { success: false, error: 'Bạn không có quyền ngừng lớp.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
 
-    const { error } = await sb
+    const { data, error } = await sb
       .from('class_schedules')
       .update({ status: 'inactive' })
       .eq('id', id)
+      .select('id')
+      .maybeSingle()
 
     if (error) throw error
+    if (!data) return { success: false, error: 'Không tìm thấy lớp hoặc bạn không có quyền.' }
     return { success: true }
   } catch (err) {
     console.error('[deactivateClassSchedule]', err)
     return { success: false, error: 'Không thể ngừng lớp.' }
+  }
+}
+
+export async function reactivateClassSchedule(
+  id: string
+): Promise<ActionResult> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Chưa đăng nhập.' }
+
+    const canEdit = hasAnyRole(user, 'admin', 'branch_manager')
+    if (!canEdit) return { success: false, error: 'Bạn không có quyền mở lại lớp.' }
+
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+
+    const { data, error } = await sb
+      .from('class_schedules')
+      .update({ status: 'active' })
+      .eq('id', id)
+      .select('id')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return { success: false, error: 'Không tìm thấy lớp hoặc bạn không có quyền.' }
+    return { success: true }
+  } catch (err) {
+    console.error('[reactivateClassSchedule]', err)
+    return { success: false, error: 'Không thể mở lại lớp.' }
   }
 }

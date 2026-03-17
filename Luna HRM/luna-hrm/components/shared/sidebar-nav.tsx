@@ -10,16 +10,16 @@ import { usePathname } from 'next/navigation'
 import {
   Home, Calendar, ClipboardCheck, Building, DollarSign,
   Star, Users, Building2, CalendarCheck, Wallet, User,
-  ClipboardList, CalendarRange,
+  ClipboardList, CalendarRange, TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getNavItemsForRole } from '@/lib/constants/navigation'
+import { getNavItemsForRoles } from '@/lib/constants/navigation'
 import type { SessionUser } from '@/lib/types/user'
 
 // Map icon string → Lucide component
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, Calendar, ClipboardCheck, Building, DollarSign, Star, Users, Building2,
-  CalendarCheck, Wallet, User, ClipboardList, CalendarRange,
+  CalendarCheck, Wallet, User, ClipboardList, CalendarRange, TrendingUp,
 }
 
 interface SidebarNavProps {
@@ -28,7 +28,7 @@ interface SidebarNavProps {
 
 export function SidebarNav({ user }: SidebarNavProps) {
   const pathname = usePathname()
-  const navItems = getNavItemsForRole(user.role)
+  const navItems = getNavItemsForRoles(user.roles)
 
   return (
     <aside className="hidden md:flex flex-col w-64 min-h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0">

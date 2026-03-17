@@ -3,17 +3,33 @@
 /**
  * useKpiEvalForm — data-fetching and save logic for KPI evaluation form.
  * Returns all state and handlers needed by the page component.
+ * Includes attendance sessions (for bonus calculation preview).
  */
 
 import { useState, useEffect, useCallback } from 'react'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import {
   getKpiEvaluation, getPreviousKpi, saveKpiEvaluation, getKpiHistory,
+  getAssistantAttendanceSessions,
 } from '@/lib/actions/kpi-actions'
 import { calculateTotalScore } from '@/lib/services/kpi-calculation-service'
 import { MANDATORY_CRITERIA, type KpiFormData } from '@/lib/types/kpi'
 import type { KpiEvaluation, KpiEvaluationInsert } from '@/lib/types/database'
 import type { PartBKey } from '@/components/kpi/kpi-part-b-scores'
+
+// ─── Attendance sessions state ────────────────────────────────────────────────
+
+export interface AttendanceSessions {
+  sessionsWorked: number
+  substituteSessions: number
+  totalScheduled: number
+}
+
+const DEFAULT_ATTENDANCE: AttendanceSessions = {
+  sessionsWorked: 0,
+  substituteSessions: 0,
+  totalScheduled: 0,
+}
 
 const DEFAULT_FORM: KpiFormData = {
   base_pass: true,
@@ -41,6 +57,7 @@ export function useKpiEvalForm(employeeId: string, month: number, year: number) 
   const [form, setForm] = useState<KpiFormData>(DEFAULT_FORM)
   const [branchId, setBranchId] = useState('')
   const [history, setHistory] = useState<KpiEvaluation[]>([])
+  const [attendance, setAttendance] = useState<AttendanceSessions>(DEFAULT_ATTENDANCE)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,11 +67,12 @@ export function useKpiEvalForm(employeeId: string, month: number, year: number) 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const [userResult, evalResult, prevResult, histResult] = await Promise.all([
+    const [userResult, evalResult, prevResult, histResult, attendanceResult] = await Promise.all([
       getCurrentUser(),
       getKpiEvaluation(employeeId, month, year),
       getPreviousKpi(employeeId, month, year),
       getKpiHistory(employeeId),
+      getAssistantAttendanceSessions(employeeId, month, year),
     ])
 
     if (userResult) setBranchId(userResult.branch_id ?? '')
@@ -81,6 +99,11 @@ export function useKpiEvalForm(employeeId: string, month: number, year: number) 
       })
       setBranchId(prev.branch_id)
       setPrefilled(true)
+    }
+
+    // Always use fresh attendance data (overrides stored eval values)
+    if (attendanceResult.success && attendanceResult.data) {
+      setAttendance(attendanceResult.data)
     }
 
     if (histResult.success && histResult.data) setHistory(histResult.data)
@@ -117,7 +140,12 @@ export function useKpiEvalForm(employeeId: string, month: number, year: number) 
         parent: form.parent_score, student: form.student_score,
         demeanor: form.demeanor_score,
       }),
-      bonus_amount: 0, evaluated_by: '',
+      // Attendance data for bonus calculation
+      sessions_worked: attendance.sessionsWorked,
+      substitute_sessions: attendance.substituteSessions,
+      total_scheduled_sessions: attendance.totalScheduled,
+      bonus_amount: 0,  // server recalculates
+      evaluated_by: '',  // server sets from current user
     }
     const result = await saveKpiEvaluation(payload)
     if (result.success) {
@@ -140,6 +168,7 @@ export function useKpiEvalForm(employeeId: string, month: number, year: number) 
   return {
     form, history, loading, saving, error,
     prefilled, saveSuccess, totalScore, basePassed,
+    attendance,
     handleFormField, handleChecks, handleSave,
   }
 }

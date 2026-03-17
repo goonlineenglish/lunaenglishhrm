@@ -31,89 +31,89 @@ INSERT INTO branches (id, name, address, phone) VALUES
 
 -- Admin (global)
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date, nationality)
 VALUES
   ('10000000-0000-0000-0000-000000000001',
    '00000000-0000-0000-0000-000000000001',
    'ADMIN01', 'Quản Trị Hệ Thống', 'admin@luna-hrm.local', '0900000001',
-   'admin', 'admin', 0, 0, false, 0, true, '2026-01-01', 'Việt Nam');
+   'admin', 'admin', ARRAY['admin'], 0, 0, false, 0, true, '2026-01-01', 'Việt Nam');
 
 -- Branch Managers
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date, nationality)
 VALUES
   ('10000000-0000-0000-0000-000000000002',
    '00000000-0000-0000-0000-000000000001',
    'BM-TM01', 'Nguyễn Thị Minh', 'bm.tanmai@luna-hrm.local', '0901234001',
-   'office', 'branch_manager', 150000, 0, true, 1, true, '2025-03-01', 'Việt Nam'),
+   'office', 'branch_manager', ARRAY['branch_manager'], 150000, 0, true, 1, true, '2025-03-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000003',
    '00000000-0000-0000-0000-000000000002',
    'BM-Q101', 'Trần Văn Hùng', 'bm.quan1@luna-hrm.local', '0901234002',
-   'office', 'branch_manager', 150000, 0, true, 2, true, '2025-04-01', 'Việt Nam');
+   'office', 'branch_manager', ARRAY['branch_manager'], 150000, 0, true, 2, true, '2025-04-01', 'Việt Nam');
 
 -- Accountant (global, works across branches)
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date, nationality)
 VALUES
   ('10000000-0000-0000-0000-000000000004',
    '00000000-0000-0000-0000-000000000001',
    'ACC01', 'Phạm Thị Lan', 'accountant@luna-hrm.local', '0901234003',
-   'office', 'accountant', 150000, 0, true, 0, true, '2025-05-01', 'Việt Nam');
+   'office', 'accountant', ARRAY['accountant'], 150000, 0, true, 0, true, '2025-05-01', 'Việt Nam');
 
 -- ============================================================
 -- TEACHERS — CS Tân Mai (3 foreign + 1 Vietnamese)
 -- ============================================================
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date,
    nationality, qualifications, teaching_license)
 VALUES
   ('10000000-0000-0000-0000-000000000005',
    '00000000-0000-0000-0000-000000000001',
    'T-TM01', 'John Smith', 'john.smith@luna-hrm.local', '0901234011',
-   'teacher', 'employee', 500000, 300000, true, 0, true, '2025-06-01',
+   'teacher', 'employee', ARRAY['employee'], 500000, 300000, true, 0, true, '2025-06-01',
    'Mỹ', 'TESOL, CELTA, IELTS 9.0', 'VN-ENG-2025-001'),
 
   ('10000000-0000-0000-0000-000000000006',
    '00000000-0000-0000-0000-000000000001',
    'T-TM02', 'Sarah Johnson', 'sarah.johnson@luna-hrm.local', '0901234012',
-   'teacher', 'employee', 480000, 280000, true, 0, true, '2025-07-15',
+   'teacher', 'employee', ARRAY['employee'], 480000, 280000, true, 0, true, '2025-07-15',
    'Anh', 'DELTA, IELTS 8.5', 'VN-ENG-2025-002'),
 
   ('10000000-0000-0000-0000-000000000007',
    '00000000-0000-0000-0000-000000000001',
    'T-TM03', 'Michael Brown', 'michael.brown@luna-hrm.local', '0901234013',
-   'teacher', 'employee', 450000, 270000, false, 1, true, '2025-09-01',
+   'teacher', 'employee', ARRAY['employee'], 450000, 270000, false, 1, true, '2025-09-01',
    'Canada', 'CELTA, B.Ed', 'VN-ENG-2025-003'),
 
   ('10000000-0000-0000-0000-000000000008',
    '00000000-0000-0000-0000-000000000001',
    'T-TM04', 'Lê Thị Hoa', 'le.hoa@luna-hrm.local', '0901234014',
-   'teacher', 'employee', 350000, 200000, true, 2, true, '2024-08-01',
+   'teacher', 'employee', ARRAY['employee'], 350000, 200000, true, 2, true, '2024-08-01',
    'Việt Nam', 'Thạc sĩ Ngôn ngữ Anh, IELTS 8.0', NULL);
 
 -- ============================================================
 -- TEACHERS — CS Quận 1 (1 foreign + 1 Vietnamese)
 -- ============================================================
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date,
    nationality, qualifications, teaching_license)
 VALUES
   ('10000000-0000-0000-0000-000000000009',
    '00000000-0000-0000-0000-000000000002',
    'T-Q101', 'Emily Davis', 'emily.davis@luna-hrm.local', '0901234021',
-   'teacher', 'employee', 500000, 300000, true, 0, true, '2025-01-15',
+   'teacher', 'employee', ARRAY['employee'], 500000, 300000, true, 0, true, '2025-01-15',
    'Úc', 'TESOL, M.Ed, IELTS 9.0', 'VN-ENG-2025-004'),
 
   ('10000000-0000-0000-0000-000000000010',
    '00000000-0000-0000-0000-000000000002',
    'T-Q102', 'Đỗ Minh Tuấn', 'do.tuan@luna-hrm.local', '0901234022',
-   'teacher', 'employee', 320000, 190000, true, 1, true, '2024-11-01',
+   'teacher', 'employee', ARRAY['employee'], 320000, 190000, true, 1, true, '2024-11-01',
    'Việt Nam', 'Cử nhân Sư phạm Anh, IELTS 7.5', NULL);
 
 -- ============================================================
@@ -121,77 +121,77 @@ VALUES
 -- rate_per_session fixed 75k for assistants, sub_rate 40k
 -- ============================================================
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date, nationality)
 VALUES
   ('10000000-0000-0000-0000-000000000011',
    '00000000-0000-0000-0000-000000000001',
    'A-TM01', 'Trần Thị Linh', 'tran.linh@luna-hrm.local', '0901234031',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-08-01', 'Việt Nam'),
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-08-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000012',
    '00000000-0000-0000-0000-000000000001',
    'A-TM02', 'Nguyễn Thị Hương', 'nguyen.huong@luna-hrm.local', '0901234032',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-09-15', 'Việt Nam'),
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-09-15', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000013',
    '00000000-0000-0000-0000-000000000001',
    'A-TM03', 'Lê Thị Hoài Tú', 'le.tu@luna-hrm.local', '0901234033',
-   'assistant', 'employee', 75000, 40000, false, 1, true, '2025-10-01', 'Việt Nam'),
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 1, true, '2025-10-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000014',
    '00000000-0000-0000-0000-000000000001',
    'A-TM04', 'Phạm Hoàng Nam', 'pham.nam@luna-hrm.local', '0901234034',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-11-01', 'Việt Nam'),
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-11-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000015',
    '00000000-0000-0000-0000-000000000001',
    'A-TM05', 'Vũ Thị An', 'vu.an@luna-hrm.local', '0901234035',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-12-01', 'Việt Nam');
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-12-01', 'Việt Nam');
 
 -- ============================================================
 -- TEACHING ASSISTANTS — CS Quận 1 (3 assistants)
 -- ============================================================
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date, nationality)
 VALUES
   ('10000000-0000-0000-0000-000000000016',
    '00000000-0000-0000-0000-000000000002',
    'A-Q101', 'Hoàng Thị Mai', 'hoang.mai@luna-hrm.local', '0901234041',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-06-01', 'Việt Nam'),
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-06-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000017',
    '00000000-0000-0000-0000-000000000002',
    'A-Q102', 'Bùi Thị Dung', 'bui.dung@luna-hrm.local', '0901234042',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-07-01', 'Việt Nam'),
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-07-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000018',
    '00000000-0000-0000-0000-000000000002',
    'A-Q103', 'Đặng Văn Kiên', 'dang.kien@luna-hrm.local', '0901234043',
-   'assistant', 'employee', 75000, 40000, false, 0, true, '2025-08-15', 'Việt Nam');
+   'assistant', 'employee', ARRAY['employee'], 75000, 40000, false, 0, true, '2025-08-15', 'Việt Nam');
 
 -- ============================================================
 -- OFFICE STAFF — 2 at CS Tân Mai, 1 at CS Quận 1
 -- ============================================================
 INSERT INTO employees
-  (id, branch_id, employee_code, full_name, email, phone, position, role,
+  (id, branch_id, employee_code, full_name, email, phone, position, role, roles,
    rate_per_session, sub_rate, has_labor_contract, dependent_count, is_active, join_date, nationality)
 VALUES
   ('10000000-0000-0000-0000-000000000019',
    '00000000-0000-0000-0000-000000000001',
    'O-TM01', 'Lê Thị Ngân', 'le.ngan@luna-hrm.local', '0901234051',
-   'office', 'employee', 150000, 0, true, 1, true, '2025-01-15', 'Việt Nam'),
+   'office', 'employee', ARRAY['employee'], 150000, 0, true, 1, true, '2025-01-15', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000020',
    '00000000-0000-0000-0000-000000000001',
    'O-TM02', 'Trương Văn Bảo', 'truong.bao@luna-hrm.local', '0901234052',
-   'office', 'employee', 120000, 0, false, 0, true, '2025-03-01', 'Việt Nam'),
+   'office', 'employee', ARRAY['employee'], 120000, 0, false, 0, true, '2025-03-01', 'Việt Nam'),
 
   ('10000000-0000-0000-0000-000000000021',
    '00000000-0000-0000-0000-000000000002',
    'O-Q101', 'Võ Thị Thảo', 'vo.thao@luna-hrm.local', '0901234053',
-   'office', 'employee', 150000, 0, true, 0, true, '2025-02-01', 'Việt Nam');
+   'office', 'employee', ARRAY['employee'], 150000, 0, true, 0, true, '2025-02-01', 'Việt Nam');
 
 -- ============================================================
 -- UPDATE branches.manager_id now that employees exist

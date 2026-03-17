@@ -17,20 +17,26 @@ export interface KpiEvaluation {
   year: number
   /** 4 mandatory criteria met → eligible for bonus */
   base_pass: boolean
-  // 5 KPI criteria with individual scores
-  tsi_score: number           // 0-1
+  // 5 KPI criteria with individual scores (new 2026-03 scale)
+  tsi_score: number           // 0-10 (Hỗ trợ GV / Giờ tương tác)
   tsi_comment: string | null
-  funtime_score: number       // 0-3
+  funtime_score: number       // 0-30
   funtime_comment: string | null
-  parent_score: number        // 0-2
+  parent_score: number        // 0-20
   parent_comment: string | null
-  student_score: number       // 0-3
+  student_score: number       // 0-30
   student_comment: string | null
-  demeanor_score: number      // 0-1
+  demeanor_score: number      // 0-10
   demeanor_comment: string | null
-  total_score: number         // sum of all scores (0-10)
-  /** total_score × 50,000 VND (0 if base_pass=false) */
+  total_score: number         // raw sum of all scores (0-100)
+  /** bonus = ROUND(40,000 × (total/10) × attendance_ratio); 0 if base_pass=false */
   bonus_amount: number
+  /** Actual teaching sessions worked (attendance status 1 or 0.5) */
+  sessions_worked: number
+  /** Substitute sessions (employee_weekly_notes type substitute) */
+  substitute_sessions: number
+  /** Total scheduled TKB slots in month (all attendance records) */
+  total_scheduled_sessions: number
   evaluated_by: string
   created_at: string
   updated_at: string

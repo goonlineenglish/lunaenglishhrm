@@ -8,6 +8,7 @@ export {
   getKpiEvaluation,
   getPreviousKpi,
   getKpiHistory,
+  getAssistantAttendanceSessions,
 } from './kpi-query-actions'
 
 export { saveKpiEvaluation } from './kpi-save-actions'

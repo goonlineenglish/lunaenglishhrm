@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { logAudit } from '@/lib/services/audit-log-service'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from './class-schedule-query-actions'
 
 export interface BatchImportRow {
@@ -33,7 +34,7 @@ export async function batchImportClassSchedules(
     const user = await getCurrentUser()
     if (!user) return { success: false, imported_count: 0, errors: [{ class_code: '', message: 'Chưa đăng nhập.' }] }
 
-    const canImport = user.role === 'admin' || user.role === 'branch_manager'
+    const canImport = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canImport) return { success: false, imported_count: 0, errors: [{ class_code: '', message: 'Bạn không có quyền nhập lịch lớp.' }] }
 
     // Server-side row limit (P0-2)
@@ -41,7 +42,8 @@ export async function batchImportClassSchedules(
       return { success: false, imported_count: 0, errors: [{ class_code: '', message: `Tối đa ${MAX_IMPORT_ROWS} lớp mỗi lần nhập.` }] }
     }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     if (!effectiveBranch) return { success: false, imported_count: 0, errors: [{ class_code: '', message: 'Chưa chọn chi nhánh.' }] }
 
     const supabase = await createClient()

@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, createAuthUser, deleteAuthUser } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { logAudit } from '@/lib/services/audit-log-service'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ParsedEmployee } from '@/lib/utils/excel-employee-parser'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ export async function batchImportEmployees(
       return { success: false, imported_count: 0, errors: [{ employee_code: '', message: 'Chưa đăng nhập.' }] }
     }
 
-    const canImport = user.role === 'admin' || user.role === 'branch_manager'
+    const canImport = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canImport) {
       return { success: false, imported_count: 0, errors: [{ employee_code: '', message: 'Bạn không có quyền nhập nhân viên.' }] }
     }
@@ -60,7 +61,8 @@ export async function batchImportEmployees(
     }
 
     // BM always uses own branch
-    const effectiveBranch = user.role === 'branch_manager' ? (user.branch_id ?? '') : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? (user.branch_id ?? '') : branchId
     if (!effectiveBranch) {
       return { success: false, imported_count: 0, errors: [{ employee_code: '', message: 'Chưa chọn chi nhánh.' }] }
     }
@@ -95,7 +97,7 @@ export async function batchImportEmployees(
     // Filter valid rows + reject BM trying to import non-employee roles
     const validRows: ParsedEmployee[] = []
     for (const row of rows) {
-      if (user.role === 'branch_manager' && !BM_ALLOWED_ROLES.has(row.role)) {
+      if (user.roles.includes('branch_manager') && !BM_ALLOWED_ROLES.has(row.role)) {
         errors.push({ employee_code: row.employee_code, message: `BM không được nhập vai trò "${row.role}".` })
         continue
       }

@@ -31,7 +31,7 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
 export default async function MyPayslipDetailPage({ params }: PageProps) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'employee') redirect('/dashboard')
+  if (!user.roles?.includes("employee")) redirect('/dashboard')
 
   const { id } = await params
   const result = await getMyPayslipDetail(id)

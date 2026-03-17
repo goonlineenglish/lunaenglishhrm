@@ -24,12 +24,14 @@ export default async function DashboardLayout({
   const user: SessionUser = {
     ...rawUser,
     role: rawUser.role as SessionUser['role'],
+    roles: (rawUser.roles ?? [rawUser.role]) as SessionUser['roles'],
     position: rawUser.position as SessionUser['position'],
     branch_name: null,
     is_active: true,
   }
 
-  const isEmployee = user.role === 'employee'
+  // Show bottom nav only for pure employee (no other roles that grant management access)
+  const isEmployee = user.roles.includes('employee') && user.roles.length === 1
 
   return (
     <div className="flex min-h-screen bg-background">

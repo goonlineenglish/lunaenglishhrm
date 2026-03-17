@@ -41,7 +41,7 @@ export function KpiPartBScores({ scores, onChange }: Props) {
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
-        Chấm điểm từng tiêu chí. Tổng tối đa 10 điểm.
+        Chấm điểm từng tiêu chí. Tổng tối đa 100 điểm.
       </p>
 
       {KPI_CRITERIA.map((criterion) => {

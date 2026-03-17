@@ -1,6 +1,7 @@
 /**
  * Navigation items for the sidebar.
- * Each item includes the roles that can see it.
+ * Multi-Role RBAC: each item specifies which roles can see it.
+ * Union menu: user sees union of all items matching ANY of their roles.
  */
 
 import type { UserRole } from '@/lib/types/database'
@@ -9,6 +10,7 @@ export interface NavItem {
   label: string
   href: string
   icon: string
+  /** User needs ANY ONE of these roles to see this item */
   roles: UserRole[]
 }
 
@@ -87,14 +89,35 @@ export const ALL_NAV_ITEMS: NavItem[] = [
     roles: ['employee'],
   },
   {
-    label: 'Hồ sơ',
+    label: 'Hồ sơ của tôi',
     href: '/my-profile',
     icon: 'User',
     roles: ['employee'],
   },
+  {
+    label: 'KPI của tôi',
+    href: '/my-kpi',
+    icon: 'TrendingUp',
+    roles: ['employee'],
+  },
 ]
 
-/** Filter nav items by user role */
+/**
+ * Filter nav items for a user with multiple roles.
+ * Union menu: show item if user has ANY of the required roles.
+ * Deduplicates by href to prevent duplicate entries.
+ */
+export function getNavItemsForRoles(userRoles: UserRole[]): NavItem[] {
+  const seen = new Set<string>()
+  return ALL_NAV_ITEMS.filter((item) => {
+    if (seen.has(item.href)) return false
+    const visible = item.roles.some(r => userRoles.includes(r))
+    if (visible) seen.add(item.href)
+    return visible
+  })
+}
+
+/** Legacy: single-role filter — use getNavItemsForRoles() for multi-role */
 export function getNavItemsForRole(role: UserRole): NavItem[] {
-  return ALL_NAV_ITEMS.filter((item) => item.roles.includes(role))
+  return getNavItemsForRoles([role])
 }

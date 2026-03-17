@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getWeekDates, getWeekStart, parseIsoDateLocal, toISODate, isWeekLocked } from '@/lib/utils/date-helpers'
+import { hasAnyRole } from '@/lib/types/user'
 import {
   buildAttendanceGrid,
   detectConflicts,
@@ -38,10 +39,11 @@ export async function getAttendanceGrid(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canView = user.role === 'admin' || user.role === 'branch_manager'
+    const canView = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canView) return { success: false, error: 'Bạn không có quyền xem chấm công.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

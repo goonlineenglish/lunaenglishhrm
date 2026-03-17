@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import type { UserRole } from '@/lib/types/database'
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,6 @@ export async function loginAction(
   })
 
   if (error) {
-    // Return user-friendly Vietnamese messages
     if (error.message.includes('Invalid login credentials')) {
       return { success: false, error: 'Email hoặc mật khẩu không đúng.' }
     }
@@ -37,11 +37,10 @@ export async function loginAction(
   }
 
   // Verify employee record exists and is active
-  // After signInWithPassword, the server client already has the user session
-  type EmployeeRow = { id: string; is_active: boolean; role: string }
+  type EmployeeRow = { id: string; is_active: boolean }
   const empResult = await supabase
     .from('employees')
-    .select('id, is_active, role')
+    .select('id, is_active')
     .eq('id', data.user.id)
     .maybeSingle()
 
@@ -96,6 +95,11 @@ export async function resetPasswordAction(
 
 // ─── Get current session user ────────────────────────────────────────────────
 
+/**
+ * Returns the current authenticated session user.
+ * Multi-Role RBAC: reads app_metadata.roles[] (with fallback to legacy role string).
+ * role/roles/branch_id come from JWT app_metadata — immutable by client.
+ */
 export async function getCurrentUser() {
   const supabase = await createClient()
 
@@ -106,14 +110,25 @@ export async function getCurrentUser() {
 
   if (error || !user) return null
 
-  // ISSUE-2 fix: read role/branch_id from JWT app_metadata (immutable by client)
-  // app_metadata is set by admin API and cannot be forged by the user
-  const meta = (user.app_metadata ?? {}) as Record<string, string | null>
-  const jwtRole = (meta.role ?? null) as string | null
-  const jwtBranchId = (meta.branch_id ?? null) as string | null
+  // Read from JWT app_metadata — immutable by client (set via admin API only)
+  const meta = (user.app_metadata ?? {}) as Record<string, unknown>
+  const jwtBranchId = (meta.branch_id as string | null) ?? null
+
+  // Multi-role: read roles[] array first, fall back to legacy role string
+  let jwtRoles: UserRole[]
+  if (Array.isArray(meta.roles) && meta.roles.length > 0) {
+    jwtRoles = meta.roles as UserRole[]
+  } else if (typeof meta.role === 'string' && meta.role) {
+    jwtRoles = [meta.role as UserRole]
+  } else {
+    jwtRoles = ['employee']
+  }
 
   type EmpRow = {
-    id: string; full_name: string; position: string; is_active: boolean
+    id: string
+    full_name: string
+    position: string
+    is_active: boolean
   }
   const empResult = await supabase
     .from('employees')
@@ -126,13 +141,68 @@ export async function getCurrentUser() {
   if (!employee) return null
   if (!employee.is_active) return null
 
-  // Role/branch come from JWT app_metadata — not the employees table
   return {
     id: user.id,
     email: user.email ?? '',
     full_name: employee.full_name,
-    role: jwtRole ?? 'employee',
+    /** Primary role for display (first in array) */
+    role: jwtRoles[0],
+    /** All roles — use for permission checks */
+    roles: jwtRoles,
     position: employee.position,
     branch_id: jwtBranchId,
   }
+}
+
+// ─── Admin: Update user roles in app_metadata ────────────────────────────────
+
+export interface UpdateUserRolesResult {
+  success: boolean
+  error?: string
+}
+
+/**
+ * Admin-only: update a user's roles in Supabase auth.users app_metadata.
+ * Also syncs employees.roles[] column for RLS enforcement.
+ * Requires service_role key — called from admin server actions only.
+ */
+export async function updateUserRoles(
+  userId: string,
+  roles: UserRole[],
+  branchId: string | null
+): Promise<UpdateUserRolesResult> {
+  if (!roles.length) {
+    return { success: false, error: 'Phải có ít nhất 1 vai trò.' }
+  }
+
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const adminClient = createAdminClient()
+
+  // Update app_metadata.roles via Supabase Admin API
+  const { error: authError } = await adminClient.auth.admin.updateUserById(userId, {
+    app_metadata: {
+      roles,
+      role: roles[0], // backward compat
+      branch_id: branchId,
+    },
+  })
+
+  if (authError) {
+    console.error('[updateUserRoles] auth error:', authError)
+    return { success: false, error: 'Không thể cập nhật vai trò tài khoản.' }
+  }
+
+  // Sync employees.roles[] column
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: empError } = await (adminClient as any)
+    .from('employees')
+    .update({ roles, role: roles[0], branch_id: branchId })
+    .eq('id', userId)
+
+  if (empError) {
+    console.error('[updateUserRoles] employees sync error:', empError)
+    return { success: false, error: 'Cập nhật auth thành công nhưng đồng bộ employees thất bại.' }
+  }
+
+  return { success: true }
 }

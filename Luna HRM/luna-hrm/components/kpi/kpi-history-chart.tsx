@@ -19,7 +19,7 @@ interface Props {
   currentYear: number
 }
 
-const MAX_SCORE = 10
+const MAX_SCORE = 100
 const MONTHS_TO_SHOW = 6
 
 /** Build the last N month/year pairs ending at current, oldest-first */
@@ -40,8 +40,8 @@ function buildMonthRange(
 }
 
 function barColor(score: number): string {
-  if (score >= 8) return 'bg-green-500'
-  if (score >= 5) return 'bg-yellow-400'
+  if (score >= 80) return 'bg-green-500'
+  if (score >= 50) return 'bg-yellow-400'
   return 'bg-red-400'
 }
 

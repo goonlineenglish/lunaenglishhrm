@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { SessionUser } from '@/lib/types/user'
+import type { UserRole } from '@/lib/types/database'
 import type { User } from '@supabase/supabase-js'
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
@@ -37,7 +38,6 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       type EmployeeRow = {
         id: string
         full_name: string
-        role: string
         position: string
         branch_id: string | null
         is_active: boolean
@@ -45,18 +45,30 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
 
       const result = await supabase
         .from('employees')
-        .select('id, full_name, role, position, branch_id, is_active')
+        .select('id, full_name, position, branch_id, is_active')
         .eq('id', authUser.id)
         .maybeSingle()
 
       const data = result.data as EmployeeRow | null
       if (!data || !data.is_active) return null
 
+      // Multi-role: read from JWT app_metadata.roles[], fallback to legacy role
+      const meta = (authUser.app_metadata ?? {}) as Record<string, unknown>
+      let roles: UserRole[]
+      if (Array.isArray(meta.roles) && meta.roles.length > 0) {
+        roles = meta.roles as UserRole[]
+      } else if (typeof meta.role === 'string' && meta.role) {
+        roles = [meta.role as UserRole]
+      } else {
+        roles = ['employee']
+      }
+
       return {
         id: authUser.id,
         email: authUser.email ?? '',
         full_name: data.full_name,
-        role: data.role as SessionUser['role'],
+        role: roles[0],
+        roles,
         position: data.position as SessionUser['position'],
         branch_id: data.branch_id,
         branch_name: null,

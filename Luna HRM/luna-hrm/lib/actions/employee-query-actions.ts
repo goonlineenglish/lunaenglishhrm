@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { Employee } from '@/lib/types/database'
 
 export interface ActionResult<T = void> {
@@ -22,7 +23,7 @@ export async function getEmployees(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canView = user.role === 'admin' || user.role === 'branch_manager' || user.role === 'accountant'
+    const canView = hasAnyRole(user, 'admin', 'branch_manager', 'accountant')
     if (!canView) return { success: false, error: 'Bạn không có quyền xem nhân viên.' }
 
     const supabase = await createClient()
@@ -31,9 +32,9 @@ export async function getEmployees(
 
     let query = sb.from('employees').select('*, branches!employees_branch_id_fkey(name)').order('full_name')
 
-    if (user.role === 'branch_manager' && user.branch_id) {
+    if (user.roles.includes('branch_manager') && user.branch_id) {
       query = query.eq('branch_id', user.branch_id)
-    } else if (branchId && user.role !== 'branch_manager') {
+    } else if (branchId && !user.roles.includes('branch_manager')) {
       query = query.eq('branch_id', branchId)
     }
 
@@ -79,10 +80,10 @@ export async function getEmployeeById(
 
     const emp = data as Employee & { branches: { name: string } | null }
 
-    if (user.role === 'branch_manager' && emp.branch_id !== user.branch_id) {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin') && emp.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền xem nhân viên này.' }
     }
-    if (user.role === 'employee' && emp.id !== user.id) {
+    if (user.roles.includes('employee') && !user.roles.includes('branch_manager') && !user.roles.includes('admin') && emp.id !== user.id) {
       return { success: false, error: 'Bạn không có quyền xem nhân viên này.' }
     }
 
@@ -112,7 +113,7 @@ export async function checkEmployeeClassAssignments(
       .or(`teacher_id.eq.${employeeId},assistant_id.eq.${employeeId}`)
 
     // BM: scope to own branch only
-    if (user.role === 'branch_manager' && user.branch_id) {
+    if (user.roles.includes('branch_manager') && user.branch_id) {
       query = query.eq('branch_id', user.branch_id)
     }
 

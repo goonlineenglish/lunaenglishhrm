@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getWeekStart, parseIsoDateLocal, toISODate, isWeekLocked } from '@/lib/utils/date-helpers'
 import { logAudit } from '@/lib/services/audit-log-service'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from './attendance-query-actions'
 
 /**
@@ -23,11 +24,12 @@ export async function unlockWeek(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canUnlock = user.role === 'admin' || user.role === 'branch_manager'
+    const canUnlock = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canUnlock) return { success: false, error: 'Bạn không có quyền mở khoá tuần.' }
 
     // BM scoped to own branch
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     const canonicalWeekStart = toISODate(getWeekStart(parseIsoDateLocal(weekStartStr)))
 
     const supabase = await createClient()
@@ -72,10 +74,11 @@ export async function overrideAutoLock(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canOverride = user.role === 'admin' || user.role === 'branch_manager'
+    const canOverride = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canOverride) return { success: false, error: 'Bạn không có quyền mở khoá tuần.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     const canonicalWeekStart = toISODate(getWeekStart(parseIsoDateLocal(weekStartStr)))
 
     const supabase = await createClient()
@@ -168,10 +171,11 @@ export async function removeOverride(
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
-    const canRemove = user.role === 'admin' || user.role === 'branch_manager'
+    const canRemove = hasAnyRole(user, 'admin', 'branch_manager')
     if (!canRemove) return { success: false, error: 'Bạn không có quyền khoá lại tuần.' }
 
-    const effectiveBranch = user.role === 'branch_manager' ? user.branch_id! : branchId
+    const isBM = user.roles.includes('branch_manager')
+    const effectiveBranch = isBM ? user.branch_id! : branchId
     const canonicalWeekStart = toISODate(getWeekStart(parseIsoDateLocal(weekStartStr)))
 
     const supabase = await createClient()

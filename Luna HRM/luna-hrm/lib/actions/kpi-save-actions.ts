@@ -12,6 +12,7 @@ import { logAudit } from '@/lib/services/audit-log-service'
 import { calculateTotalScore, calculateKpiBonus, validateAllScores } from '@/lib/services/kpi-calculation-service'
 import { getMonthBounds } from '@/lib/utils/date-helpers'
 import { countTeachingSessions, getSubstituteSessions, countScheduledSessions } from '@/lib/services/payroll-session-counter'
+import { hasAnyRole } from '@/lib/types/user'
 import type { KpiEvaluation, KpiEvaluationInsert } from '@/lib/types/database'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 
@@ -23,11 +24,11 @@ export async function saveKpiEvaluation(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Bạn không có quyền lưu KPI.' }
     }
 
-    if (user.role === 'branch_manager' && data.branch_id !== user.branch_id) {
+    if (user.roles.includes('branch_manager') && !user.roles.includes('admin') && data.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền lưu KPI cho cơ sở này.' }
     }
 

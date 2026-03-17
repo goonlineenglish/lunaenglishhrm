@@ -19,7 +19,7 @@ interface PageProps {
 export default async function MyAttendancePage({ searchParams }: PageProps) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'employee') redirect('/dashboard')
+  if (!user.roles?.includes("employee")) redirect('/dashboard')
 
   const params = await searchParams
   const now = new Date()

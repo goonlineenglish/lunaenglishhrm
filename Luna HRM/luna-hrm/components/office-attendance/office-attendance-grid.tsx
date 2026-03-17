@@ -2,7 +2,7 @@
 
 /**
  * Office attendance grid — VP staff daily grid.
- * Simpler than class-based: employee × day (Mon-Sat work, Sun off).
+ * Simpler than class-based: employee × day (Mon-Sun, tất cả 7 ngày cho phép chấm công).
  */
 
 import { useState, useCallback } from 'react'

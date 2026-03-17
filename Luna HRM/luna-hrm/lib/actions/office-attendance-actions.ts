@@ -99,11 +99,13 @@ export async function getOfficeAttendanceGrid(
       const cells: Record<number, OfficeGridCell> = {}
       for (let i = 0; i < 7; i++) {
         const isoDay = i + 1
-        const isWorkDay = isoDay >= 1 && isoDay <= 6
+        // Cho phép chấm công tất cả 7 ngày kể cả Chủ nhật (iso 7)
+        const isWorkDay = true
+        const isWeekend = isoDay === 7 // Chủ nhật: mặc định null để BM chủ động nhập
         const dateStr = toISODate(weekDates[i])
         const existing = recMap.get(`${emp.id}:${dateStr}`)
         cells[isoDay] = {
-          status: existing ? existing.status : (isWorkDay ? '1' : null),
+          status: existing ? existing.status : (isWeekend ? null : '1'),
           isWorkDay,
           existingId: existing?.id ?? null,
         }

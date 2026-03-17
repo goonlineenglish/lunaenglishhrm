@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 import type { EvaluationTemplate } from '@/lib/types/database-evaluation-types'
 import type {
@@ -21,7 +22,7 @@ export async function getEvaluationTemplates(): Promise<ActionResult<EvaluationT
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Bạn không có quyền xem mẫu đánh giá.' }
     }
 
@@ -60,7 +61,7 @@ export async function getEvaluationTemplate(id: string): Promise<ActionResult<Ev
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Bạn không có quyền xem mẫu đánh giá.' }
     }
 
@@ -99,7 +100,7 @@ export async function createEvaluationTemplate(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin') return { success: false, error: 'Chỉ admin mới có thể tạo mẫu đánh giá.' }
+    if (!user.roles.includes('admin')) return { success: false, error: 'Chỉ admin mới có thể tạo mẫu đánh giá.' }
     if (!template.name.trim()) return { success: false, error: 'Tên mẫu không được để trống.' }
     if (criteria.length === 0) return { success: false, error: 'Mẫu cần ít nhất 1 tiêu chí.' }
 
@@ -147,7 +148,7 @@ export async function updateEvaluationTemplate(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin') return { success: false, error: 'Chỉ admin mới có thể sửa mẫu đánh giá.' }
+    if (!user.roles.includes('admin')) return { success: false, error: 'Chỉ admin mới có thể sửa mẫu đánh giá.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -200,7 +201,7 @@ export async function deactivateTemplate(id: string): Promise<ActionResult> {
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin') return { success: false, error: 'Chỉ admin mới có thể vô hiệu hóa mẫu đánh giá.' }
+    if (!user.roles.includes('admin')) return { success: false, error: 'Chỉ admin mới có thể vô hiệu hóa mẫu đánh giá.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

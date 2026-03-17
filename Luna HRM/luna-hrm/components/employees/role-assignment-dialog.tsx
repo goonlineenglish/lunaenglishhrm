@@ -6,7 +6,7 @@
  * Updates both app_metadata.roles[] and employees.roles[].
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
@@ -41,6 +41,14 @@ export function RoleAssignmentDialog({
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>(currentRoles)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // ISSUE-6 fix: reset selection when dialog opens or target user changes
+  useEffect(() => {
+    if (open) {
+      setSelectedRoles(currentRoles)
+      setError(null)
+    }
+  }, [open, userId, currentRoles])
 
   function toggleRole(role: UserRole) {
     setSelectedRoles(prev =>

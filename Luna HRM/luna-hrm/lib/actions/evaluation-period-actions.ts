@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import type { ActionResult } from '@/lib/actions/employee-actions'
 import type { EvaluationPeriod } from '@/lib/types/database-evaluation-types'
 
@@ -16,7 +17,7 @@ export async function getEvaluationPeriods(): Promise<ActionResult<EvaluationPer
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin' && user.role !== 'branch_manager') {
+    if (!hasAnyRole(user, 'admin', 'branch_manager')) {
       return { success: false, error: 'Bạn không có quyền xem kỳ đánh giá.' }
     }
 
@@ -45,7 +46,7 @@ export async function createEvaluationPeriod(
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin') return { success: false, error: 'Chỉ admin mới có thể tạo kỳ đánh giá.' }
+    if (!user.roles.includes('admin')) return { success: false, error: 'Chỉ admin mới có thể tạo kỳ đánh giá.' }
 
     if (!data.name.trim()) return { success: false, error: 'Tên kỳ đánh giá không được để trống.' }
     if (!data.start_date || !data.end_date) {
@@ -79,7 +80,7 @@ export async function closeEvaluationPeriod(id: string): Promise<ActionResult> {
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
-    if (user.role !== 'admin') return { success: false, error: 'Chỉ admin mới có thể đóng kỳ đánh giá.' }
+    if (!user.roles.includes('admin')) return { success: false, error: 'Chỉ admin mới có thể đóng kỳ đánh giá.' }
 
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

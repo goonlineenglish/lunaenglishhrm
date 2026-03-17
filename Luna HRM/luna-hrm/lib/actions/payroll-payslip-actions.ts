@@ -195,8 +195,8 @@ export async function batchUpdatePayslips(
       return { success: false, error: 'Phiếu lương đã xác nhận, không thể chỉnh sửa.' }
     }
 
-    // Branch guard: pure accountant (no BM) can only edit their own branch's payslips
-    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && pRow.branch_id !== user.branch_id) {
+    // Branch guard: BM+accountant hybrid is branch-scoped; pure accountant is global (ISSUE-4)
+    if (user.roles.includes('branch_manager') && user.branch_id && pRow.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền chỉnh sửa kỳ lương này.' }
     }
 
@@ -297,8 +297,8 @@ export async function markPayslipsReviewed(
       return { success: false, error: 'Kỳ lương đã xác nhận, không thể thay đổi.' }
     }
 
-    // Branch guard: pure accountant (no BM) can only mark their own branch's payslips
-    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && mRow.branch_id !== user.branch_id) {
+    // Branch guard: BM+accountant hybrid is branch-scoped; pure accountant is global (ISSUE-4)
+    if (user.roles.includes('branch_manager') && user.branch_id && mRow.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền xác nhận kỳ lương này.' }
     }
 

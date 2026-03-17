@@ -4,6 +4,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
+import { hasAnyRole } from '@/lib/types/user'
 import { logAudit } from '@/lib/services/audit-log-service'
 import type { PayrollPeriod } from '@/lib/types/database'
 import type { ActionResult } from '@/lib/actions/employee-actions'
@@ -15,7 +16,7 @@ export interface PayrollPeriodWithCount extends PayrollPeriod {
 async function requirePayrollRole(actionLabel: string) {
   const user = await getCurrentUser()
   if (!user) return { error: { success: false, error: 'Chưa đăng nhập.' } as ActionResult<never> }
-  if (user.role !== 'admin' && user.role !== 'accountant') return { error: { success: false, error: `Bạn không có quyền ${actionLabel}.` } as ActionResult<never> }
+  if (!hasAnyRole(user, 'admin', 'accountant')) return { error: { success: false, error: `Bạn không có quyền ${actionLabel}.` } as ActionResult<never> }
   return { user }
 }
 

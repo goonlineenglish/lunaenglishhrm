@@ -52,6 +52,18 @@
 | Phase 2: Bulk Import from Excel | ✅ Done | 2026-03-15 | Template download, batch import, auth creation, rollback on failure |
 | All Features Complete | ✅ Done | 2026-03-15 | 3 new files, 5 edits, 130 unit tests passing |
 
+### Multi-Role RBAC Phase (Complete)
+
+| Item | Status | Date | Notes |
+|------|--------|------|-------|
+| Phase 1: Database Schema + RLS | ✅ Done | 2026-03-17 | `employees.roles TEXT[]`, migration 014, 70 RLS policies rewritten |
+| Phase 2: Core Types + Auth Helpers | ✅ Done | 2026-03-17 | SessionUser.roles[], getCurrentUser() multi-role support, updateUserRoles() action |
+| Phase 3: Server Actions (21 files) | ✅ Done | 2026-03-17 | All actions converted to roles.includes() pattern, hasAnyRole() helper |
+| Phase 4: UI Components + Role Assignment | ✅ Done | 2026-03-17 | RoleAssignmentDialog for admin, role badges, multi-role nav logic |
+| Phase 5: Gap Fixes + /my-kpi Portal | ✅ Done | 2026-03-17 | getMyKpiHistory() action, /my-kpi page, bottom-nav KPI tab |
+| Phase 6: Tests + Seed Update | ✅ Done | 2026-03-17 | 136/136 tests passing, seed.sql roles[] backfilled, 25 routes, 0 errors |
+| All Features Complete | ✅ Done | 2026-03-17 | 14 new/modified files, backward compat with legacy role, production-ready |
+
 ---
 
 ## Feature Completion Summary
@@ -150,12 +162,12 @@ All 17 tables implemented with RLS:
 | Metric | Target | Achieved |
 |--------|--------|----------|
 | Phases Complete | 7/7 | ✅ 7/7 (100%) |
-| Routes Implemented | 20+ | ✅ 24 routes |
-| Custom Components | 30+ | ✅ ~35 components |
+| Routes Implemented | 20+ | ✅ 25 routes |
+| Custom Components | 30+ | ✅ ~40+ components |
 | Database Tables | 17 | ✅ 17 tables |
-| RLS Policies | 60+ | ✅ 68 policies |
+| RLS Policies | 60+ | ✅ 70+ policies |
 | Build Errors | 0 | ✅ 0 errors |
-| Unit Tests | Core logic | ✅ Passing |
+| Unit Tests | Core logic | ✅ 136 tests passing |
 | MVP Optimizations | 18 | ✅ 18/18 (100%) |
 
 ---
@@ -262,8 +274,8 @@ npm run build && npm start
 
 ---
 
-**Status:** MVP Complete ✅
-**Build:** 0 errors, 24 routes, ~100+ files
+**Status:** MVP Complete + Post-MVP Enhancements + Multi-Role RBAC ✅
+**Build:** 0 errors, 25 routes, ~140+ files
 **Ready for Deployment:** Yes
 
 ## Dev/Test Quick Reference

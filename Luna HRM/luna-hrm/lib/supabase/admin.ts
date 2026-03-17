@@ -23,7 +23,7 @@ export function createAdminClient() {
 }
 
 /**
- * Create an auth user and set role + branch_id in app_metadata.
+ * Create an auth user and set role + roles[] + branch_id in app_metadata.
  * Returns the new user's UUID for use as employees.id.
  */
 export async function createAuthUser(params: {
@@ -34,13 +34,14 @@ export async function createAuthUser(params: {
 }) {
   const admin = createAdminClient()
 
-  // Create auth user
+  // Create auth user — set both roles[] (multi-role) and role (backward compat)
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email: params.email,
     password: params.password,
     email_confirm: true,
     app_metadata: {
       role: params.role,
+      roles: [params.role],  // ISSUE-2 fix: always set roles[] array
       branch_id: params.branchId ?? null,
     },
   })
@@ -60,6 +61,7 @@ export async function deleteAuthUser(userId: string) {
 
 /**
  * Update role and/or branch_id in app_metadata for an existing user.
+ * Always syncs both roles[] and legacy role for backward compat.
  */
 export async function updateAuthUserMetadata(
   userId: string,
@@ -67,8 +69,11 @@ export async function updateAuthUserMetadata(
 ) {
   const admin = createAdminClient()
 
-  const metadataUpdate: Record<string, string | null | undefined> = {}
-  if (updates.role !== undefined) metadataUpdate.role = updates.role
+  const metadataUpdate: Record<string, string | string[] | null | undefined> = {}
+  if (updates.role !== undefined) {
+    metadataUpdate.role = updates.role
+    metadataUpdate.roles = [updates.role]  // ISSUE-2 fix: always sync roles[]
+  }
   if (updates.branchId !== undefined) metadataUpdate.branch_id = updates.branchId
 
   const { data, error } = await admin.auth.admin.updateUserById(userId, {

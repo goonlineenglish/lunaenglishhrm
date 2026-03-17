@@ -164,8 +164,8 @@ export async function initializePayslips(
       return { success: false, error: 'Chỉ có thể khởi tạo kỳ lương ở trạng thái nháp.' }
     }
 
-    // Branch guard: pure accountant (no BM) can only init their own branch
-    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && period.branch_id !== user.branch_id) {
+    // Branch guard: BM+accountant hybrid is branch-scoped; pure accountant is global (ISSUE-4)
+    if (user.roles.includes('branch_manager') && user.branch_id && period.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền khởi tạo kỳ lương này.' }
     }
 
@@ -338,8 +338,8 @@ export async function reinitializePayslips(
       return { success: false, error: 'Chỉ có thể khởi tạo lại kỳ lương đang ở trạng thái nháp.' }
     }
 
-    // Branch guard: pure accountant (no BM) can only reinit their own branch
-    if (user.roles.includes('accountant') && !user.roles.includes('branch_manager') && user.branch_id && period.branch_id !== user.branch_id) {
+    // Branch guard: BM+accountant hybrid is branch-scoped; pure accountant is global (ISSUE-4)
+    if (user.roles.includes('branch_manager') && user.branch_id && period.branch_id !== user.branch_id) {
       return { success: false, error: 'Bạn không có quyền khởi tạo lại kỳ lương này.' }
     }
 

@@ -1,6 +1,7 @@
 # Luna HRM Codebase Summary
 
-**Status:** All 7 phases complete + Post-MVP Enhancements + Phase 6 (Email Confirmation) planning. Production-ready MVP with 24 routes, ~135+ files.
+**Status:** All 7 phases complete + Post-MVP Enhancements + Multi-Role RBAC. Production-ready MVP with 25 routes, ~140+ files.
+
 
 ## Project Structure
 
@@ -19,10 +20,11 @@ luna-hrm/
 │   │   ├── evaluation-periods/          # Admin: period CRUD
 │   │   ├── payroll/                    # Payroll periods, slips, preview, export
 │   │   ├── kpi/                        # KPI grid, preview, submission
+│   │   ├── my-kpi/                     # Employee: KPI history portal (Multi-Role RBAC, 2026-03-17)
 │   │   ├── my-attendance/              # Employee: own weekly attendance
 │   │   ├── my-payslips/                # Employee: own payslip history
 │   │   ├── my-profile/                 # Employee: profile read-only
-│   │   └── layout.tsx                  # Dashboard layout + sidebar nav
+│   │   └── layout.tsx                  # Dashboard layout + sidebar nav (multi-role aware)
 │   ├── api/                             # Server actions, API routes
 │   │   ├── auth/                       # Login, signup, logout, verify
 │   │   ├── class-schedules/            # CRUD endpoints
@@ -53,7 +55,8 @@ luna-hrm/
 │   │   ├── employee-profile-info.tsx
 │   │   ├── employee-profile-tabs.tsx
 │   │   ├── employee-detail.tsx
-│   │   └── employee-notes-list.tsx
+│   │   ├── employee-notes-list.tsx
+│   │   └── role-assignment-dialog.tsx  # Multi-role toggle UI (Multi-Role RBAC, 2026-03-17)
 │   ├── payroll/                         # Period form, slip preview, export button, attendance summary
 │   │   ├── payroll-period-form.tsx
 │   │   ├── payroll-spreadsheet.tsx      # Semi-manual payslip entry + class-grouped layout (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
@@ -74,12 +77,14 @@ luna-hrm/
 │   │   ├── employee-actions.ts         # CRUD employees
 │   │   ├── employee-query-actions.ts   # Employee queries with filtering (Employee Module Enhancements)
 │   │   ├── employee-import-actions.ts  # Bulk import employees from Excel (Employee Module Enhancements)
+│   │   ├── **employee-mutation-actions.ts** | **Create/update/delete/toggle active + update roles (Multi-Role RBAC)**
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
 │   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + class_breakdown (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── payroll-calculate-actions.ts # Prefill logic + class breakdown init (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── **payroll-notification-actions.ts** | **Send payslips to employees, finalize period (Phase 6)**
 │   │   ├── **employee-confirmation-actions.ts** | **Confirm/dispute payslip endpoints (Phase 6)**
 │   │   ├── kpi-save-actions.ts         # KPI submission
+│   │   ├── **kpi-query-actions.ts**    | **Query KPI history, including /my-kpi (Multi-Role RBAC)**
 │   │   ├── evaluation-actions.ts       # Query evaluations
 │   │   ├── evaluation-save-actions.ts  # Save evaluations
 │   │   ├── evaluation-template-actions.ts # Admin CRUD templates
@@ -87,7 +92,7 @@ luna-hrm/
 │   │   ├── employee-notes-actions.ts    # CRUD notes
 │   │   ├── employee-profile-actions.ts  # Profile updates
 │   │   ├── employee-portal-actions.ts   # Employee own data queries
-│   │   └── auth-actions.ts              # Auth operations
+│   │   └── **auth-actions.ts**         | **Multi-role getUser(), updateUserRoles() (Multi-Role RBAC)**
 │   ├── types/
 │   │   ├── employee.ts                 # Employee types
 │   │   ├── attendance.ts               # Attendance types
@@ -106,8 +111,8 @@ luna-hrm/
 │   │   ├── **email-service.ts**        # **Email sending via Resend (Phase 6)**
 │   │   └── **email-templates.ts**      # **Payslip + reminder email templates (Phase 6)**
 │   ├── hooks/
-│   │   ├── use-auth.ts                 # Auth context hook
-│   │   ├── use-permissions.ts          # Role/branch checks
+│   │   ├── use-auth.ts                 # Auth context hook (multi-role support)
+│   │   ├── use-permissions.ts          # Role/branch checks (roles[] pattern)
 │   │   ├── use-attendance-keyboard.ts  # Keyboard shortcuts
 │   │   └── use-mobile.ts               # Mobile detection (SSR-safe)
 │   ├── utils/
@@ -128,7 +133,7 @@ luna-hrm/
 │   ├── migrations/
 │   │   ├── 000_reset_database.sql      # Full reset (dev only)
 │   │   ├── 001_create_all_tables.sql   # 17 tables + RLS helpers
-│   │   ├── 002_rls_policies.sql        # 68 RLS policies
+│   │   ├── 002_rls_policies.sql        # 70 RLS policies (updated for multi-role)
 │   │   ├── 003_indexes.sql             # Performance indexes
 │   │   ├── 004_add_payslip_deductions_column.sql  # Payslip deductions
 │   │   ├── 005_audit_logs.sql          # Audit log table + RLS
@@ -137,7 +142,8 @@ luna-hrm/
 │   │   ├── 008_payroll_class_breakdown.sql   # Per-class rates + class_breakdown JSONB (Feature: Payroll Per-Class Rows, 2026-03-14)
 │   │   ├── 009_security_and_index_improvements.sql  # Security/index improvements
 │   │   ├── 010_fix_rls_recursion.sql   # RLS infinite recursion fix (SECURITY DEFINER, 2026-03-15)
-│   │   └── seed.sql                    # 21 employees, 10 classes, sample data
+│   │   ├── **011_multi_role_schema_and_rls.sql** | **employees.roles[], RLS helpers, 70 policies rewritten (Multi-Role RBAC, 2026-03-17)**
+│   │   └── seed.sql                    # 21 employees with roles[] backfilled, 10 classes, sample data
 ├── public/
 │   ├── manifest.json                   # PWA manifest
 │   └── sw.js                           # Service worker (static assets only)
@@ -286,9 +292,10 @@ luna-hrm/
 
 - **Auth:** Supabase Auth (email/password)
 - **Identity:** `employees.id = auth.users.id` (canonical link via trigger)
-- **Roles:** admin, branch_manager, accountant, employee (in `app_metadata`)
+- **Roles:** admin, branch_manager, accountant, employee — stored as `roles TEXT[]` in both JWT `app_metadata` and `employees.roles` table
 - **Branch:** stored in `app_metadata` as `branch_id`
-- **RLS:** 68 policies via JWT → `get_user_role()`, `get_user_branch_id()`
+- **Multi-Role Pattern:** `roles.includes('admin')` or `hasAnyRole(user, ['admin', 'accountant'])`
+- **RLS:** 70+ policies via JWT → `get_user_roles()`, `get_user_branch_id()`, `get_user_id()`
 
 ## Key Architectural Patterns
 
@@ -335,10 +342,10 @@ npm run lint
 
 ## Build Status
 
-- **Routes:** 24 total
-- **Components:** ~70+ custom components (74 .tsx files including variants)
-- **Files:** ~115+ (code, types, actions, services, hooks, utils)
-- **Tests:** 130+ unit tests (6 suites: tax-calculator, payroll-calc, kpi-calc, date-helpers, payroll-audit-service, payroll-prefill-service, attendance-summary) — all passing
+- **Routes:** 25 total (added /my-kpi)
+- **Components:** ~75+ custom components (~40 .tsx files including variants, +role-assignment-dialog)
+- **Files:** ~140+ (code, types, actions, services, hooks, utils, migrations)
+- **Tests:** 136+ unit tests (6 suites: tax-calculator, payroll-calc, kpi-calc, date-helpers, payroll-audit-service, payroll-prefill-service, attendance-summary) — all passing
 - **Build:** Clean, 0 errors
 
 ## Dev/Test Setup
@@ -362,4 +369,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-15 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows + Employee Module Enhancements (soft delete, status filter, bulk import) + RLS Recursion Fix
+**Last Updated:** 2026-03-17 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows + Employee Module Enhancements (soft delete, status filter, bulk import) + RLS Recursion Fix + Multi-Role RBAC

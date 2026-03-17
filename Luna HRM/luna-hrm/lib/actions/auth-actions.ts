@@ -171,12 +171,30 @@ export async function updateUserRoles(
   roles: UserRole[],
   branchId: string | null
 ): Promise<UpdateUserRolesResult> {
+  // ISSUE-1 fix: enforce admin-only server-side
+  const caller = await getCurrentUser()
+  if (!caller) return { success: false, error: 'Chưa đăng nhập.' }
+  if (!caller.roles.includes('admin')) {
+    return { success: false, error: 'Chỉ admin mới có thể thay đổi vai trò.' }
+  }
+
+  // Validate roles against allowed enum values
+  const ALLOWED_ROLES: UserRole[] = ['admin', 'branch_manager', 'accountant', 'employee']
+  const invalidRoles = roles.filter(r => !ALLOWED_ROLES.includes(r))
+  if (invalidRoles.length) {
+    return { success: false, error: `Vai trò không hợp lệ: ${invalidRoles.join(', ')}` }
+  }
+
   if (!roles.length) {
     return { success: false, error: 'Phải có ít nhất 1 vai trò.' }
   }
 
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const adminClient = createAdminClient()
+
+  // Get current app_metadata for rollback
+  const { data: currentAuthUser } = await adminClient.auth.admin.getUserById(userId)
+  const previousMeta = currentAuthUser?.user?.app_metadata ?? {}
 
   // Update app_metadata.roles via Supabase Admin API
   const { error: authError } = await adminClient.auth.admin.updateUserById(userId, {
@@ -201,7 +219,11 @@ export async function updateUserRoles(
 
   if (empError) {
     console.error('[updateUserRoles] employees sync error:', empError)
-    return { success: false, error: 'Cập nhật auth thành công nhưng đồng bộ employees thất bại.' }
+    // Rollback auth metadata to maintain consistency
+    await adminClient.auth.admin.updateUserById(userId, {
+      app_metadata: previousMeta,
+    })
+    return { success: false, error: 'Không thể đồng bộ vai trò nhân viên. Đã hoàn tác thay đổi.' }
   }
 
   return { success: true }

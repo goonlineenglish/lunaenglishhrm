@@ -26,15 +26,23 @@ ALTER TABLE employees
 -- ============================================================
 
 -- Returns roles array from JWT app_metadata.roles
+-- ISSUE-3 fix: fallback to legacy app_metadata.role if roles[] is absent/empty
 CREATE OR REPLACE FUNCTION get_user_roles()
 RETURNS TEXT[]
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT COALESCE(
-    ARRAY(SELECT jsonb_array_elements_text(auth.jwt()->'app_metadata'->'roles')),
-    ARRAY[]::TEXT[]
-  );
+  SELECT CASE
+    -- Prefer roles[] array when present and non-empty
+    WHEN jsonb_typeof(auth.jwt()->'app_metadata'->'roles') = 'array'
+      AND jsonb_array_length(auth.jwt()->'app_metadata'->'roles') > 0
+    THEN ARRAY(SELECT jsonb_array_elements_text(auth.jwt()->'app_metadata'->'roles'))
+    -- Fallback to legacy single role string
+    WHEN auth.jwt()->'app_metadata'->>'role' IS NOT NULL
+    THEN ARRAY[auth.jwt()->'app_metadata'->>'role']
+    -- Default to employee for any authenticated user
+    ELSE ARRAY['employee']::TEXT[]
+  END;
 $$;
 
 -- Check if user has a specific role (array membership)
@@ -68,6 +76,20 @@ $$;
 
 -- get_user_branch_id() is unchanged — still reads from app_metadata.branch_id
 -- get_current_user_is_active() is unchanged — still reads is_active from employees table via SECURITY DEFINER
+
+-- SECURITY DEFINER helper: get current user's roles[] from employees table
+-- Required for employees_self_update anti-escalation check.
+-- Bypasses RLS (SECURITY DEFINER) to avoid 42P17 infinite recursion.
+-- Pattern identical to get_current_user_is_active() in migration 011.
+CREATE OR REPLACE FUNCTION get_current_user_roles()
+RETURNS TEXT[]
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT COALESCE(roles, ARRAY[]::TEXT[]) FROM employees WHERE id = (SELECT auth.uid());
+$$;
 
 -- ============================================================
 -- STEP 3: DROP all existing RLS policies (68 data + 1 audit)
@@ -252,14 +274,17 @@ CREATE POLICY "employees_self_select" ON employees
   USING (user_has_role('employee') AND id = (SELECT auth.uid()));
 
 -- STEP 4 (Anti-escalation): employee cannot modify roles, branch_id, is_active
+-- NOTE: We cannot do `roles = (SELECT roles FROM employees ...)` here — that would trigger
+--       42P17 infinite recursion (same table RLS re-entry, bug fixed in migration 011).
+--       Use get_current_user_roles() SECURITY DEFINER helper to bypass RLS safely.
 CREATE POLICY "employees_self_update" ON employees
   FOR UPDATE TO authenticated
   USING (user_has_role('employee') AND id = (SELECT auth.uid()))
   WITH CHECK (
     user_has_role('employee')
     AND id = (SELECT auth.uid())
-    -- Use JWT-cached values to avoid recursive employees table queries (migration 011 pattern)
-    AND roles = (SELECT roles FROM employees WHERE id = (SELECT auth.uid()))
+    -- Use SECURITY DEFINER helper to read roles[] without recursion (migration 011 pattern)
+    AND roles IS NOT DISTINCT FROM get_current_user_roles()
     AND branch_id IS NOT DISTINCT FROM get_user_branch_id()
     AND is_active = get_current_user_is_active()
   );

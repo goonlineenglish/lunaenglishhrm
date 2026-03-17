@@ -64,6 +64,7 @@ export async function createEmployee(
       phone: input.phone ?? null,
       position: input.position,
       role: input.role,
+      roles: [input.role] as string[],  // ISSUE-2 fix: always set roles[] array alongside legacy role
       branch_id: branchId,
       rate_per_session: input.rate_per_session,
       sub_rate: input.sub_rate ?? 0,
@@ -116,6 +117,11 @@ export async function updateEmployee(
     }
     if (Object.keys(safeData).length === 0) {
       return { success: false, error: 'Không có trường hợp lệ để cập nhật.' }
+    }
+
+    // ISSUE-2 fix: when updating legacy role, also sync roles[] array
+    if (safeData.role !== undefined) {
+      safeData.roles = [safeData.role as string]
     }
 
     if (user.roles.includes('branch_manager') && !user.roles.includes('admin') && safeData.role !== undefined) {

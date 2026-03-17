@@ -1,9 +1,9 @@
 # Luna HRM System Architecture
 
 **Project:** Luna HRM (Lightweight HRM for English Language Centers)
-**Status:** Complete (All 7 phases + Post-MVP Enhancements + Email Confirmation planning)
-**Last Updated:** 2026-03-16
-**Migrations:** 12 files (000-011), Phase 6 scheduled (012_employee_payslip_confirmation)
+**Status:** Complete (All 7 phases + Post-MVP Enhancements + Multi-Role RBAC)
+**Last Updated:** 2026-03-17
+**Migrations:** 12 files (000-011), Multi-Role RBAC (011), Phase 6 scheduled (012_employee_payslip_confirmation)
 
 ---
 
@@ -44,11 +44,12 @@
 1. **Login/Signup:** User enters email + password via `/auth/login` or `/auth/signup`
 2. **JWT Creation:** Supabase issues JWT with:
    - `sub`: user UUID (= employees.id)
-   - `app_metadata`: `{ role: "admin|branch_manager|accountant|employee", branch_id: UUID }`
+   - `app_metadata`: `{ roles: ["admin"|"branch_manager"|"accountant"|"employee"], branch_id: UUID }`
 3. **Session Storage:** JWT stored in Supabase session (httpOnly cookie or localStorage per framework)
 4. **Middleware Check:** Every request via `lib/middleware.ts` validates JWT
 5. **Helper Functions:**
-   - `get_user_role()` — reads JWT app_metadata.role
+   - `get_user_roles()` — reads JWT app_metadata.roles[] (array)
+   - `get_user_role()` — reads JWT app_metadata.roles[0] (first role, for backward compat)
    - `get_user_branch_id()` — reads JWT app_metadata.branch_id
 
 ### Authorization Model
@@ -56,9 +57,26 @@
 | Role | CRUD Scope | Attendance | Payroll | Evaluation | Audit |
 |------|-----------|-----------|---------|-----------|-------|
 | **admin** | All tables, all branches | View all | Full (create, recalc, undo, send email) | Create templates/periods, view all | View all |
-| **branch_manager** | Own branch employees, schedules, attendance | Full own branch | View own branch only | Score own branch | View own branch |
-| **accountant** | Payroll only | View all | Full CRUD + send email | View all | View all |
+| **branch_manager** (+ accountant) | Own branch employees, schedules, attendance | Full own branch | View own branch + create (if also accountant) | Score own branch | View own branch |
+| **accountant** (standalone) | Payroll only, all branches | View all | Full CRUD + send email, all branches | View all | View all |
 | **employee** | Own data only | View own | View own payslips | N/A | View own |
+
+### Multi-Role Patterns (2026-03-17)
+
+**Database-level:**
+- `employees.roles TEXT[]` column (e.g., `["admin"]` or `["branch_manager", "accountant"]`)
+- JWT `app_metadata.roles[]` synced with DB on role updates
+- All 70+ RLS policies use `user_has_role(role)` helper
+
+**Application-level:**
+- `SessionUser.roles: UserRole[]` in auth context
+- `user.roles.includes('admin')` — check for single role
+- `hasAnyRole(user, ['admin', 'accountant'])` — check for any role
+- Admin can assign multiple roles to same employee (e.g., branch_manager + accountant)
+
+**Hybrid Access Rules:**
+- Accountant + branch_manager = branch-scoped payroll (not global)
+- Admin alone = global access (all branches)
 
 ### Identity Mapping
 
@@ -67,11 +85,12 @@
 -- Enforced by trigger: before insert on auth.users
 --   → Create matching employee record with id = user_id
 
--- Role/branch stored in app_metadata (admin-only write)
--- app_metadata = { role: string, branch_id: UUID }
+-- Roles stored in both places (sync on updateUserRoles)
+-- employees.roles TEXT[] = array of role strings
+-- app_metadata.roles[] = array in JWT
 
 -- RLS leverages JWT to enforce policies
--- WHERE get_user_role() = 'admin'
+-- WHERE user_has_role('admin')
 -- WHERE branch_id = get_user_branch_id()
 ```
 
@@ -115,6 +134,9 @@ CREATE TABLE employees (
   employee_code TEXT UNIQUE,
   position TEXT,
   rate_per_session NUMERIC(10,2),
+
+  -- Multi-Role RBAC (2026-03-17)
+  roles TEXT[] DEFAULT '{}',              -- e.g. ['admin'], ['branch_manager', 'accountant']
 
   -- Extended profile (Phase 6)
   cccd TEXT UNIQUE,                  -- ID card
@@ -348,11 +370,13 @@ CREATE TABLE employee_notes (
 - `payroll-payslip-actions.ts` — Semi-manual payslip save + class_breakdown (Feature: 2026-03-11/14)
 - `payroll-calculate-actions.ts` — Prefill logic + class breakdown init
 - `kpi-save-actions.ts` — Submit KPI scores
+- `kpi-query-actions.ts` — Query KPI history incl. /my-kpi (Multi-Role RBAC, 2026-03-17)
 - `evaluation-save-actions.ts` — Create evaluations
-- `employee-mutation-actions.ts` — Create/update/toggle active (Feature: 2026-03-15)
+- `employee-mutation-actions.ts` — Create/update/toggle active + update roles (Multi-Role RBAC)
 - `employee-import-actions.ts` — Bulk import from Excel (Feature: 2026-03-15)
 - `employee-profile-actions.ts` — Update profile fields
 - `employee-notes-actions.ts` — CRUD notes
+- `auth-actions.ts` — getCurrentUser() multi-role support, updateUserRoles() (Multi-Role RBAC, 2026-03-17)
 - `audit-log-service.ts` — Fire-and-forget logging
 
 #### 3. Service Layer (`/lib/services/*`)
@@ -545,23 +569,25 @@ RLS: Templates/periods admin-only, evaluations BM-scoped
 
 ### Employee Portal Module (Phase 5)
 ```
-Routes: /my-attendance, /my-payslips, /my-profile
+Routes: /my-attendance, /my-payslips, /my-profile, /my-kpi
 ├─ MyAttendanceGrid (read-only)
 ├─ MyPayslipHistory
-└─ MyProfileView
+├─ MyProfileView
+└─ MyKpiHistoryChart (Multi-Role RBAC, 2026-03-17)
 
-Actions: employee-portal-actions.ts
+Actions: employee-portal-actions.ts, kpi-query-actions.ts
 ├─ queryMyAttendance(employee_id)
 ├─ queryMyPayslips(employee_id)
-└─ queryMyProfile(employee_id)
+├─ queryMyProfile(employee_id)
+└─ getMyKpiHistory(employee_id, months=6) (Multi-Role RBAC)
 
-Database: attendance, payslips, employees (self-only)
+Database: attendance, payslips, kpi_evaluations, employees (self-only)
 RLS: WHERE employee_id = get_user_id()
-Mobile: Bottom nav, CSS-responsive layout
+Mobile: Bottom nav (5 tabs), CSS-responsive layout
 PWA: Service worker (static assets only)
 ```
 
-### Employee Profile Module (Phase 6 + Enhancements)
+### Employee Profile Module (Phase 6 + Enhancements + Multi-Role RBAC)
 ```
 Routes: /employees, /employees/[id]
 ├─ EmployeeForm (CRUD)
@@ -570,25 +596,27 @@ Routes: /employees, /employees/[id]
 ├─ EmployeeNotesList
 ├─ EmployeeImportDialog (bulk import from Excel)
 ├─ EmployeeStatusFilter (active/inactive toggle)
+└─ RoleAssignmentDialog (admin-only, toggle multiple roles) (Multi-Role RBAC, 2026-03-17)
 
 Actions:
 ├─ employee-actions.ts (legacy CRUD)
 ├─ employee-query-actions.ts (employee queries with filtering)
-├─ employee-mutation-actions.ts (create/update/toggle active)
+├─ employee-mutation-actions.ts (create/update/toggle active + updateUserRoles) (Multi-Role RBAC)
 ├─ employee-import-actions.ts (bulk import from Excel)
 ├─ employee-profile-actions.ts (profile fields)
 ├─ employee-notes-actions.ts (CRUD notes)
 
-Database: employees (extended fields), employee_notes
-Extended Fields: cccd, dob, bank_account, qualifications, characteristics, is_active
+Database: employees (extended fields + roles[]), employee_notes
+Extended Fields: cccd, dob, bank_account, qualifications, characteristics, is_active, roles[]
 Features:
+  - Multi-role assignment (admin-only, UI dialog)
   - Soft delete (is_active toggle)
   - Status filter (active/inactive employees)
   - Bulk import from Excel with validation
   - Class assignment warning (cannot assign inactive employees to classes)
   - Search + filtering by status
   - Reactivate class schedules (toggle is_active)
-RLS: BM can edit own branch, admin can edit all
+RLS: BM can edit own branch + roles, admin can edit all + roles
 ```
 
 ### Audit Log Module (Phase 7)
@@ -620,9 +648,11 @@ RLS: All employees can view own actions, admin/accountant view all
 
 ### Authorization (RLS)
 - **Policy Type:** Row-level security on all 17 tables
-- **Enforcement:** 70+ RLS policies (grew from security hardening)
+- **Enforcement:** 70+ RLS policies (updated for multi-role support)
 - **Key Functions:**
-  - `get_user_role()` — from JWT app_metadata.role
+  - `get_user_roles()` — from JWT app_metadata.roles[] (array)
+  - `get_user_role()` — from JWT app_metadata.roles[0] (first role, backward compat)
+  - `user_has_role(role)` — check if user roles[] includes given role
   - `get_user_branch_id()` — from JWT app_metadata.branch_id
   - `get_user_id()` — from JWT sub
   - `get_current_user_is_active()` — SECURITY DEFINER, RLS recursion safe
@@ -743,7 +773,7 @@ RESEND_API_KEY=...
 ### Bottlenecks & Solutions
 1. **Attendance Grid Load:** Week_start index + upsert pattern (solved)
 2. **Payroll Calculation:** In-memory calculation for <100 employees (solved)
-3. **RLS Policy Count:** 68 policies (manageable; consider policy consolidation for 100+ tables)
+3. **RLS Policy Count:** 70 policies (manageable; consider policy consolidation for 100+ tables)
 4. **File Storage:** Limit to profile images (use Cloudinary for scalability)
 
 ### Future Scaling
@@ -761,12 +791,17 @@ RESEND_API_KEY=...
 **Why:** Eliminates junction tables, simplifies RLS
 **Trade-off:** Employee creation coupled to auth user
 
-### 2. Role/Branch in JWT
-**Decision:** Store in `app_metadata` (admin-only write), not `user_metadata`
-**Why:** User-metadata is client-writable (security risk)
-**Trade-off:** Role changes require JWT re-issue
+### 2. Role/Branch in JWT as arrays
+**Decision:** Store `roles[]` in `app_metadata` (admin-only write), not `user_metadata`; maintain roles[] in employees table
+**Why:** User-metadata is client-writable (security risk); database-backed roles for auditability
+**Trade-off:** Role changes require JWT re-issue + DB sync
 
-### 3. Attendance RLS via Class
+### 3. Multi-Role Support (2026-03-17)
+**Decision:** `employees.roles TEXT[]` + JWT `app_metadata.roles[]`; RLS via `user_has_role(role)` helper
+**Why:** Supports hybrid roles (e.g., branch_manager + accountant); backward compatible with single-role logic
+**Trade-off:** All policies rewritten from `get_user_role() = 'X'` to `user_has_role('X')`
+
+### 4. Attendance RLS via Class
 **Decision:** No `branch_id` on `attendance` table; RLS via JOIN on `class_schedules.branch_id`
 **Why:** Normalizes branch data, prevents redundancy
 **Trade-off:** RLS policy complexity (one extra JOIN)
@@ -947,5 +982,5 @@ Admin/Accountant:
 
 ---
 
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-03-17
 **Maintained By:** Luna HRM Team

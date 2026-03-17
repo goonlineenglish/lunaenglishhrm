@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert } from '@/components/ui/alert'
-import { EmployeeCodeLookup } from '@/components/class-schedules/employee-code-lookup'
+import { EmployeeCombobox } from '@/components/class-schedules/employee-combobox'
 import { createWeeklyNote } from '@/lib/actions/weekly-notes-actions'
+import { getEmployeesForSelection } from '@/lib/actions/class-schedule-actions'
 import type { NoteType } from '@/lib/types/database'
 import type { EmployeeLookup } from '@/lib/actions/class-schedule-actions'
 import { NOTE_TYPE_LABELS } from './attendance-notes-constants'
@@ -23,17 +24,23 @@ export function AddNoteForm({ branchId, weekStart, onCreated }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [noteType, setNoteType] = useState<NoteType>('general')
   const [employeeId, setEmployeeId] = useState('')
-  const [employeeCode, setEmployeeCode] = useState('')
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [amountUnit, setAmountUnit] = useState<'sessions' | 'vnd'>('sessions')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [employees, setEmployees] = useState<EmployeeLookup[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(false)
 
-  function handleEmployeeSelect(emp: EmployeeLookup) {
-    setEmployeeId(emp.id)
-    setEmployeeCode(emp.employee_code)
-  }
+  // Prefetch employee list when form opens
+  useEffect(() => {
+    if (!showForm) return
+    setLoadingEmployees(true)
+    getEmployeesForSelection(branchId).then((res) => {
+      if (res.success && res.data) setEmployees(res.data)
+      setLoadingEmployees(false)
+    })
+  }, [showForm, branchId])
 
   async function handleAdd() {
     if (!employeeId || !description.trim()) {
@@ -60,7 +67,6 @@ export function AddNoteForm({ branchId, weekStart, onCreated }: Props) {
     setDescription('')
     setAmount('')
     setEmployeeId('')
-    setEmployeeCode('')
     setShowForm(false)
     onCreated()
   }
@@ -78,7 +84,13 @@ export function AddNoteForm({ branchId, weekStart, onCreated }: Props) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Nhân viên</Label>
-              <EmployeeCodeLookup value={employeeCode} onSelect={handleEmployeeSelect} placeholder="Mã NV" />
+              <EmployeeCombobox
+                employees={employees}
+                value={employeeId}
+                onSelect={(emp) => setEmployeeId(emp.id)}
+                placeholder="Chọn nhân viên"
+                loading={loadingEmployees}
+              />
             </div>
             <div>
               <Label className="text-xs">Loại</Label>

@@ -1,6 +1,6 @@
 # Luna HRM Codebase Summary
 
-**Status:** All 7 phases complete + Post-MVP Enhancements + Multi-Role RBAC. Production-ready MVP with 25 routes, ~140+ files.
+**Status:** All 7 phases complete + Post-MVP Enhancements + Multi-Role RBAC + Email Confirmation Workflow. Production-ready MVP with 25 routes, ~150+ files.
 
 
 ## Project Structure
@@ -39,13 +39,18 @@ luna-hrm/
 │   │   ├── cron/                       # Scheduled tasks (auto-fill, lock, reminders)
 │   │   │   ├── weekly-reminder/        # Weekend reminder for unsaved attendance
 │   │   │   ├── kpi-reminder/           # KPI reminder on 25th
-│   │   │   ├── **auto-confirm-payslips/** | **Auto-confirm payslips after 3 days (Phase 6)**
-│   │   │   └── **payslip-reminder/**   | **Remind employees on day 2 (Phase 6)**
+│   │   │   ├── auto-confirm-payslips/  # Auto-confirm payslips after 3 days
+│   │   │   └── payslip-reminder/       # Remind employees on day 2
+│   ├── confirm-payslip/                # **Public token-based payslip confirmation (Phase 8)**
 │   ├── globals.css                      # Tailwind base styles
 │   └── layout.tsx                       # Root layout
 ├── components/
 │   ├── layout/                          # Sidebar, nav, footer
+│   ├── ui/                              # shadcn/ui components
+│   │   ├── popover.tsx                  # Popover primitive (Employee Combobox UX, 2026-03-18)
+│   │   └── command.tsx                  # Command/cmdk primitive (Employee Combobox UX, 2026-03-18)
 │   ├── class-schedules/                 # Class schedule form, table, import dialog
+│   │   └── employee-combobox.tsx        # Employee searchable dropdown (replaces employee-code-lookup, 2026-03-18)
 │   ├── attendance/                      # Grid, notes panel, diff viewer, summary cards, calendar dates, lock override
 │   ├── office-attendance/               # Daily grid, helpers
 │   ├── employees/                       # Form, profile-info, profile-tabs, notes
@@ -70,6 +75,7 @@ luna-hrm/
 ├── lib/
 │   ├── actions/                         # Server actions (CRUD, calculations)
 │   │   ├── class-schedule-actions.ts   # CRUD + import class schedules
+│   │   ├── class-schedule-query-actions.ts # Query class schedules + getEmployeesForSelection() (Employee Combobox UX, 2026-03-18)
 │   │   ├── attendance-actions.ts       # Query + save attendance
 │   │   ├── attendance-summary-actions.ts # Attendance summary (Feature: Summary by Class)
 │   │   ├── attendance-lock-actions.ts   # Lock override actions (Feature: Calendar + Lock Override)
@@ -81,15 +87,15 @@ luna-hrm/
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
 │   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + class_breakdown (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── payroll-calculate-actions.ts # Prefill logic + class breakdown init (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
-│   │   ├── **payroll-notification-actions.ts** | **Send payslips to employees, finalize period (Phase 6)**
-│   │   ├── **employee-confirmation-actions.ts** | **Confirm/dispute payslip endpoints (Phase 6)**
+│   │   ├── payroll-notification-actions.ts # Send payslips to employees, finalize period (Phase 8)
+│   │   ├── employee-confirmation-actions.ts # Confirm/dispute payslip endpoints (Phase 8)
 │   │   ├── kpi-save-actions.ts         # KPI submission
 │   │   ├── kpi-query-actions.ts       | Query KPI history, including /my-kpi (Phase 5)
 │   │   ├── evaluation-actions.ts       # Query evaluations
 │   │   ├── evaluation-save-actions.ts  # Save evaluations
 │   │   ├── evaluation-template-actions.ts # Admin CRUD templates
 │   │   ├── evaluation-period-actions.ts  # Admin CRUD periods
-│   │   ├── employee-notes-actions.ts    # CRUD notes
+│   │   ├── employee-notes-actions.ts    # CRUD notes + server-side is_active guard (Employee Combobox UX, 2026-03-18)
 │   │   ├── employee-profile-actions.ts  # Profile updates
 │   │   ├── employee-portal-actions.ts   # Employee own data queries
 │   │   └── auth-actions.ts            | Multi-role getUser(), updateUserRoles() (Phase 2)
@@ -108,8 +114,8 @@ luna-hrm/
 │   │   ├── payroll-audit-service.ts    # Audit logs for manual payslip edits (Feature: Semi-Manual Payroll)
 │   │   ├── payroll-prefill-service.ts  # Pre-fill suggestions from KPI/notes (Feature: Semi-Manual Payroll)
 │   │   ├── audit-log-service.ts        # Fire-and-forget logging
-│   │   ├── **email-service.ts**        # **Email sending via Resend (Phase 6)**
-│   │   └── **email-templates.ts**      # **Payslip + reminder email templates (Phase 6)**
+│   │   ├── email-service.ts            # Email sending via Resend (Phase 8)
+│   │   └── email-templates.ts          # Payslip + reminder email templates (Phase 8)
 │   ├── hooks/
 │   │   ├── use-auth.ts                 # Auth context hook (multi-role support)
 │   │   ├── use-permissions.ts          # Role/branch checks (roles[] pattern)
@@ -142,7 +148,8 @@ luna-hrm/
 │   │   ├── 008_payroll_class_breakdown.sql   # Per-class rates + class_breakdown JSONB (Feature: Payroll Per-Class Rows, 2026-03-14)
 │   │   ├── 009_security_and_index_improvements.sql  # Security/index improvements
 │   │   ├── 010_fix_rls_recursion.sql   # RLS infinite recursion fix (SECURITY DEFINER, 2026-03-15)
-│   │   ├── 011_multi_role_schema_and_rls.sql | employees.roles[], RLS helpers, 70 policies rewritten (Phase 1)
+│   │   ├── 011_multi_role_schema_and_rls.sql # employees.roles[], RLS helpers, 70 policies rewritten (Phase 1)
+│   │   ├── 015_employee_payslip_confirmation.sql # Payslip confirmation columns + finalized status (Phase 8)
 │   │   └── seed.sql                    # 21 employees with roles[] backfilled, 10 classes, sample data
 ├── public/
 │   ├── manifest.json                   # PWA manifest
@@ -151,7 +158,7 @@ luna-hrm/
 │   ├── attendance-lock.test.ts         # Unit tests
 │   ├── payroll-calculation.test.ts
 │   ├── kpi-bonus.test.ts
-│   └── **email-confirmation.test.ts**  # **Email confirm/dispute/auto-confirm tests (Phase 6)**
+│   ├── email-confirmation.test.ts      # Email confirm/dispute/auto-confirm tests (Phase 8, 21 tests)
 │   ├── payroll-audit-service.test.ts   # Audit logging tests
 │   ├── payroll-prefill-service.test.ts # Prefill logic tests
 │   └── attendance-summary.test.ts      # Attendance summary tests (Feature: 2026-03-11)
@@ -166,10 +173,10 @@ luna-hrm/
 
 ### 1. Class Schedules (Ca Làm Việc)
 - **Routes:** `/class-schedules`
-- **Components:** ClassScheduleForm, ClassScheduleTable, ExcelImportDialog
-- **Actions:** class-schedule-actions.ts (create, update, delete, list, import .xlsx)
+- **Components:** ClassScheduleForm, ClassScheduleTable, ExcelImportDialog, EmployeeCombobox
+- **Actions:** class-schedule-actions.ts (create, update, delete, list, import .xlsx, getEmployeesForSelection), class-schedule-query-actions.ts
 - **Database:** `class_schedules` table (branch_id, class_code, class_name, shift_time, days_of_week[], teacher_id, assistant_id)
-- **Features:** CRUD, Excel import, auto-fill weekly attendance grid
+- **Features:** CRUD, Excel import, auto-fill weekly attendance grid, employee combobox UX (searchable dropdown with command/cmdk)
 
 ### 2. Attendance (Chấm Công)
 - **Routes:** `/attendance`, `/my-attendance`
@@ -342,10 +349,10 @@ npm run lint
 
 ## Build Status
 
-- **Routes:** 25 total (added /my-kpi — Phase 5)
-- **Components:** ~75+ custom components (~40+ .tsx files including role-assignment-dialog)
-- **Files:** ~140+ (code, types, actions, services, hooks, utils, migrations)
-- **Tests:** 136+ unit tests (7 suites including multi-role patterns) — all passing
+- **Routes:** 25 total (25: added /confirm-payslip — Phase 8)
+- **Components:** ~76+ custom components (~46+ .tsx files including role-assignment-dialog, email confirmation, employee-combobox, popover, command)
+- **Files:** ~151+ (code, types, actions, services, hooks, utils, migrations)
+- **Tests:** 151 unit tests (8 suites: tax-calculator, payroll-calc, kpi-calc, date-helpers, payroll-audit-service, payroll-prefill-service, attendance-summary, email-confirmation) — all passing
 - **Build:** Clean, 0 errors
 
 ## Dev/Test Setup
@@ -369,4 +376,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-17 | All 7 phases complete + Multi-Role RBAC (6 phases) + Post-MVP Features (Semi-Manual Payroll, Attendance Summary, Calendar Dates, Lock Override, Per-Class Rows, Employee Module)
+**Last Updated:** 2026-03-18 | All 7 phases complete + Multi-Role RBAC (Phase 8, 6 sub-phases) + Post-MVP Features (Semi-Manual Payroll, Attendance Summary, Calendar Dates, Lock Override, Per-Class Rows, Employee Module) + Email Confirmation Workflow (Phase 8, 6 new files, 21 tests) + Employee Combobox UX (2 new UI components, 1 new action, stale state fix, inactive staff guard)

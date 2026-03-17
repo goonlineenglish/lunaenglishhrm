@@ -33,7 +33,7 @@
 | 6 | Employee Profile + Evaluation | ✅ Done | 2026-03-07 | 2026-03-07 | Profile CRUD, template-based eval, notes, history |
 | 7 | Polish + Localization | ✅ Done | 2026-03-07 | 2026-03-07 | Audit logs, i18n, keyboard shortcuts, Excel I/O |
 | 8 | Multi-Role RBAC | ✅ Done | 2026-03-17 | 2026-03-17 | 6 phases: DB schema, types, actions, UI, /my-kpi, tests + seed (Codex-approved) |
-| **9** | **Email Notification + Confirmation** | 📋 **Planning** | TBD | TBD | **Codex-approved (5 rounds), admin/accountant send payslips, employee confirm/dispute, auto-confirm cron** |
+| **9** | **Email Notification + Confirmation** | ✅ **Complete** | 2026-03-16 | 2026-03-17 | **Admin/accountant send payslips, employee confirm/dispute, auto-confirm cron, 21 tests** |
 
 ### Production Review Phase (Complete)
 
@@ -65,7 +65,17 @@
 | Phase 6: Tests + Seed Update | ✅ Done | 2026-03-17 | 136/136 tests passing, seed.sql roles[] backfilled, 25 routes, 0 errors |
 | All Features Complete | ✅ Done | 2026-03-17 | 14 new/modified files, backward compat with legacy role, production-ready |
 
----
+### Employee Combobox UX Enhancement (Complete)
+
+| Item | Status | Date | Notes |
+|------|--------|------|-------|
+| Add shadcn Popover + Command | ✅ Done | 2026-03-18 | `components/ui/popover.tsx`, `components/ui/command.tsx` for searchable dropdown |
+| Create EmployeeCombobox Component | ✅ Done | 2026-03-18 | Replaces EmployeeCodeLookup; searchable, filterable by branch, marks inactive staff |
+| Add getEmployeesForSelection Action | ✅ Done | 2026-03-18 | Server action to fetch active employees for combobox with branch scoping |
+| Update ClassScheduleForm | ✅ Done | 2026-03-18 | Integrated EmployeeCombobox for teacher/assistant; stale state fix (re-render on form reset) |
+| Update AttendanceAddNoteForm | ✅ Done | 2026-03-18 | Integrated EmployeeCombobox for employee selection |
+| Server-Side Inactive Guard | ✅ Done | 2026-03-18 | weekly-notes-actions.ts + class-schedule-mutation-actions.ts validate is_active |
+| All Features Complete | ✅ Done | 2026-03-18 | 2 new UI files, 1 new query action, 3 modified components/actions, UX improvement |
 
 ## Feature Completion Summary
 
@@ -84,16 +94,16 @@
 - [x] Audit logging (all CRUD operations)
 - [x] Excel import/export (class schedules, payroll)
 
-### Phase 8 Features (📋 Planning)
+### Phase 8 Features (✅ Complete)
 
-- [ ] Email notification service (Resend API integration)
-- [ ] Payslip email with confirmation button
-- [ ] Employee confirmation/dispute workflow (max 2 disputes)
-- [ ] Auto-confirm after 3 days no action
-- [ ] Reminder email on day 2
-- [ ] Payroll period finalization (all confirmed → finalized state)
-- [ ] Admin/accountant send payslips UI
-- [ ] Employee payslip confirmation UI
+- [x] Email notification service (Resend API integration)
+- [x] Payslip email with confirmation button
+- [x] Employee confirmation/dispute workflow (max 2 disputes)
+- [x] Auto-confirm after 3 days no action
+- [x] Reminder email on day 2
+- [x] Payroll period finalization (all confirmed → finalized state)
+- [x] Admin/accountant send payslips UI
+- [x] Employee payslip confirmation UI
 
 ### Optimization Features (100% Complete)
 
@@ -162,13 +172,13 @@ All 17 tables implemented with RLS:
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| Phases Complete | 7/7 MVP | ✅ 7/7 (100%) + 1 Post-MVP Multi-Role RBAC (100%) |
-| Routes Implemented | 20+ | ✅ 25 routes |
-| Custom Components | 30+ | ✅ ~40+ components (incl. RoleAssignmentDialog) |
+| Phases Complete | 7/7 MVP | ✅ 7/7 (100%) + 1 Post-MVP Multi-Role RBAC (100%) + 1 Post-MVP Email Confirmation (100%) + 1 Post-MVP Employee Combobox UX (100%) |
+| Routes Implemented | 20+ | ✅ 25 routes (added /confirm-payslip) |
+| Custom Components | 30+ | ✅ ~76+ components (incl. RoleAssignmentDialog, email confirmation UI, EmployeeCombobox, Popover, Command) |
 | Database Tables | 17 | ✅ 17 tables |
 | RLS Policies | 60+ | ✅ 70+ policies (multi-role aware) |
 | Build Errors | 0 | ✅ 0 errors |
-| Unit Tests | Core logic | ✅ 136 tests passing (7 suites) |
+| Unit Tests | Core logic | ✅ 151 tests passing (8 suites + email-confirmation) |
 | MVP Optimizations | 18 | ✅ 18/18 (100%) |
 
 ---
@@ -275,8 +285,8 @@ npm run build && npm start
 
 ---
 
-**Status:** MVP Complete + Post-MVP Enhancements (Semi-Manual Payroll, Attendance Summary, Lock Override, Per-Class Rows, Employee Module, RLS Recursion Fix) + Multi-Role RBAC ✅
-**Build:** 0 errors, 25 routes, ~140+ files
+**Status:** MVP Complete + Post-MVP Enhancements (Semi-Manual Payroll, Attendance Summary, Lock Override, Per-Class Rows, Employee Module, RLS Recursion Fix) + Multi-Role RBAC + Email Confirmation Workflow ✅
+**Build:** 0 errors, 25 routes, ~150+ files, 151 tests passing
 **Ready for Deployment:** Yes
 
 ## Dev/Test Quick Reference
@@ -286,9 +296,10 @@ npm run build && npm start
 | Dev server | `npm run dev` → `http://localhost:3000` |
 | Production | `npm start -- -p 3001` |
 | Supabase | `btwwqeemwedtbnskjcem.supabase.co` |
-| Tests | `npm test` → 130+ tests, 6 suites |
+| Tests | `npm test` → 151 tests, 8 suites |
 | Seed data | `supabase/seed.sql` (21 employees, 10 classes) |
 | Test password | `Luna@2026` (dev only) |
+| Env vars | RESEND_API_KEY, RESEND_FROM (email service) |
 
 ### Feature 3: Attendance Calendar Dates + Lock Override
 - **Status:** ✅ Complete
@@ -420,3 +431,41 @@ npm run build && npm start
   - Adversarial review: 11 issues → all fixed
 - **Tests:** 130+ unit tests (attendance-summary suite added)
 - **Build:** 24 routes, 0 errors, clean
+
+### Feature 7: Email Confirmation Workflow (Xác Nhận Lương Qua Email)
+- **Status:** ✅ Complete
+- **Completion Date:** 2026-03-17
+- **Description:** Email-based payslip confirmation workflow. Admin/accountant send payslips via email with token-based confirmation links. Employees confirm/dispute payslips; unconfirmed payslips auto-confirm after 3 days. Payroll period finalizes only when all employees confirm.
+- **Scope:**
+  - Email service: Resend API integration with lazy init, retry, bulk send
+  - Payslip email templates: HTML email with payslip details + confirmation button
+  - Token-based confirmation: unique token per payslip, validates via email
+  - Dispute workflow: employees can dispute max 2 times per payslip
+  - Auto-confirm cron: after 3 days with no action
+  - Day-2 reminder cron: sends reminder email
+  - Payroll finalization: period locked only when all employees confirmed/disputed
+  - Public confirmation page: `/confirm-payslip?token=xxx`
+- **Key Implementation Files:**
+  - `supabase/migrations/015_employee_payslip_confirmation.sql` (NEW — confirmation columns, finalized status, RLS)
+  - `lib/services/email-service.ts` (NEW — Resend wrapper)
+  - `lib/services/email-templates.ts` (NEW — HTML templates)
+  - `lib/actions/payroll-notification-actions.ts` (NEW — sendPayslipEmails, resendPayslipEmail)
+  - `lib/actions/employee-confirmation-actions.ts` (NEW — confirmMyPayslip, disputePayslip)
+  - `app/confirm-payslip/page.tsx` (NEW — public confirmation page)
+  - `components/confirm-payslip-form.tsx` (NEW — confirmation form)
+  - `app/api/cron/auto-confirm-payslips/route.ts` (NEW — daily auto-confirm)
+  - `app/api/cron/payslip-reminder/route.ts` (NEW — day-2 reminder)
+  - `components/payroll/payroll-spreadsheet.tsx` (EXTENDED — employee_status column)
+  - `components/payroll/payroll-spreadsheet-row.tsx` (EXTENDED — status badge)
+  - `app/(dashboard)/payroll/[period]/page.tsx` (EXTENDED — send email button)
+  - `app/(dashboard)/my-payslips/[id]/page.tsx` (EXTENDED — dispute feedback display)
+  - `lib/types/database-payroll-types.ts` (EXTENDED — PayslipEmployeeStatus type, confirmation columns)
+  - `lib/types/payroll.ts` (EXTENDED — finalized status)
+  - `components/payroll/payroll-status-badge.tsx` (EXTENDED — finalized badge)
+- **Database Changes:**
+  - `payslips` table: confirmation_token, confirmed_at, dispute_count, dispute_feedback, employee_status
+  - `payroll_periods` table: confirmation_deadline, finalized_at
+  - New status: `pending_send` → `sent` → `confirmed` | `disputed` → `finalized`
+- **Tests:** 21 unit tests (email-confirmation suite: send, remind, confirm, dispute, auto-confirm, finalize)
+- **Build:** 25 routes, 151 tests, 0 errors, clean
+- **Env Vars Needed:** RESEND_API_KEY, RESEND_FROM

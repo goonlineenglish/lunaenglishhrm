@@ -68,6 +68,44 @@ export async function getClassSchedules(
   }
 }
 
+/** Fetch all active employees for combobox selection. Role-gated + branch-scoped. */
+export async function getEmployeesForSelection(
+  branchId?: string
+): Promise<ActionResult<EmployeeLookup[]>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Chưa đăng nhập.' }
+
+    // Role gate: only admin/BM/accountant can fetch bulk list
+    const canAccess = hasAnyRole(user, 'admin', 'branch_manager', 'accountant')
+    if (!canAccess) return { success: false, error: 'Không có quyền.' }
+
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+
+    // BM always scoped to own branch. Admin with empty branchId → fetch all
+    const effectiveBranch = user.roles.includes('branch_manager')
+      ? user.branch_id
+      : (branchId || undefined)
+
+    let query = sb
+      .from('employees')
+      .select('id, employee_code, full_name, position, rate_per_session')
+      .eq('is_active', true)
+      .order('full_name')
+
+    if (effectiveBranch) query = query.eq('branch_id', effectiveBranch)
+
+    const { data, error } = await query
+    if (error) throw error
+    return { success: true, data: (data ?? []) as EmployeeLookup[] }
+  } catch (err) {
+    console.error('[getEmployeesForSelection]', err)
+    return { success: false, error: 'Không thể tải danh sách nhân viên.' }
+  }
+}
+
 /** Lookup employee by code (partial match). Branch-scoped for BM. */
 export async function lookupEmployeeByCode(
   code: string,

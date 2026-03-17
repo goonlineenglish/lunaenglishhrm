@@ -92,14 +92,31 @@ export async function createWeeklyNote(
     const branchId = isBM ? user.branch_id! : data.branch_id
 
     // BM: validate employee belongs to own branch
+    // All roles: validate employee is active
     if (user.roles.includes('branch_manager') && !user.roles.includes('admin')) {
       const { data: emp } = await sb
         .from('employees')
-        .select('branch_id')
+        .select('branch_id, is_active')
         .eq('id', data.employee_id)
         .maybeSingle()
       if (!emp || emp.branch_id !== user.branch_id) {
         return { success: false, error: 'Nhân viên không thuộc chi nhánh của bạn.' }
+      }
+      if (!emp.is_active) {
+        return { success: false, error: 'Nhân viên đã ngừng hoạt động.' }
+      }
+    } else {
+      // Admin: still validate employee is active
+      const { data: emp } = await sb
+        .from('employees')
+        .select('is_active')
+        .eq('id', data.employee_id)
+        .maybeSingle()
+      if (!emp) {
+        return { success: false, error: 'Không tìm thấy nhân viên.' }
+      }
+      if (!emp.is_active) {
+        return { success: false, error: 'Nhân viên đã ngừng hoạt động.' }
       }
     }
 

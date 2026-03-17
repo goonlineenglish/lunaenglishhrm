@@ -98,8 +98,14 @@ export async function updateClassSchedule(
     const effectiveBranch = isBM ? user.branch_id! : existing.branch_id
 
     const empChecks: { id: string; requiredPosition: string; label: string }[] = []
-    if (data.teacher_id) empChecks.push({ id: data.teacher_id, requiredPosition: 'teacher', label: 'Giáo viên' })
-    if (data.assistant_id) empChecks.push({ id: data.assistant_id, requiredPosition: 'assistant', label: 'Trợ giảng' })
+    // Only validate staff that are actually being changed — skip if same as existing
+    // (inactive existing staff should not block unrelated field edits)
+    if (data.teacher_id && data.teacher_id !== existing.teacher_id) {
+      empChecks.push({ id: data.teacher_id, requiredPosition: 'teacher', label: 'Giáo viên' })
+    }
+    if (data.assistant_id && data.assistant_id !== existing.assistant_id) {
+      empChecks.push({ id: data.assistant_id, requiredPosition: 'assistant', label: 'Trợ giảng' })
+    }
 
     const validationError = await validateStaffAssignment(sb, effectiveBranch, empChecks)
     if (validationError) return validationError as ActionResult<ClassSchedule>

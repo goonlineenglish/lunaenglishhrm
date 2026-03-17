@@ -3,9 +3,10 @@
 /**
  * Class schedule create/edit form dialog.
  * Fields: class_code, class_name, shift_time, days_of_week[], teacher, assistant.
+ * Uses EmployeeCombobox (prefetch) instead of EmployeeCodeLookup (per-keystroke search).
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,8 +14,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Alert } from '@/components/ui/alert'
-import { EmployeeCodeLookup } from './employee-code-lookup'
-import { createClassSchedule, updateClassSchedule } from '@/lib/actions/class-schedule-actions'
+import { EmployeeCombobox } from './employee-combobox'
+import { createClassSchedule, updateClassSchedule, getEmployeesForSelection } from '@/lib/actions/class-schedule-actions'
 import type { ClassSchedule } from '@/lib/types/database'
 import type { EmployeeLookup } from '@/lib/actions/class-schedule-actions'
 import { getDayName } from '@/lib/utils/date-helpers'
@@ -22,7 +23,7 @@ import { getDayName } from '@/lib/utils/date-helpers'
 interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
-  editSchedule: ClassSchedule | null
+  editSchedule: (ClassSchedule & { teacher_name?: string; assistant_name?: string }) | null
   branchId: string
   onSaved: () => void
 }
@@ -34,9 +35,7 @@ interface FormState {
   class_name: string
   shift_time: string
   days_of_week: number[]
-  teacher_code: string
   teacher_id: string
-  assistant_code: string
   assistant_id: string
   teacher_rate: string
   assistant_rate: string
@@ -44,26 +43,51 @@ interface FormState {
 
 const EMPTY: FormState = {
   class_code: '', class_name: '', shift_time: '',
-  days_of_week: [], teacher_code: '', teacher_id: '',
-  assistant_code: '', assistant_id: '',
+  days_of_week: [], teacher_id: '',
+  assistant_id: '',
   teacher_rate: '', assistant_rate: '',
 }
 
 export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, onSaved }: Props) {
-  const [form, setForm] = useState<FormState>(
-    editSchedule ? {
-      class_code: editSchedule.class_code,
-      class_name: editSchedule.class_name,
-      shift_time: editSchedule.shift_time,
-      days_of_week: editSchedule.days_of_week,
-      teacher_code: '', teacher_id: editSchedule.teacher_id,
-      assistant_code: '', assistant_id: editSchedule.assistant_id,
-      teacher_rate: editSchedule.teacher_rate?.toString() ?? '',
-      assistant_rate: editSchedule.assistant_rate?.toString() ?? '',
-    } : EMPTY
-  )
+  const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [employees, setEmployees] = useState<EmployeeLookup[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(false)
+
+  // BUGFIX: useState(init) only runs once — sync form state every time dialog opens
+  useEffect(() => {
+    if (!open) return
+    if (editSchedule) {
+      setForm({
+        class_code: editSchedule.class_code,
+        class_name: editSchedule.class_name,
+        shift_time: editSchedule.shift_time,
+        days_of_week: editSchedule.days_of_week,
+        teacher_id: editSchedule.teacher_id,
+        assistant_id: editSchedule.assistant_id,
+        teacher_rate: editSchedule.teacher_rate?.toString() ?? '',
+        assistant_rate: editSchedule.assistant_rate?.toString() ?? '',
+      })
+    } else {
+      setForm(EMPTY)
+    }
+    setError(null)
+  }, [open, editSchedule])
+
+  // Prefetch employees when dialog opens
+  useEffect(() => {
+    if (!open) return
+    setLoadingEmployees(true)
+    getEmployeesForSelection(branchId).then((res) => {
+      if (res.success && res.data) setEmployees(res.data)
+      setLoadingEmployees(false)
+    })
+  }, [open, branchId])
+
+  // Filter by position (computed from prefetched list)
+  const teachers = employees.filter((e) => e.position === 'teacher')
+  const assistants = employees.filter((e) => e.position === 'assistant')
 
   function toggleDay(day: number) {
     setForm((f) => ({
@@ -72,14 +96,6 @@ export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, 
         ? f.days_of_week.filter((d) => d !== day)
         : [...f.days_of_week, day].sort(),
     }))
-  }
-
-  function handleTeacher(emp: EmployeeLookup) {
-    setForm((f) => ({ ...f, teacher_id: emp.id, teacher_code: emp.employee_code }))
-  }
-
-  function handleAssistant(emp: EmployeeLookup) {
-    setForm((f) => ({ ...f, assistant_id: emp.id, assistant_code: emp.employee_code }))
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -166,20 +182,24 @@ export function ClassScheduleForm({ open, onOpenChange, editSchedule, branchId, 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Giáo viên (GV) *</Label>
-              <EmployeeCodeLookup
-                value={form.teacher_code}
-                onSelect={handleTeacher}
-                position="teacher"
-                placeholder="Mã GV"
+              <EmployeeCombobox
+                employees={teachers}
+                value={form.teacher_id}
+                onSelect={(emp) => setForm((f) => ({ ...f, teacher_id: emp.id }))}
+                placeholder="Chọn giáo viên"
+                loading={loadingEmployees}
+                fallbackLabel={editSchedule?.teacher_name}
               />
             </div>
             <div className="space-y-1">
               <Label>Trợ giảng (TG) *</Label>
-              <EmployeeCodeLookup
-                value={form.assistant_code}
-                onSelect={handleAssistant}
-                position="assistant"
-                placeholder="Mã TG"
+              <EmployeeCombobox
+                employees={assistants}
+                value={form.assistant_id}
+                onSelect={(emp) => setForm((f) => ({ ...f, assistant_id: emp.id }))}
+                placeholder="Chọn trợ giảng"
+                loading={loadingEmployees}
+                fallbackLabel={editSchedule?.assistant_name}
               />
             </div>
           </div>

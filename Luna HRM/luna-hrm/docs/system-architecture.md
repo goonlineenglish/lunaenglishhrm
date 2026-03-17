@@ -1,9 +1,9 @@
 # Luna HRM System Architecture
 
 **Project:** Luna HRM (Lightweight HRM for English Language Centers)
-**Status:** Complete (All 7 phases + Post-MVP Enhancements + Multi-Role RBAC)
+**Status:** Complete (All 7 phases + Post-MVP Enhancements + Multi-Role RBAC — 6 phases)
 **Last Updated:** 2026-03-17
-**Migrations:** 12 files (000-011), Multi-Role RBAC (011), Phase 6 scheduled (012_employee_payslip_confirmation)
+**Migrations:** 12 files (000-011), Multi-Role RBAC (011), Phase 8 scheduled (012_employee_payslip_confirmation)
 
 ---
 
@@ -61,7 +61,7 @@
 | **accountant** (standalone) | Payroll only, all branches | View all | Full CRUD + send email, all branches | View all | View all |
 | **employee** | Own data only | View own | View own payslips | N/A | View own |
 
-### Multi-Role Patterns (2026-03-17)
+### Multi-Role Patterns (Phase 5 — 2026-03-17)
 
 **Database-level:**
 - `employees.roles TEXT[]` column (e.g., `["admin"]` or `["branch_manager", "accountant"]`)
@@ -370,13 +370,13 @@ CREATE TABLE employee_notes (
 - `payroll-payslip-actions.ts` — Semi-manual payslip save + class_breakdown (Feature: 2026-03-11/14)
 - `payroll-calculate-actions.ts` — Prefill logic + class breakdown init
 - `kpi-save-actions.ts` — Submit KPI scores
-- `kpi-query-actions.ts` — Query KPI history incl. /my-kpi (Multi-Role RBAC, 2026-03-17)
+- `kpi-query-actions.ts` — Query KPI history incl. /my-kpi (Phase 5)
 - `evaluation-save-actions.ts` — Create evaluations
-- `employee-mutation-actions.ts` — Create/update/toggle active + update roles (Multi-Role RBAC)
+- `employee-mutation-actions.ts` — Create/update/toggle active + update roles (Phase 3)
 - `employee-import-actions.ts` — Bulk import from Excel (Feature: 2026-03-15)
 - `employee-profile-actions.ts` — Update profile fields
 - `employee-notes-actions.ts` — CRUD notes
-- `auth-actions.ts` — getCurrentUser() multi-role support, updateUserRoles() (Multi-Role RBAC, 2026-03-17)
+- `auth-actions.ts` — getCurrentUser() multi-role support, updateUserRoles() (Phase 2)
 - `audit-log-service.ts` — Fire-and-forget logging
 
 #### 3. Service Layer (`/lib/services/*`)
@@ -573,13 +573,13 @@ Routes: /my-attendance, /my-payslips, /my-profile, /my-kpi
 ├─ MyAttendanceGrid (read-only)
 ├─ MyPayslipHistory
 ├─ MyProfileView
-└─ MyKpiHistoryChart (Multi-Role RBAC, 2026-03-17)
+└─ MyKpiHistoryChart (Phase 5)
 
 Actions: employee-portal-actions.ts, kpi-query-actions.ts
 ├─ queryMyAttendance(employee_id)
 ├─ queryMyPayslips(employee_id)
 ├─ queryMyProfile(employee_id)
-└─ getMyKpiHistory(employee_id, months=6) (Multi-Role RBAC)
+└─ getMyKpiHistory(employee_id, months=6) (Phase 5)
 
 Database: attendance, payslips, kpi_evaluations, employees (self-only)
 RLS: WHERE employee_id = get_user_id()
@@ -596,12 +596,12 @@ Routes: /employees, /employees/[id]
 ├─ EmployeeNotesList
 ├─ EmployeeImportDialog (bulk import from Excel)
 ├─ EmployeeStatusFilter (active/inactive toggle)
-└─ RoleAssignmentDialog (admin-only, toggle multiple roles) (Multi-Role RBAC, 2026-03-17)
+└─ RoleAssignmentDialog (admin-only, toggle multiple roles) (Phase 4)
 
 Actions:
 ├─ employee-actions.ts (legacy CRUD)
 ├─ employee-query-actions.ts (employee queries with filtering)
-├─ employee-mutation-actions.ts (create/update/toggle active + updateUserRoles) (Multi-Role RBAC)
+├─ employee-mutation-actions.ts (create/update/toggle active + updateUserRoles) (Phase 3)
 ├─ employee-import-actions.ts (bulk import from Excel)
 ├─ employee-profile-actions.ts (profile fields)
 ├─ employee-notes-actions.ts (CRUD notes)
@@ -796,7 +796,7 @@ RESEND_API_KEY=...
 **Why:** User-metadata is client-writable (security risk); database-backed roles for auditability
 **Trade-off:** Role changes require JWT re-issue + DB sync
 
-### 3. Multi-Role Support (2026-03-17)
+### 3. Multi-Role Support (Phase 1-5 — 2026-03-17)
 **Decision:** `employees.roles TEXT[]` + JWT `app_metadata.roles[]`; RLS via `user_has_role(role)` helper
 **Why:** Supports hybrid roles (e.g., branch_manager + accountant); backward compatible with single-role logic
 **Trade-off:** All policies rewritten from `get_user_role() = 'X'` to `user_has_role('X')`

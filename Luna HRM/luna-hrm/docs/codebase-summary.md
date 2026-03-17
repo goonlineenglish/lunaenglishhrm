@@ -20,7 +20,7 @@ luna-hrm/
 │   │   ├── evaluation-periods/          # Admin: period CRUD
 │   │   ├── payroll/                    # Payroll periods, slips, preview, export
 │   │   ├── kpi/                        # KPI grid, preview, submission
-│   │   ├── my-kpi/                     # Employee: KPI history portal (Multi-Role RBAC, 2026-03-17)
+│   │   ├── my-kpi/                     # Employee: KPI history portal (Phase 5 Multi-Role RBAC)
 │   │   ├── my-attendance/              # Employee: own weekly attendance
 │   │   ├── my-payslips/                # Employee: own payslip history
 │   │   ├── my-profile/                 # Employee: profile read-only
@@ -56,7 +56,7 @@ luna-hrm/
 │   │   ├── employee-profile-tabs.tsx
 │   │   ├── employee-detail.tsx
 │   │   ├── employee-notes-list.tsx
-│   │   └── role-assignment-dialog.tsx  # Multi-role toggle UI (Multi-Role RBAC, 2026-03-17)
+│   │   └── role-assignment-dialog.tsx  # Multi-role toggle UI (Phase 4 Multi-Role RBAC)
 │   ├── payroll/                         # Period form, slip preview, export button, attendance summary
 │   │   ├── payroll-period-form.tsx
 │   │   ├── payroll-spreadsheet.tsx      # Semi-manual payslip entry + class-grouped layout (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
@@ -77,14 +77,14 @@ luna-hrm/
 │   │   ├── employee-actions.ts         # CRUD employees
 │   │   ├── employee-query-actions.ts   # Employee queries with filtering (Employee Module Enhancements)
 │   │   ├── employee-import-actions.ts  # Bulk import employees from Excel (Employee Module Enhancements)
-│   │   ├── **employee-mutation-actions.ts** | **Create/update/delete/toggle active + update roles (Multi-Role RBAC)**
+│   │   ├── employee-mutation-actions.ts | Create/update/delete/toggle active + update roles (Phase 3)
 │   │   ├── payroll-period-actions.ts   # Payroll calculations
 │   │   ├── payroll-payslip-actions.ts  # Semi-manual payslip save + class_breakdown (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── payroll-calculate-actions.ts # Prefill logic + class breakdown init (Feature: Semi-Manual Payroll + Payroll Per-Class Rows, 2026-03-11/14)
 │   │   ├── **payroll-notification-actions.ts** | **Send payslips to employees, finalize period (Phase 6)**
 │   │   ├── **employee-confirmation-actions.ts** | **Confirm/dispute payslip endpoints (Phase 6)**
 │   │   ├── kpi-save-actions.ts         # KPI submission
-│   │   ├── **kpi-query-actions.ts**    | **Query KPI history, including /my-kpi (Multi-Role RBAC)**
+│   │   ├── kpi-query-actions.ts       | Query KPI history, including /my-kpi (Phase 5)
 │   │   ├── evaluation-actions.ts       # Query evaluations
 │   │   ├── evaluation-save-actions.ts  # Save evaluations
 │   │   ├── evaluation-template-actions.ts # Admin CRUD templates
@@ -92,7 +92,7 @@ luna-hrm/
 │   │   ├── employee-notes-actions.ts    # CRUD notes
 │   │   ├── employee-profile-actions.ts  # Profile updates
 │   │   ├── employee-portal-actions.ts   # Employee own data queries
-│   │   └── **auth-actions.ts**         | **Multi-role getUser(), updateUserRoles() (Multi-Role RBAC)**
+│   │   └── auth-actions.ts            | Multi-role getUser(), updateUserRoles() (Phase 2)
 │   ├── types/
 │   │   ├── employee.ts                 # Employee types
 │   │   ├── attendance.ts               # Attendance types
@@ -142,7 +142,7 @@ luna-hrm/
 │   │   ├── 008_payroll_class_breakdown.sql   # Per-class rates + class_breakdown JSONB (Feature: Payroll Per-Class Rows, 2026-03-14)
 │   │   ├── 009_security_and_index_improvements.sql  # Security/index improvements
 │   │   ├── 010_fix_rls_recursion.sql   # RLS infinite recursion fix (SECURITY DEFINER, 2026-03-15)
-│   │   ├── **011_multi_role_schema_and_rls.sql** | **employees.roles[], RLS helpers, 70 policies rewritten (Multi-Role RBAC, 2026-03-17)**
+│   │   ├── 011_multi_role_schema_and_rls.sql | employees.roles[], RLS helpers, 70 policies rewritten (Phase 1)
 │   │   └── seed.sql                    # 21 employees with roles[] backfilled, 10 classes, sample data
 ├── public/
 │   ├── manifest.json                   # PWA manifest
@@ -342,10 +342,10 @@ npm run lint
 
 ## Build Status
 
-- **Routes:** 25 total (added /my-kpi)
-- **Components:** ~75+ custom components (~40 .tsx files including variants, +role-assignment-dialog)
+- **Routes:** 25 total (added /my-kpi — Phase 5)
+- **Components:** ~75+ custom components (~40+ .tsx files including role-assignment-dialog)
 - **Files:** ~140+ (code, types, actions, services, hooks, utils, migrations)
-- **Tests:** 136+ unit tests (6 suites: tax-calculator, payroll-calc, kpi-calc, date-helpers, payroll-audit-service, payroll-prefill-service, attendance-summary) — all passing
+- **Tests:** 136+ unit tests (7 suites including multi-role patterns) — all passing
 - **Build:** Clean, 0 errors
 
 ## Dev/Test Setup
@@ -369,4 +369,4 @@ Auth users created via Supabase Dashboard, password: `Luna@2026`
 
 ---
 
-**Last Updated:** 2026-03-17 | All 7 phases complete + Semi-Manual Payroll + Attendance Summary by Class + Calendar Dates + Lock Override + Payroll Per-Class Rows + Employee Module Enhancements (soft delete, status filter, bulk import) + RLS Recursion Fix + Multi-Role RBAC
+**Last Updated:** 2026-03-17 | All 7 phases complete + Multi-Role RBAC (6 phases) + Post-MVP Features (Semi-Manual Payroll, Attendance Summary, Calendar Dates, Lock Override, Per-Class Rows, Employee Module)

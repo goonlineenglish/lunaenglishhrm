@@ -32,7 +32,8 @@
 | 5 | Employee Self-Service Portal | ✅ Done | 2026-03-07 | 2026-03-07 | PWA, CSS-responsive, own data views |
 | 6 | Employee Profile + Evaluation | ✅ Done | 2026-03-07 | 2026-03-07 | Profile CRUD, template-based eval, notes, history |
 | 7 | Polish + Localization | ✅ Done | 2026-03-07 | 2026-03-07 | Audit logs, i18n, keyboard shortcuts, Excel I/O |
-| **8** | **Email Notification + Confirmation** | 📋 **Planning** | TBD | TBD | **Codex-approved (5 rounds), admin/accountant send payslips, employee confirm/dispute, auto-confirm cron** |
+| 8 | Multi-Role RBAC | ✅ Done | 2026-03-17 | 2026-03-17 | 6 phases: DB schema, types, actions, UI, /my-kpi, tests + seed (Codex-approved) |
+| **9** | **Email Notification + Confirmation** | 📋 **Planning** | TBD | TBD | **Codex-approved (5 rounds), admin/accountant send payslips, employee confirm/dispute, auto-confirm cron** |
 
 ### Production Review Phase (Complete)
 
@@ -56,7 +57,7 @@
 
 | Item | Status | Date | Notes |
 |------|--------|------|-------|
-| Phase 1: Database Schema + RLS | ✅ Done | 2026-03-17 | `employees.roles TEXT[]`, migration 014, 70 RLS policies rewritten |
+| Phase 1: Database Schema + RLS | ✅ Done | 2026-03-17 | `employees.roles TEXT[]`, migration 011, 70 RLS policies rewritten |
 | Phase 2: Core Types + Auth Helpers | ✅ Done | 2026-03-17 | SessionUser.roles[], getCurrentUser() multi-role support, updateUserRoles() action |
 | Phase 3: Server Actions (21 files) | ✅ Done | 2026-03-17 | All actions converted to roles.includes() pattern, hasAnyRole() helper |
 | Phase 4: UI Components + Role Assignment | ✅ Done | 2026-03-17 | RoleAssignmentDialog for admin, role badges, multi-role nav logic |
@@ -161,13 +162,13 @@ All 17 tables implemented with RLS:
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| Phases Complete | 7/7 | ✅ 7/7 (100%) |
+| Phases Complete | 7/7 MVP | ✅ 7/7 (100%) + 1 Post-MVP Multi-Role RBAC (100%) |
 | Routes Implemented | 20+ | ✅ 25 routes |
-| Custom Components | 30+ | ✅ ~40+ components |
+| Custom Components | 30+ | ✅ ~40+ components (incl. RoleAssignmentDialog) |
 | Database Tables | 17 | ✅ 17 tables |
-| RLS Policies | 60+ | ✅ 70+ policies |
+| RLS Policies | 60+ | ✅ 70+ policies (multi-role aware) |
 | Build Errors | 0 | ✅ 0 errors |
-| Unit Tests | Core logic | ✅ 136 tests passing |
+| Unit Tests | Core logic | ✅ 136 tests passing (7 suites) |
 | MVP Optimizations | 18 | ✅ 18/18 (100%) |
 
 ---
@@ -274,7 +275,7 @@ npm run build && npm start
 
 ---
 
-**Status:** MVP Complete + Post-MVP Enhancements + Multi-Role RBAC ✅
+**Status:** MVP Complete + Post-MVP Enhancements (Semi-Manual Payroll, Attendance Summary, Lock Override, Per-Class Rows, Employee Module, RLS Recursion Fix) + Multi-Role RBAC ✅
 **Build:** 0 errors, 25 routes, ~140+ files
 **Ready for Deployment:** Yes
 

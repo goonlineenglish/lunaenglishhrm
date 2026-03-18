@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thiết Lập Hệ Thống — Luna HRM</title>
+  <meta name="description" content="Hướng dẫn sử dụng hệ thống quản lý nhân sự Luna HRM"/>
+  <style>
+:root {
+  --primary: #3E1A51;
+  --primary-light: #5a2d73;
+  --secondary: #4a7cc9;
+  --bg: #f8f7fc;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #6b6b8d;
+  --border: #e5e5ef;
+  --code-bg: #f3f1f9;
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #fff;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 12px rgba(62,26,81,0.2);
+}
+.header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none; color: #fff;
+}
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+}
+.logo h1 { font-size: 18px; font-weight: 700; }
+.logo small { font-size: 11px; opacity: 0.7; display: block; }
+.login-btn {
+  background: rgba(255,255,255,0.15);
+  color: #fff; text-decoration: none;
+  padding: 8px 18px; border-radius: 8px;
+  font-size: 14px; transition: background 0.2s;
+}
+.login-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Nav */
+.nav {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.nav-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; gap: 4px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.nav a {
+  padding: 10px 16px; font-size: 14px;
+  color: var(--text-muted); text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap; transition: all 0.2s;
+}
+.nav a:hover, .nav a.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Main */
+.main {
+  max-width: 860px; margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Guide Cards */
+.cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px; margin-top: 32px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-decoration: none; color: inherit;
+  transition: all 0.25s ease;
+  display: flex; gap: 16px;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(62,26,81,0.1);
+  border-color: var(--primary-light);
+}
+.card-icon { font-size: 40px; flex-shrink: 0; }
+.card h2 { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.card .role {
+  display: inline-block; font-size: 11px;
+  background: rgba(62,26,81,0.08); color: var(--primary);
+  padding: 2px 8px; border-radius: 99px; font-weight: 600;
+  margin-bottom: 8px;
+}
+.card p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.card .arrow { font-size: 14px; color: var(--primary); margin-top: 8px; font-weight: 500; }
+
+.hero { text-align: center; margin-bottom: 12px; }
+.hero h1 { font-size: 32px; color: var(--primary); margin-bottom: 8px; }
+.hero p { font-size: 17px; color: var(--text-muted); max-width: 560px; margin: 0 auto; }
+
+.tip-box {
+  margin-top: 40px; padding: 20px 24px;
+  background: var(--code-bg); border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.tip-box h3 { font-size: 15px; margin-bottom: 8px; }
+.tip-box li { font-size: 14px; color: var(--text-muted); margin: 4px 0; list-style: none; }
+
+/* Article Styles */
+.breadcrumb {
+  font-size: 14px; color: var(--text-muted); margin-bottom: 20px;
+}
+.breadcrumb a { color: var(--secondary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+.guide-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 32px; padding-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+.guide-header span { font-size: 32px; }
+.guide-header h1 { font-size: 26px; color: var(--primary); }
+
+article h1 { font-size: 28px; font-weight: 700; color: var(--primary); margin: 32px 0 16px; padding-bottom: 12px; border-bottom: 2px solid rgba(62,26,81,0.15); }
+article h2 { font-size: 22px; font-weight: 700; color: var(--primary); margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+article h3 { font-size: 18px; font-weight: 600; margin: 24px 0 8px; }
+article h4 { font-size: 16px; font-weight: 600; margin: 16px 0 6px; }
+article p { margin: 8px 0; color: var(--text); }
+article a { color: var(--secondary); }
+article strong { font-weight: 600; color: var(--text); }
+article code {
+  background: var(--code-bg); padding: 2px 6px;
+  border-radius: 4px; font-size: 0.9em;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  color: var(--primary);
+}
+article ul, article ol { margin: 10px 0; padding-left: 24px; }
+article li { margin: 4px 0; }
+article li.sub-item { margin-left: 24px; }
+article hr { margin: 32px 0; border: none; border-top: 1px solid var(--border); }
+
+.code-block {
+  margin: 16px 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.code-lang {
+  background: rgba(62,26,81,0.08); padding: 6px 16px;
+  font-size: 12px; color: var(--primary);
+  font-family: monospace; border-bottom: 1px solid var(--border);
+}
+.code-block pre {
+  background: var(--code-bg); padding: 16px;
+  overflow-x: auto; font-size: 13px; line-height: 1.6;
+}
+.code-block code { background: none; padding: 0; color: var(--text); }
+
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: rgba(62,26,81,0.06); text-align: left; font-weight: 600; color: var(--primary); }
+th, td { border: 1px solid var(--border); padding: 8px 12px; }
+tr:nth-child(even) { background: rgba(0,0,0,0.015); }
+
+.img-wrap { display: block; margin: 20px 0; }
+.img-wrap img {
+  max-width: 100%; border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+}
+.img-wrap figcaption {
+  font-size: 12px; color: var(--text-muted);
+  text-align: center; margin-top: 6px; font-style: italic;
+}
+
+.page-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 48px; padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.page-nav a {
+  color: var(--text-muted); text-decoration: none;
+  font-size: 14px; transition: color 0.2s;
+}
+.page-nav a:hover { color: var(--primary); }
+
+.footer {
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.02);
+  padding: 20px; text-align: center;
+  font-size: 13px; color: var(--text-muted);
+  margin-top: 40px;
+}
+
+@media (max-width: 640px) {
+  .cards { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 24px; }
+  article h1 { font-size: 22px; }
+  article h2 { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/helps/" class="logo">
+        <div class="logo-icon">L</div>
+        <div>
+          <h1>Luna HRM</h1>
+          <small>Trung tâm Hướng dẫn</small>
+        </div>
+      </a>
+      <a href="/login" class="login-btn">Đăng nhập</a>
+    </div>
+  </header>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/helps/">🏠 Trang chủ</a>
+      <a href="/helps/branch-manager-setup.html" class="active">Thiết Lập Hệ Thống</a>
+      <a href="/helps/branch-manager.html">Quản Lý Cơ Sở</a>
+      <a href="/helps/accountant.html">Kế Toán</a>
+      <a href="/helps/employee.html">Nhân Viên</a>
+    </div>
+  </nav>
+  <div class="main">
+    
+    <div class="breadcrumb">
+      <a href="/helps/">Hướng dẫn</a> / <strong>Thiết Lập Hệ Thống</strong>
+    </div>
+    <div class="guide-header">
+      <span>🏗️</span>
+      <div>
+        <h1 style="margin:0;padding:0;border:none">Thiết Lập Hệ Thống</h1>
+        <span class="role" style="margin-top:4px">Admin</span>
+      </div>
+    </div>
+    <article><h1 id="hướng-dẫn-setup-toàn-bộ-quản-lý-cơ-sở">Hướng Dẫn Setup Toàn Bộ — Quản Lý Cơ Sở</h1>
+<p><strong>Phiên bản:</strong> 1.1</p>
+<p><strong>Ngày cập nhật:</strong> 2026-03-18</p>
+<p><strong>Dành cho:</strong> Quản lý cơ sở (Branch Manager)</p>
+<p><strong>Thời gian:</strong> ~2-3 giờ cho setup lần đầu</p>
+<hr/>
+<h2 id="-tổng-quan">📋 Tổng Quan</h2>
+<p>Tài liệu này hướng dẫn chi tiết cách <strong>setup một cơ sở hoàn chỉnh</strong> từ đầu:</p>
+<ol>
+<li>✅ Tạo cơ sở (chi nhánh)</li>
+<li>✅ Thêm nhân viên</li>
+<li>✅ Tạo lịch học</li>
+<li>✅ Chấm công hàng tuần</li>
+</ol>
+<hr/>
+<h2 id="-quy-trình-1-setup-cơ-sở-lần-đầu">🚀 Quy Trình 1: Setup Cơ Sở Lần Đầu</h2>
+<h3 id="url-httpshrmlunaenglishiovndashboardbranches">URL: <code>https://hrm.lunaenglish.io.vn/dashboard/branches</code></h3>
+<h3 id="bước-11-đăng-nhập">Bước 1.1 — Đăng Nhập</h3>
+<ol>
+<li>Vào <strong>https://hrm.lunaenglish.io.vn</strong></li>
+<li>Nhập <strong>email</strong>: <code>bm.tanmai@luna-hrm.local</code> (hoặc email BM của bạn)</li>
+<li>Nhập <strong>mật khẩu</strong>: <code>Luna@2026</code> (do Admin cấp lần đầu)</li>
+<li>Kích <strong>Đăng Nhập</strong></li>
+</ol>
+<p><strong>Kết quả:</strong> Redirect về <strong>Dashboard</strong> (<code>/dashboard</code>)</p>
+<figure class="img-wrap"><img src="/helps/images/01-login-screen.png" alt="Step 1.1: Login screen with email/password fields" loading="lazy"/><figcaption>Step 1.1: Login screen with email/password fields</figcaption></figure>
+<hr/>
+<h3 id="bước-12-truy-cập-module-branches">Bước 1.2 — Truy Cập Module Branches</h3>
+<p><strong>Trên Dashboard:</strong></p>
+<ol>
+<li>Kích menu <strong>Nhân Viên</strong> ở bên trái</li>
+<li>Nhìn thấy sub-menu → Kích <strong>Quản Lý Chi Nhánh</strong> (hoặc kích trực tiếp URL bar)</li>
+<li>Hoặc truy cập URL: <code>https://hrm.lunaenglish.io.vn/dashboard/branches</code></li>
+</ol>
+<p><strong>Kết quả:</strong> Danh sách chi nhánh (có thể rỗng nếu lần đầu)</p>
+<figure class="img-wrap"><img src="/helps/images/02-sidebar-menu.png" alt="Step 1.2: Left sidebar menu with Branches option highlighted" loading="lazy"/><figcaption>Step 1.2: Left sidebar menu with Branches option highlighted</figcaption></figure>
+<hr/>
+<h3 id="bước-13-tạo-chi-nhánh-mới">Bước 1.3 — Tạo Chi Nhánh Mới</h3>
+<p><strong>Nếu chưa có chi nhánh:</strong></p>
+<ol>
+<li>Kích nút <strong>+ Tạo Chi Nhánh</strong> (góc trên phải)</li>
+<li>Modal form mở ra</li>
+</ol>
+<p><strong>Điền thông tin:</strong></p>
+<div class="code-block"><pre><code>Tên Chi Nhánh:        Tân Mai
+Mã Chi Nhánh:         TM-001
+Địa Chỉ:              123 Đường Tân Mai, Q.Tân Phú, HCM
+Điện Thoại:           +84 28 1234 5678
+Email:                tanmai@lunaenglish.io.vn
+Quản Lý Chi Nhánh:    [Chọn từ dropdown — tên BM]</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/03-branch-form.png" alt="Step 1.3: Branch creation form with fields" loading="lazy"/><figcaption>Step 1.3: Branch creation form with fields</figcaption></figure>
+<p><strong>Step 1.3.1 — Chọn Quản Lý Chi Nhánh</strong></p>
+<ul>
+<li>Kích dropdown <strong>Quản Lý Chi Nhánh</strong></li>
+<li>Danh sách BM hiện tại (hoặc "Tạo mới")</li>
+<li>Nếu "Tạo mới" → cần Admin tạo tài khoản trước</li>
+</ul>
+<p><strong>Step 1.3.2 — Lưu Chi Nhánh</strong></p>
+<ol>
+<li>Kiểm tra tất cả field đã điền</li>
+<li>Kích <strong>Lưu Chi Nhánh</strong></li>
+<li>Hệ thống xác nhận: "✓ Chi nhánh tạo thành công"</li>
+</ol>
+<p><strong>Kết quả:</strong> Chi nhánh hiện ở danh sách</p>
+<figure class="img-wrap"><img src="/helps/images/04-branch-success.png" alt="Step 1.3.2: Success message after branch creation" loading="lazy"/><figcaption>Step 1.3.2: Success message after branch creation</figcaption></figure>
+<hr/>
+<h3 id="bước-14-cấu-hình-cơ-sở-nếu-cần-sửa">Bước 1.4 — Cấu Hình Cơ Sở (Nếu Cần Sửa)</h3>
+<ol>
+<li>Kích tên chi nhánh trong danh sách</li>
+<li>Kích <strong>Chỉnh Sửa</strong></li>
+<li>Thay đổi thông tin (tên, địa chỉ, BM, v.v.)</li>
+<li>Kích <strong>Cập Nhật</strong></li>
+</ol>
+<hr/>
+<h2 id="-quy-trình-2-thêm-nhân-viên">👥 Quy Trình 2: Thêm Nhân Viên</h2>
+<h3 id="url-httpshrmlunaenglishiovndashboardemployees">URL: <code>https://hrm.lunaenglish.io.vn/dashboard/employees</code></h3>
+<h3 id="bước-21-truy-cập-module-nhân-viên">Bước 2.1 — Truy Cập Module Nhân Viên</h3>
+<ol>
+<li>Từ <strong>Dashboard</strong> → Menu trái → <strong>Nhân Viên</strong></li>
+<li>Hoặc URL: <code>https://hrm.lunaenglish.io.vn/dashboard/employees</code></li>
+</ol>
+<p><strong>Kết quả:</strong> Danh sách nhân viên (có cột: Mã NV, Tên, Chức Vụ, Email, Trạng Thái)</p>
+<figure class="img-wrap"><img src="/helps/images/05-employees-list.png" alt="Step 2.1: Employees list page with table and action buttons" loading="lazy"/><figcaption>Step 2.1: Employees list page with table and action buttons</figcaption></figure>
+<hr/>
+<h3 id="bước-22-thêm-nhân-viên-thủ-công-từng-cái">Bước 2.2 — Thêm Nhân Viên Thủ Công (Từng Cái)</h3>
+<p><strong>Nút "Thêm Nhân Viên" (góc trên phải):</strong></p>
+<ol>
+<li>Kích <strong>+ Thêm Nhân Viên</strong></li>
+<li>Form wizard mở ra (3 bước)</li>
+</ol>
+<hr/>
+<h4 id="bước-221-thông-tin-cơ-bản">Bước 2.2.1 — Thông Tin Cơ Bản</h4>
+<p><strong>Form:</strong></p>
+<div class="code-block"><pre><code>Mã Nhân Viên:        T-TM01        (tự định nghĩa, ví dụ: T=Teacher, TM=Tân Mai, 01=số thứ tự)
+Tên Đầy Đủ:          John Smith
+Email:               john.smith@luna-hrm.local
+Điện Thoại:          0912345678
+Chức Vụ:             Giáo Viên      (Chọn: Giáo Viên, Trợ Giảng, Nhân viên VP)
+Chi Nhánh:           Tân Mai        (auto-filled từ BM, hoặc chọn)
+Tỷ Giá Lương:        75000          (VND/phiên cho Giáo viên)
+Có Hợp Đồng Lao Động: ☑             (checkbox)</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/06-employee-form-tab1.png" alt="Step 2.2.1: Employee form - Basic Info tab" loading="lazy"/><figcaption>Step 2.2.1: Employee form - Basic Info tab</figcaption></figure>
+<p><strong>Kích "Tiếp Tục" → Bước 2.2.2</strong></p>
+<hr/>
+<h4 id="bước-222-thông-tin-cá-nhân">Bước 2.2.2 — Thông Tin Cá Nhân</h4>
+<p><strong>Form:</strong></p>
+<div class="code-block"><pre><code>CCCD:                123456789
+Ngày Sinh:           1990-05-15
+Địa Chỉ:             Tân Bình, TPHCM
+Bằng Cấp:            B.A. English   (tuỳ chọn)
+Ghi Chú:             Tốt nghiệp ĐH Ngoại Ngữ</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/07-employee-form-tab2.png" alt="Step 2.2.2: Employee form - Personal Info tab" loading="lazy"/><figcaption>Step 2.2.2: Employee form - Personal Info tab</figcaption></figure>
+<p><strong>Kích "Tiếp Tục" → Bước 2.2.3</strong></p>
+<hr/>
+<h4 id="bước-223-thông-tin-ngân-hàng">Bước 2.2.3 — Thông Tin Ngân Hàng</h4>
+<p><strong>Form:</strong></p>
+<div class="code-block"><pre><code>Ngân Hàng:           Vietcombank     (Chọn từ dropdown)
+Chủ Tài Khoản:       JOHN SMITH
+Số Tài Khoản:        1234567890
+Chi Nhánh Ngân Hàng: Tân Bình</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/08-employee-form-tab3.png" alt="Step 2.2.3: Employee form - Bank Info tab" loading="lazy"/><figcaption>Step 2.2.3: Employee form - Bank Info tab</figcaption></figure>
+<p><strong>Kích "Tạo Nhân Viên"</strong></p>
+<hr/>
+<h4 id="kết-quả-bước-22">Kết Quả Bước 2.2</h4>
+<ul>
+<li>✓ Nhân viên được tạo</li>
+<li>Hệ thống hiển thị: "✓ Nhân viên tạo thành công"</li>
+<li>Danh sách cập nhật → Thấy nhân viên mới</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/09-employee-success.png" alt="Step 2.2: Success notification" loading="lazy"/><figcaption>Step 2.2: Success notification</figcaption></figure>
+<hr/>
+<h3 id="bước-23-nhập-nhân-viên-hàng-loạt-excel">Bước 2.3 — Nhập Nhân Viên Hàng Loạt (Excel)</h3>
+<p><strong>Nút "Nhập Excel" (bên cạnh "+ Thêm Nhân Viên"):</strong></p>
+<ol>
+<li>Kích <strong>📤 Nhập Excel</strong></li>
+<li>Dialog mở ra</li>
+</ol>
+<figure class="img-wrap"><img src="/helps/images/10-import-dialog.png" alt="Step 2.3: Import Excel dialog with template download button" loading="lazy"/><figcaption>Step 2.3: Import Excel dialog with template download button</figcaption></figure>
+<hr/>
+<h4 id="bước-231-tải-template">Bước 2.3.1 — Tải Template</h4>
+<ol>
+<li>Kích <strong>Tải Template</strong></li>
+<li>File <code>employees-template.xlsx</code> tải về</li>
+</ol>
+<p><strong>Mở template trong Excel, điền dữ liệu:</strong></p>
+<div class="table-wrap"><table><thead><tr><th>full_name</th><th>employee_code</th><th>email</th><th>position</th><th>salary_per_session</th><th>has_labor_contract</th><th>is_active</th></tr></thead><tbody><tr><td>John Smith</td><td>T-TM01</td><td>john@luna.local</td><td>teacher</td><td>75000</td><td>1</td><td>1</td></tr><tr><td>Trần Thị Linh</td><td>A-TM01</td><td>linh@luna.local</td><td>assistant</td><td>0</td><td>1</td><td>1</td></tr><tr><td>Lê Thị Ngân</td><td>O-TM01</td><td>ngan@luna.local</td><td>office</td><td>0</td><td>1</td><td>1</td></tr></tbody></table></div>
+<p><strong>Lưu ý:</strong></p>
+<ul>
+<li><code>position</code>: teacher / assistant / office / admin</li>
+<li><code>salary_per_session</code>: 0 cho trợ giảng (tính theo KPI)</li>
+<li><code>has_labor_contract</code>: 1 = Có, 0 = Không</li>
+<li><code>is_active</code>: 1 = Hoạt động, 0 = Ngưng việc</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/11-excel-template.png" alt="Step 2.3.1: Excel template with sample data" loading="lazy"/><figcaption>Step 2.3.1: Excel template with sample data</figcaption></figure>
+<hr/>
+<h4 id="bước-232-upload-file">Bước 2.3.2 — Upload File</h4>
+<ol>
+<li>Kích <strong>Chọn File</strong> → Chọn file Excel đã điền</li>
+<li>Hoặc kéo thả file vào upload zone</li>
+<li>Kích <strong>Nhập</strong></li>
+</ol>
+<p><strong>Hệ thống sẽ:</strong></p>
+<ul>
+<li>Validate dữ liệu</li>
+<li>Hiển thị preview (danh sách nhân viên sẽ thêm)</li>
+<li>Kích <strong>Xác Nhận</strong> → Import</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/12-upload-preview.png" alt="Step 2.3.2: Upload area and preview of imported employees" loading="lazy"/><figcaption>Step 2.3.2: Upload area and preview of imported employees</figcaption></figure>
+<p><strong>Kết quả:</strong></p>
+<ul>
+<li>✓ Danh sách cập nhật</li>
+<li>Thấy tất cả nhân viên vừa import</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/13-import-success.png" alt="Step 2.3.2: Success message and updated employees list" loading="lazy"/><figcaption>Step 2.3.2: Success message and updated employees list</figcaption></figure>
+<hr/>
+<h2 id="-quy-trình-3-tạo-lịch-học">📅 Quy Trình 3: Tạo Lịch Học</h2>
+<h3 id="url-httpshrmlunaenglishiovndashboardclass-schedules">URL: <code>https://hrm.lunaenglish.io.vn/dashboard/class-schedules</code></h3>
+<h3 id="bước-31-truy-cập-module-lịch-học">Bước 3.1 — Truy Cập Module Lịch Học</h3>
+<ol>
+<li>Từ <strong>Dashboard</strong> → Menu trái → <strong>Lịch Học</strong></li>
+<li>Hoặc URL: <code>https://hrm.lunaenglish.io.vn/dashboard/class-schedules</code></li>
+</ol>
+<p><strong>Kết quả:</strong> Danh sách lớp học (có cột: Mã Lớp, Tên, Giáo Viên, Trợ Giảng, Giờ Học, Trạng Thái)</p>
+<figure class="img-wrap"><img src="/helps/images/14-class-list.png" alt="Step 3.1: Class schedules list page" loading="lazy"/><figcaption>Step 3.1: Class schedules list page</figcaption></figure>
+<hr/>
+<h3 id="bước-32-tạo-lịch-học-thủ-công-từng-cái">Bước 3.2 — Tạo Lịch Học Thủ Công (Từng Cái)</h3>
+<ol>
+<li>Kích <strong>+ Tạo Lịch Học</strong> (góc trên phải)</li>
+<li>Form mở ra</li>
+</ol>
+<p><strong>Điền thông tin:</strong></p>
+<div class="code-block"><pre><code>Mã Lớp:              B1-TM-01
+Tên Lớp:             Beginner 1 - Sáng Tân Mai
+Khóa Học:            Beginner (BASIC)
+Giáo Viên:           John Smith          [Chọn từ danh sách nhân viên]
+Trợ Giảng:           Trần Thị Linh        [Chọn từ danh sách]
+Giờ Bắt Đầu:         08:00
+Giờ Kết Thúc:        09:30
+Ngày Học:            ☑ Mon  ☑ Wed  ☑ Fri  [Chọn các ngày]
+Trạng Thái:          Active              [Chọn: Active / Inactive]</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/15-class-form.png" alt="Step 3.2: Class schedule creation form" loading="lazy"/><figcaption>Step 3.2: Class schedule creation form</figcaption></figure>
+<hr/>
+<h3 id="bước-33-lưu-lịch-học">Bước 3.3 — Lưu Lịch Học</h3>
+<ol>
+<li>Kiểm tra tất cả field đã điền</li>
+<li>Kích <strong>Lưu Lịch Học</strong></li>
+<li>Hệ thống xác nhận: "✓ Lịch học tạo thành công"</li>
+</ol>
+<p><strong>Kết quả:</strong></p>
+<ul>
+<li>✓ Lớp học được tạo</li>
+<li>Hệ thống <strong>auto-generate chấm công</strong> cho tuần hiện tại</li>
+<li>Danh sách lịch học cập nhật</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/16-class-success.png" alt="Step 3.3: Success message" loading="lazy"/><figcaption>Step 3.3: Success message</figcaption></figure>
+<hr/>
+<h3 id="bước-34-nhập-lịch-học-hàng-loạt-excel">Bước 3.4 — Nhập Lịch Học Hàng Loạt (Excel)</h3>
+<ol>
+<li>Kích <strong>📤 Nhập Excel</strong></li>
+<li>Tải template</li>
+</ol>
+<p><strong>Template columns:</strong></p>
+<div class="code-block"><pre><code>class_code | name | time_start | time_end | days | teacher_email | assistant_email | course_level | status
+B1-01 | Beginner 1 | 08:00 | 09:30 | Mon,Wed,Fri | john@luna.local | linh@luna.local | BASIC | active</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/17-class-template.png" alt="Step 3.4: Class schedule Excel template" loading="lazy"/><figcaption>Step 3.4: Class schedule Excel template</figcaption></figure>
+<ol>
+<li>Điền dữ liệu → Upload → Xác nhận</li>
+</ol>
+<figure class="img-wrap"><img src="/helps/images/18-class-import.png" alt="Step 3.4: Upload and import confirmation" loading="lazy"/><figcaption>Step 3.4: Upload and import confirmation</figcaption></figure>
+<hr/>
+<h2 id="-quy-trình-4-chấm-công-hàng-tuần">✅ Quy Trình 4: Chấm Công Hàng Tuần</h2>
+<h3 id="url-httpshrmlunaenglishiovndashboardattendance">URL: <code>https://hrm.lunaenglish.io.vn/dashboard/attendance</code></h3>
+<h3 id="bước-41-truy-cập-module-chấm-công">Bước 4.1 — Truy Cập Module Chấm Công</h3>
+<ol>
+<li>Từ <strong>Dashboard</strong> → Menu trái → <strong>Chấm Công</strong></li>
+<li>Hoặc URL: <code>https://hrm.lunaenglish.io.vn/dashboard/attendance</code></li>
+</ol>
+<p><strong>Kết quả:</strong> Lưới chấm công hiển thị</p>
+<figure class="img-wrap"><img src="/helps/images/19-attendance-page.png" alt="Step 4.1: Attendance page with week selector and grid" loading="lazy"/><figcaption>Step 4.1: Attendance page with week selector and grid</figcaption></figure>
+<hr/>
+<h3 id="bước-42-chọn-tuần-cần-chấm">Bước 4.2 — Chọn Tuần Cần Chấm</h3>
+<ol>
+<li><strong>Tuần Selector</strong> (phía trên): Chọn tuần từ dropdown hoặc calendar</li>
+<li>Mặc định = tuần hiện tại</li>
+<li>Mỗi tuần: Thứ 2 - Chủ Nhật (7 cột)</li>
+</ol>
+<p><strong>Lưới hiển thị:</strong></p>
+<div class="code-block"><pre><code>| Nhân Viên (từ lịch học) | T2 | T3 | T4 | T5 | T6 | T7 | CN |
+| John Smith (B1-01)      | 1  | 1  | 1  | 1  | 1  | -  | -  |
+| Trần Thị Linh (B1-01)    | 1  | 1  | 1  | 1  | 1  | -  | -  |</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/20-week-selector.png" alt="Step 4.2: Week selector and attendance grid with columns" loading="lazy"/><figcaption>Step 4.2: Week selector and attendance grid with columns</figcaption></figure>
+<hr/>
+<h3 id="bước-43-chỉnh-sửa-chấm-công">Bước 4.3 — Chỉnh Sửa Chấm Công</h3>
+<h4 id="cách-1-click-từng-ô-cycle-trạng-thái">Cách 1 — Click Từng Ô (Cycle Trạng Thái)</h4>
+<ol>
+<li>Kích vào ô chấm công</li>
+<li>Trạng thái <strong>cycle</strong>: 1 → 0 → KP → 0.5 → 1</li>
+</ol>
+<ul>
+<li><strong>1</strong> = Có mặt cả ngày</li>
+<li><strong>0</strong> = Vắng có phép</li>
+<li><strong>KP</strong> = Vắng không phép</li>
+<li><strong>0.5</strong> = Nửa ngày</li>
+<li><strong>-</strong> = Không có lớp (tự động)</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/21-attendance-cell-cycle.png" alt="Step 4.3a: Attendance cell cycling through statuses" loading="lazy"/><figcaption>Step 4.3a: Attendance cell cycling through statuses</figcaption></figure>
+<h4 id="cách-2-auto-fill-từ-tuần-trước">Cách 2 — Auto-fill (Từ Tuần Trước)</h4>
+<ol>
+<li>Kích nút <strong>🔄 Auto-fill</strong> (góc trên phải)</li>
+<li>Hệ thống điền dữ liệu tuần trước</li>
+<li><strong>Lưu ý:</strong> Kiểm tra kỹ trước khi lưu</li>
+</ol>
+<figure class="img-wrap"><img src="/helps/images/22-auto-fill.png" alt="Step 4.3b: Auto-fill button and confirmation" loading="lazy"/><figcaption>Step 4.3b: Auto-fill button and confirmation</figcaption></figure>
+<hr/>
+<h3 id="bước-44-xem-trước-thay-đổi">Bước 4.4 — Xem Trước Thay Đổi</h3>
+<ol>
+<li>Kích <strong>👁️ Xem Trước</strong> (góc dưới phải)</li>
+<li>Modal hiển thị: <strong>Trước</strong> vs <strong>Sau</strong></li>
+</ol>
+<div class="code-block"><pre><code>TRƯỚC:          SAU:
+John 1 1 1      John 1 1 0
+Linh 1 1 KP     Linh 1 1 KP</code></pre></div>
+<figure class="img-wrap"><img src="/helps/images/23-preview-modal.png" alt="Step 4.4: Diff/preview modal showing before and after" loading="lazy"/><figcaption>Step 4.4: Diff/preview modal showing before and after</figcaption></figure>
+<ol>
+<li>Kiểm tra có đúng không</li>
+<li>Kích <strong>✓ Xác Nhận Thay Đổi</strong> → Lưu vào DB</li>
+</ol>
+<p><strong>Kết quả:</strong> Grid cập nhật</p>
+<figure class="img-wrap"><img src="/helps/images/24-confirm-success.png" alt="Step 4.4: Confirmation and success message" loading="lazy"/><figcaption>Step 4.4: Confirmation and success message</figcaption></figure>
+<hr/>
+<h3 id="bước-45-khóa-tuần-chấm-công">Bước 4.5 — Khóa Tuần Chấm Công</h3>
+<p><strong>Sau khi hoàn thành chấm công:</strong></p>
+<ol>
+<li>Kích nút <strong>🔒 Khóa Tuần</strong> (góc dưới phải)</li>
+<li>Modal xác nhận:</li>
+</ol>
+<div class="code-block"><pre><code>   Bạn có chắc muốn khóa tuần 2026-03-02?
+   Tuần khóa không thể chỉnh sửa.</code></pre></div>
+<ol>
+<li>Kích <strong>Xác Nhận Khóa Tuần</strong></li>
+</ol>
+<p><strong>Kết quả:</strong></p>
+<ul>
+<li>✓ Tuần bị khóa</li>
+<li>Hệ thống ghi lại: ngày khóa + người khóa</li>
+<li>Lưới chuyển sang trạng thái read-only</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/25-lock-dialog.png" alt="Step 4.5: Lock confirmation dialog" loading="lazy"/><figcaption>Step 4.5: Lock confirmation dialog</figcaption></figure>
+<hr/>
+<h3 id="bước-46-mở-khóa-tuần-nếu-cần-sửa">Bước 4.6 — Mở Khóa Tuần (Nếu Cần Sửa)</h3>
+<ol>
+<li>Tìm tuần bị khóa</li>
+<li>Kích <strong>🔓 Mở Khóa</strong> (nút đó thay thế "Khóa Tuần")</li>
+<li>Ghi lý do mở khóa (tuỳ chọn)</li>
+<li>Kích <strong>Xác Nhận Mở Khóa</strong></li>
+</ol>
+<p><strong>Kết quả:</strong></p>
+<ul>
+<li>✓ Tuần mở khóa</li>
+<li>Có thể chỉnh sửa lại</li>
+<li>Lịch sử mở/khóa được ghi vào Audit Log</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/26-unlock-dialog.png" alt="Step 4.6: Unlock dialog" loading="lazy"/><figcaption>Step 4.6: Unlock dialog</figcaption></figure>
+<hr/>
+<h3 id="bước-47-xuất-excel-chấm-công">Bước 4.7 — Xuất Excel Chấm Công</h3>
+<ol>
+<li>Kích <strong>📥 Xuất Excel</strong> (góc trên phải)</li>
+<li>File <code>attendance-2026-03.xlsx</code> tải về</li>
+</ol>
+<p><strong>File bao gồm:</strong></p>
+<ul>
+<li>Tất cả tuần trong tháng</li>
+<li>Tất cả nhân viên</li>
+<li>Có thể in hoặc chia sẻ</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/27-export-button.png" alt="Step 4.7: Export button and downloaded file" loading="lazy"/><figcaption>Step 4.7: Export button and downloaded file</figcaption></figure>
+<hr/>
+<h2 id="-tab-tổng-hợp-chấm-công-attendance-summary">📊 Tab Tổng Hợp Chấm Công (Attendance Summary)</h2>
+<h3 id="url-httpshrmlunaenglishiovndashboardattendance-tab-tổng-hợp">URL: <code>https://hrm.lunaenglish.io.vn/dashboard/attendance</code> → Tab "Tổng Hợp"</h3>
+<h3 id="bước-48-xem-tính-toán-sessions">Bước 4.8 — Xem Tính Toán Sessions</h3>
+<ol>
+<li>Ở lưới chấm công → Kích tab <strong>Tổng Hợp</strong></li>
+<li>Hiển thị bảng:</li>
+</ol>
+<div class="code-block"><pre><code>   | Nhân Viên  | Lớp (Class) | Mon | Tue | Wed | Thu | Fri | Sat | Sun | Total Sessions |
+   | John Smith | B1-01       | 1   | -   | 1   | -   | 1   | -   | -   | 3              |
+   | Linh       | B1-01       | 1   | -   | 1   | -   | 1   | -   | -   | 3              |</code></pre></div>
+<p><strong>Tính toán:</strong></p>
+<ul>
+<li>Sessions = tổng số ngày có mặt (status = 1)</li>
+<li>Half-day (0.5) = tính 0.5 sessions</li>
+<li>Dùng để tính lương (Kế toán dùng)</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/28-summary-tab.png" alt="Step 4.8: Attendance Summary tab with per-employee per-class sessions" loading="lazy"/><figcaption>Step 4.8: Attendance Summary tab with per-employee per-class sessions</figcaption></figure>
+<hr/>
+<h2 id="-quy-trình-5-vp-attendance-nhân-viên-văn-phòng">🔐 Quy Trình 5: VP Attendance (Nhân Viên Văn Phòng)</h2>
+<h3 id="url-httpshrmlunaenglishiovndashboardoffice-attendance">URL: <code>https://hrm.lunaenglish.io.vn/dashboard/office-attendance</code></h3>
+<h3 id="bước-51-truy-cập-module-vp-attendance">Bước 5.1 — Truy Cập Module VP Attendance</h3>
+<ol>
+<li>Từ <strong>Dashboard</strong> → Menu trái → <strong>Chấm Công VP</strong></li>
+<li>Hoặc URL: <code>https://hrm.lunaenglish.io.vn/dashboard/office-attendance</code></li>
+</ol>
+<p><strong>Khác với Attendance Grid:</strong></p>
+<ul>
+<li>Không theo lớp học</li>
+<li>Hàng ngày (Thứ 2 - Thứ 7)</li>
+<li>Chỉ dành cho nhân viên VP</li>
+</ul>
+<figure class="img-wrap"><img src="/helps/images/29-vp-attendance-page.png" alt="Step 5.1: Office attendance page with daily grid" loading="lazy"/><figcaption>Step 5.1: Office attendance page with daily grid</figcaption></figure>
+<hr/>
+<h3 id="bước-52-chấm-công-vp">Bước 5.2 — Chấm Công VP</h3>
+<ol>
+<li>Chọn <strong>Tháng/Năm</strong></li>
+<li>Lưới hiển thị:</li>
+</ol>
+<div class="code-block"><pre><code>   | Nhân Viên | T2 | T3 | T4 | T5 | T6 | T7 |
+   | Lê Ngân   | 1  | 1  | 1  | 1  | 1  | -  |</code></pre></div>
+<ol>
+<li>Click ô → Cycle trạng thái (1 → 0 → KP → 0.5)</li>
+<li>Kích <strong>Lưu</strong></li>
+</ol>
+<p><strong>Lưu ý:</strong> Thứ 7 là tuỳ chọn (nhiều nơi không làm)</p>
+<figure class="img-wrap"><img src="/helps/images/30-vp-grid.png" alt="Step 5.2: Office attendance grid for daily entry" loading="lazy"/><figcaption>Step 5.2: Office attendance grid for daily entry</figcaption></figure>
+<hr/>
+<h2 id="-automation-cron-jobs">⏰ Automation — Cron Jobs</h2>
+<h3 id="auto-lock-mỗi-chủ-nhật-2300">Auto-lock Mỗi Chủ Nhật 23:00</h3>
+<ul>
+<li>Hệ thống tự động khóa tuần</li>
+<li>Bạn <strong>không cần</strong> thao tác thủ công</li>
+<li>Để đảm bảo dữ liệu không bị sửa sau hạn</li>
+</ul>
+<h3 id="reminder-email-thứ-5-lúc-3pm">Reminder Email — Thứ 5 Lúc 3PM</h3>
+<ul>
+<li>Hệ thống gửi email nhắc nhở</li>
+<li>Nội dung: "Hãy chấm công cho tuần này"</li>
+<li>Để bạn không quên</li>
+</ul>
+<hr/>
+<h2 id="-checklist-setup-hoàn-chỉnh">📋 Checklist Setup Hoàn Chỉnh</h2>
+<div class="code-block"><pre><code>SETUP CƠNG SỞ LẦN ĐẦU
+├─ ☐ Tạo chi nhánh tại /dashboard/branches
+├─ ☐ Thêm nhân viên (thủ công hoặc Excel) tại /dashboard/employees
+├─ ☐ Tạo lịch học (thủ công hoặc Excel) tại /dashboard/class-schedules
+├─ ☐ Chấm công tuần đầu tại /dashboard/attendance
+├─ ☐ Khóa tuần đầu
+└─ ☐ Xuất chứng chỉ chấm công (Excel)
+
+CÔNG VIỆC HÀng TUẦN
+├─ ☐ Mỗi Thứ 2: Chấm công cho tuần trước (nếu quên)
+├─ ☐ Mỗi Thứ 5: Nhận email nhắc nhở (tự động)
+├─ ☐ Mỗi Thứ 6-CN: Hoàn thành chấm công
+├─ ☐ Mỗi CN: Khóa tuần (nếu chưa auto-lock)
+└─ ☐ Cuối tháng: Xuất Excel gửi Kế toán
+
+HÀNG THÁNG (Cuối Tháng)
+├─ ☐ Đảm bảo tất cả tuần đã chấm &amp; khóa
+├─ ☐ Xuất Excel chấm công
+├─ ☐ Gửi Kế toán để tính lương
+├─ ☐ (Kế toán tính lương)
+├─ ☐ Duyệt bảng lương tại /dashboard/payroll
+└─ ☐ Phê duyệt lương</code></pre></div>
+<hr/>
+<h2 id="-faq-thường-gặp">❓ FAQ Thường Gặp</h2>
+<h3 id="q-chấm-công-bị-sai-phải-làm-gì">Q: Chấm công bị sai, phải làm gì?</h3>
+<p><strong>A:</strong></p>
+<ol>
+<li>Tìm tuần cần sửa</li>
+<li>Kích <strong>🔓 Mở Khóa</strong> (nếu đã khóa)</li>
+<li>Chỉnh sửa ô chấm công</li>
+<li>Kích <strong>Xác Nhận Thay Đổi</strong></li>
+<li>Khóa lại (nếu cần)</li>
+</ol>
+<h3 id="q-quên-auto-fill-thì-sao">Q: Quên auto-fill thì sao?</h3>
+<p><strong>A:</strong></p>
+<ol>
+<li>Mỗi ngày có thể input thủ công</li>
+<li>Hoặc dùng <strong>Auto-fill</strong> (điền từ tuần trước)</li>
+<li>Kiểm tra trước khi lưu</li>
+</ol>
+<h3 id="q-nhân-viên-mới-vào-giữa-tháng">Q: Nhân viên mới vào giữa tháng?</h3>
+<p><strong>A:</strong></p>
+<ol>
+<li>Thêm nhân viên vào danh sách</li>
+<li>Tạo lịch học gán cho nhân viên đó</li>
+<li>Auto-generate chấm công cho tuần tiếp theo</li>
+</ol>
+<h3 id="q-lương-tính-sao-nếu-05-ngày">Q: Lương tính sao nếu 0.5 ngày?</h3>
+<p><strong>A:</strong> 0.5 = nửa ngày = 0.5 sessions trong lương</p>
+<h3 id="q-mất-dữ-liệu-sau-khi-khóa-tuần">Q: Mất dữ liệu sau khi khóa tuần?</h3>
+<p><strong>A:</strong> Không. Khóa = chỉ read-only. Dữ liệu vẫn lưu. Có thể mở khóa & sửa.</p>
+<hr/>
+<h2 id="-hỗ-trợ">📞 Hỗ Trợ</h2>
+<ul>
+<li><strong>Vấn đề nhân viên:</strong> Liên hệ Admin</li>
+<li><strong>Vấn đề lịch học:</strong> Liên hệ Admin</li>
+<li><strong>Vấn đề chấm công:</strong> Liên hệ Kế toán</li>
+<li><strong>Tài khoản / Mật khẩu:</strong> Admin</li>
+</ul></article>
+    <div class="page-nav">
+      <div></div>
+      <a href="/helps/branch-manager.html">Quản Lý Cơ Sở →</a>
+    </div>
+  
+  </div>
+  <footer class="footer">© 2026 Luna English — Luna HRM Help Center</footer>
+</body>
+</html>

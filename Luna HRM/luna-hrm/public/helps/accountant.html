@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kế Toán — Luna HRM</title>
+  <meta name="description" content="Hướng dẫn sử dụng hệ thống quản lý nhân sự Luna HRM"/>
+  <style>
+:root {
+  --primary: #3E1A51;
+  --primary-light: #5a2d73;
+  --secondary: #4a7cc9;
+  --bg: #f8f7fc;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #6b6b8d;
+  --border: #e5e5ef;
+  --code-bg: #f3f1f9;
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #fff;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 12px rgba(62,26,81,0.2);
+}
+.header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none; color: #fff;
+}
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+}
+.logo h1 { font-size: 18px; font-weight: 700; }
+.logo small { font-size: 11px; opacity: 0.7; display: block; }
+.login-btn {
+  background: rgba(255,255,255,0.15);
+  color: #fff; text-decoration: none;
+  padding: 8px 18px; border-radius: 8px;
+  font-size: 14px; transition: background 0.2s;
+}
+.login-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Nav */
+.nav {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.nav-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; gap: 4px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.nav a {
+  padding: 10px 16px; font-size: 14px;
+  color: var(--text-muted); text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap; transition: all 0.2s;
+}
+.nav a:hover, .nav a.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Main */
+.main {
+  max-width: 860px; margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Guide Cards */
+.cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px; margin-top: 32px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-decoration: none; color: inherit;
+  transition: all 0.25s ease;
+  display: flex; gap: 16px;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(62,26,81,0.1);
+  border-color: var(--primary-light);
+}
+.card-icon { font-size: 40px; flex-shrink: 0; }
+.card h2 { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.card .role {
+  display: inline-block; font-size: 11px;
+  background: rgba(62,26,81,0.08); color: var(--primary);
+  padding: 2px 8px; border-radius: 99px; font-weight: 600;
+  margin-bottom: 8px;
+}
+.card p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.card .arrow { font-size: 14px; color: var(--primary); margin-top: 8px; font-weight: 500; }
+
+.hero { text-align: center; margin-bottom: 12px; }
+.hero h1 { font-size: 32px; color: var(--primary); margin-bottom: 8px; }
+.hero p { font-size: 17px; color: var(--text-muted); max-width: 560px; margin: 0 auto; }
+
+.tip-box {
+  margin-top: 40px; padding: 20px 24px;
+  background: var(--code-bg); border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.tip-box h3 { font-size: 15px; margin-bottom: 8px; }
+.tip-box li { font-size: 14px; color: var(--text-muted); margin: 4px 0; list-style: none; }
+
+/* Article Styles */
+.breadcrumb {
+  font-size: 14px; color: var(--text-muted); margin-bottom: 20px;
+}
+.breadcrumb a { color: var(--secondary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+.guide-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 32px; padding-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+.guide-header span { font-size: 32px; }
+.guide-header h1 { font-size: 26px; color: var(--primary); }
+
+article h1 { font-size: 28px; font-weight: 700; color: var(--primary); margin: 32px 0 16px; padding-bottom: 12px; border-bottom: 2px solid rgba(62,26,81,0.15); }
+article h2 { font-size: 22px; font-weight: 700; color: var(--primary); margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+article h3 { font-size: 18px; font-weight: 600; margin: 24px 0 8px; }
+article h4 { font-size: 16px; font-weight: 600; margin: 16px 0 6px; }
+article p { margin: 8px 0; color: var(--text); }
+article a { color: var(--secondary); }
+article strong { font-weight: 600; color: var(--text); }
+article code {
+  background: var(--code-bg); padding: 2px 6px;
+  border-radius: 4px; font-size: 0.9em;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  color: var(--primary);
+}
+article ul, article ol { margin: 10px 0; padding-left: 24px; }
+article li { margin: 4px 0; }
+article li.sub-item { margin-left: 24px; }
+article hr { margin: 32px 0; border: none; border-top: 1px solid var(--border); }
+
+.code-block {
+  margin: 16px 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.code-lang {
+  background: rgba(62,26,81,0.08); padding: 6px 16px;
+  font-size: 12px; color: var(--primary);
+  font-family: monospace; border-bottom: 1px solid var(--border);
+}
+.code-block pre {
+  background: var(--code-bg); padding: 16px;
+  overflow-x: auto; font-size: 13px; line-height: 1.6;
+}
+.code-block code { background: none; padding: 0; color: var(--text); }
+
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: rgba(62,26,81,0.06); text-align: left; font-weight: 600; color: var(--primary); }
+th, td { border: 1px solid var(--border); padding: 8px 12px; }
+tr:nth-child(even) { background: rgba(0,0,0,0.015); }
+
+.img-wrap { display: block; margin: 20px 0; }
+.img-wrap img {
+  max-width: 100%; border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+}
+.img-wrap figcaption {
+  font-size: 12px; color: var(--text-muted);
+  text-align: center; margin-top: 6px; font-style: italic;
+}
+
+.page-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 48px; padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.page-nav a {
+  color: var(--text-muted); text-decoration: none;
+  font-size: 14px; transition: color 0.2s;
+}
+.page-nav a:hover { color: var(--primary); }
+
+.footer {
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.02);
+  padding: 20px; text-align: center;
+  font-size: 13px; color: var(--text-muted);
+  margin-top: 40px;
+}
+
+@media (max-width: 640px) {
+  .cards { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 24px; }
+  article h1 { font-size: 22px; }
+  article h2 { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/helps/" class="logo">
+        <div class="logo-icon">L</div>
+        <div>
+          <h1>Luna HRM</h1>
+          <small>Trung tâm Hướng dẫn</small>
+        </div>
+      </a>
+      <a href="/login" class="login-btn">Đăng nhập</a>
+    </div>
+  </header>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/helps/">🏠 Trang chủ</a>
+      <a href="/helps/branch-manager-setup.html">Thiết Lập Hệ Thống</a>
+      <a href="/helps/branch-manager.html">Quản Lý Cơ Sở</a>
+      <a href="/helps/accountant.html" class="active">Kế Toán</a>
+      <a href="/helps/employee.html">Nhân Viên</a>
+    </div>
+  </nav>
+  <div class="main">
+    
+    <div class="breadcrumb">
+      <a href="/helps/">Hướng dẫn</a> / <strong>Kế Toán</strong>
+    </div>
+    <div class="guide-header">
+      <span>💰</span>
+      <div>
+        <h1 style="margin:0;padding:0;border:none">Kế Toán</h1>
+        <span class="role" style="margin-top:4px">Accountant</span>
+      </div>
+    </div>
+    <article><h1 id="hướng-dẫn-sử-dụng-luna-hrm-kế-toán">Hướng Dẫn Sử Dụng Luna HRM — Kế Toán</h1>
+<p><strong>Phiên bản:</strong> 1.1</p>
+<p><strong>Ngày cập nhật:</strong> 2026-03-18</p>
+<p><strong>Dành cho:</strong> Kế toán (Accountant)</p>
+<hr/>
+<h2 id="-tổng-quan">📋 Tổng Quan</h2>
+<p>Tài liệu này hướng dẫn Kế toán cách sử dụng Luna HRM để:</p>
+<ul>
+<li>Tính lương hàng tháng (3 loại: Giáo viên, Trợ giảng, Nhân viên VP)</li>
+<li>Quản lý các loại phụ cấp & khấu trừ</li>
+<li>Tính thuế TNCN & bảo hiểm xã hội (BHXH/BHYT/BHTN)</li>
+<li>Xem lịch sử KPI</li>
+<li>Xuất bảng lương & chứng chỉ</li>
+<li>Quản lý điều chỉnh lương theo ghi chú</li>
+</ul>
+<p><strong>Quyền hạn Kế toán:</strong></p>
+<ul>
+<li>✅ Tạo kỳ tính lương</li>
+<li>✅ Tính lương tự động</li>
+<li>✅ Xem/sửa chi tiết lương</li>
+<li>✅ Duyệt & gửi lương</li>
+<li>✅ Xem KPI trợ giảng</li>
+<li>✅ Nhập ghi chú điều chỉnh (bonus/penalty/substitute)</li>
+<li>✅ Xuất báo cáo Excel/PDF</li>
+<li>✅ Quản lý phụ cấp cố định</li>
+<li>❌ Quản lý nhân viên (Quản lý cơ sở)</li>
+<li>❌ Quản lý toàn hệ thống (Admin)</li>
+</ul>
+<hr/>
+<h2 id="-bắt-đầu">🚀 Bắt Đầu</h2>
+<h3 id="đăng-nhập">Đăng Nhập</h3>
+<ol>
+<li>Vào <strong>https://hrm.lunaenglish.io.vn</strong></li>
+<li>Nhập <strong>email</strong> (ví dụ: <code>accountant@luna-hrm.local</code>)</li>
+<li>Nhập <strong>mật khẩu</strong> (cấp lần đầu: <code>Luna@2026</code>)</li>
+<li>Kích <strong>Đăng Nhập</strong></li>
+</ol>
+<h3 id="giao-diện-chính">Giao Diện Chính</h3>
+<div class="code-block"><pre><code>Dashboard (Trang chủ)
+├── Thống kê lương tháng này
+├── Menu bên trái
+│   ├── Bảng Lương (Payroll)
+│   ├── KPI (Kpi)
+│   ├── Nhân Viên (Employees - xem thôi)
+│   ├── Ghi Chú Hàng Tuần (Weekly Notes)
+│   ├── Hồ Sơ Cá Nhân (Profile)
+│   └── Đăng Xuất
+└── Thông tin cá nhân (góc phải)</code></pre></div>
+<hr/>
+<h2 id="-module-1-bảng-lương-payroll">💰 Module 1: Bảng Lương (Payroll)</h2>
+<h3 id="tổng-quan">Tổng Quan</h3>
+<ul>
+<li>Quản lý kỳ tính lương (tháng/năm)</li>
+<li>Tính lương tự động hoặc bán tự động</li>
+<li>Xem chi tiết từng nhân viên</li>
+<li>Điều chỉnh lương nếu có thay đổi</li>
+<li>Duyệt & gửi lương cho nhân viên</li>
+</ul>
+<h3 id="công-thức-tính-lương">Công Thức Tính Lương</h3>
+<p><strong>Giáo Viên & Nhân Viên VP:</strong></p>
+<div class="code-block"><pre><code>Lương Cơ Bản    = Sessions × Tỷ Giá Lương (ví dụ: 75,000 VND)
+Lương Thay Thế  = Substitute Sessions × Tỷ Giá Thay Thế (ví dụ: 200,000 VND)
+Lương Khác      = Từ ghi chú hàng tuần (Bonus, Extra Job)
+────────────────────────────────────────────────────
+GROSS (Lương Tổng Cộng)
+
+Phụ Cấp (Allowances)     = Từ salary_components cố định
+Khấu Trừ (Deductions)    = Từ salary_components cố định
+Penalty                  = Từ ghi chú hàng tuần (nếu có)
+────────────────────────────────────────────────────
+TAXABLE (Lương Chịu Thuế) = GROSS + Phụ Cấp - Khấu Trừ - Penalty
+
+Thuế TNCN                = Tỷ lệ% theo từng khung (7 khung thuế)
+BHXH (8%)               = Dành cho nhân viên hợp đồng lao động
+BHYT (1.5%)             = Dành cho nhân viên hợp đồng lao động
+BHTN (1%)               = Dành cho nhân viên hợp đồng lao động
+────────────────────────────────────────────────────
+NET (Lương Ròng) = TAXABLE - Thuế TNCN - BHXH - BHYT - BHTN</code></pre></div>
+<p><strong>Trợ Giảng (Assistant):</strong></p>
+<div class="code-block"><pre><code>NET = (Sessions × 75,000) + (Substitute × SubRate) + KPI Bonus + Khác - Deductions - Penalty - Taxes</code></pre></div>
+<h3 id="tạo-kỳ-tính-lương-mới">Tạo Kỳ Tính Lương Mới</h3>
+<p><strong>Step 1:</strong> Kích <strong>Bảng Lương</strong> → <strong>Tạo Kỳ Lương</strong></p>
+<p><strong>Step 2:</strong> Điền thông tin:</p>
+<div class="code-block"><pre><code>Tháng:           3
+Năm:             2026
+Ngày Bắt Đầu:    2026-03-01
+Ngày Kết Thúc:   2026-03-31
+Trạng Thái:      Draft (Dự thảo)
+
+[Các tùy chọn]
+☐ Khóa Tỷ Giá Cố Định   (nếu tỷ giá không đổi)
+☐ Tính Tự Động         (tự động tính ngay)</code></pre></div>
+<p><strong>Step 3:</strong> Kích <strong>Tạo Kỳ Lương</strong></p>
+<p>Hệ thống sẽ:</p>
+<ul>
+<li>Lấy chấm công từ Chấm Công module (sessions đã đi học)</li>
+<li>Lấy phụ cấp/khấu trừ từ salary_components</li>
+<li>Lấy KPI & bonus/penalty từ ghi chú hàng tuần</li>
+<li>Tính lương tự động cho tất cả nhân viên</li>
+</ul>
+<h3 id="tính-lương-tự-động-bán-tự-động">Tính Lương Tự Động / Bán Tự Động</h3>
+<p><strong>Tự Động:</strong></p>
+<ol>
+<li>Kỳ lương tạo mới → Hệ thống tính ngay</li>
+<li>Kích <strong>Tính Lương</strong> để tính lại (nếu chấm công bị sửa)</li>
+</ol>
+<p><strong>Bán Tự Động (Semi-Manual):</strong></p>
+<ul>
+<li>Lưới spreadsheet có thể chỉnh sửa</li>
+<li>Kích từng ô → Thay đổi giá trị (sessions, deductions, etc.)</li>
+<li>Lương sẽ tính lại tự động dựa trên công thức</li>
+</ul>
+<h3 id="xem-chi-tiết-lương-nhân-viên">Xem Chi Tiết Lương Nhân Viên</h3>
+<p><strong>Step 1:</strong> Kích <strong>Bảng Lương</strong> → Kỳ lương cần xem</p>
+<p><strong>Step 2:</strong> Danh sách nhân viên → Kích tên → <strong>Chi Tiết Lương</strong></p>
+<p><strong>Chi tiết hiển thị:</strong></p>
+<div class="code-block"><pre><code>John Smith — Tháng 3/2026
+─────────────────────────────────────
+📊 SESSIONS (Các Phiên)
+  Giáo viên:           40 phiên × 75,000 VND    = 3,000,000 VND
+  Thay Thế:            4 phiên × 200,000 VND    = 800,000 VND
+  ─────────────────────────────────────────────
+  Subtotal:                                      3,800,000 VND
+
+💰 ALLOWANCES &amp; DEDUCTIONS
+  Phụ Cấp Bảo Hiểm:    500,000 VND
+  Khấu Trừ Quỹ:        -100,000 VND
+  Ghi Chú Thêm:        0 VND
+  ─────────────────────────────────────────────
+  Subtotal:                                      400,000 VND
+
+🎯 SPECIAL (KPI, Bonus, Penalty)
+  KPI Bonus (Trợ Giảng): 0 VND
+  Bonus Thêm:          0 VND
+  Penalty:             0 VND
+  ─────────────────────────────────────────────
+  Subtotal:                                      0 VND
+
+═════════════════════════════════════════════════
+GROSS (Lương Tổng Cộng):                 4,200,000 VND
+
+🧮 TAXES &amp; INSURANCE
+  BHXH (8%):           336,000 VND
+  BHYT (1.5%):         63,000 VND
+  BHTN (1%):           42,000 VND
+  Thuế TNCN:           229,250 VND
+  ─────────────────────────────────────────────
+  Total Deductions:                        670,250 VND
+
+═════════════════════════════════════════════════
+NET (Lương Ròng):                        3,529,750 VND
+
+📅 CHUYỂN KHOẢN
+  Ngân Hàng:          Vietcombank
+  Chủ Tài Khoản:      JOHN SMITH
+  Số Tài Khoản:       1234567890</code></pre></div>
+<h3 id="chỉnh-sửa-chi-tiết-lương">Chỉnh Sửa Chi Tiết Lương</h3>
+<p><strong>Nếu chấm công bị sửa:</strong></p>
+<ol>
+<li>Quản lý cơ sở chỉnh sửa → Kích <strong>Tính Lương</strong> → Tự động cập nhật</li>
+</ol>
+<p><strong>Nếu cần chỉnh sửa thủ công:</strong></p>
+<ol>
+<li>Kích <strong>Chỉnh Sửa</strong> → Lưới spreadsheet:</li>
+</ol>
+<div class="code-block"><pre><code>   | Nhân Viên | Sessions | Tỷ Giá | Phụ Cấp | Khấu Trừ | Penalty | Lương Ròng |
+   | Thay đổi từng ô theo cần thiết |</code></pre></div>
+<ol>
+<li>Lương tự động recalculate</li>
+<li>Kích <strong>Cập Nhật Tất Cả</strong></li>
+</ol>
+<h3 id="so-sánh-lương-trướcsau">So Sánh Lương (Trước/Sau)</h3>
+<ul>
+<li>Kích <strong>So Sánh</strong> trước khi duyệt</li>
+<li>Xem danh sách thay đổi:</li>
+</ul>
+<div class="code-block"><pre><code>  Nhân Viên          | Lương Tháng Trước | Lương Tháng Này | % Thay Đổi
+  John Smith         | 3,400,000        | 3,529,750       | +3.8%
+  ...</code></pre></div>
+<h3 id="cảnh-báo-lương-tăng-20">Cảnh Báo Lương Tăng > 20%</h3>
+<ul>
+<li>Nếu lương tăng > 20% so với tháng trước → Cảnh báo đỏ</li>
+<li><strong>Yêu cầu xác nhận:</strong> Kích <strong>Xác Nhận Lương Tăng</strong></li>
+<li>Ghi lý do (tuỳ chọn)</li>
+</ul>
+<h3 id="duyệt-gửi-lương">Duyệt & Gửi Lương</h3>
+<p><strong>Step 1:</strong> Kích <strong>Duyệt Lương</strong></p>
+<p><strong>Step 2:</strong> Xem tóm tắt:</p>
+<div class="code-block"><pre><code>📊 TỔNG HỢP KỲ LƯƠNG
+  Tháng:              3/2026
+  Tổng Nhân Viên:     21 người
+  Tổng Lương Ròng:    45,123,456 VND
+  Tổng Thuế TNCN:     2,345,678 VND
+  Tổng BHXH/BHYT/BHTN: 5,432,109 VND</code></pre></div>
+<p><strong>Step 3:</strong> Kích <strong>Xác Nhận Duyệt</strong></p>
+<p><strong>Step 4:</strong> Hệ thống sẽ:</p>
+<ul>
+<li>Gửi email thông báo lương cho từng nhân viên</li>
+<li>Nhân viên có thể xem chi tiết lương trong <strong>Lương Của Tôi</strong> portal</li>
+<li>Lịch sử duyệt được ghi lại (ngày + người duyệt)</li>
+</ul>
+<h3 id="hoàn-tác-duyệt-undo---trong-24h">Hoàn Tác Duyệt (Undo - trong 24h)</h3>
+<ul>
+<li>Nếu phát hiện sai sau duyệt, trong vòng 24 giờ:</li>
+</ul>
+<ol>
+<li>Kích <strong>Hoàn Tác Duyệt</strong></li>
+<li>Lương quay lại trạng thái chỉnh sửa</li>
+<li>Chỉnh sửa → Duyệt lại</li>
+</ol>
+<hr/>
+<h2 id="-module-2-ghi-chú-hàng-tuần-weekly-notes">📝 Module 2: Ghi Chú Hàng Tuần (Weekly Notes)</h2>
+<h3 id="tổng-quan">Tổng Quan</h3>
+<ul>
+<li>Ghi nhận các khoản điều chỉnh lương hàng tuần</li>
+<li>Loại ghi chú: Substitute (thay thế), Bonus (thưởng), Penalty (phạt), Extra Job (công việc thêm)</li>
+<li>Dữ liệu này sẽ được tính vào lương tháng</li>
+</ul>
+<h3 id="nhập-ghi-chú-mới">Nhập Ghi Chú Mới</h3>
+<p><strong>Step 1:</strong> Kích <strong>Ghi Chú Hàng Tuần</strong></p>
+<p><strong>Step 2:</strong> Kích <strong>Thêm Ghi Chú</strong></p>
+<p><strong>Step 3:</strong> Điền thông tin:</p>
+<div class="code-block"><pre><code>Tuần:              Tuần 1 - Tháng 3/2026 (2026-03-01 - 2026-03-07)
+Nhân Viên:         John Smith
+Loại Ghi Chú:      Chọn từ dropdown
+  ├ Substitute     (Thay thế: 2 phiên thay thế học sinh)
+  ├ Bonus          (Thưởng: 500,000 VND)
+  ├ Penalty        (Phạt: -100,000 VND)
+  └ Extra Job      (Công việc thêm: 300,000 VND)
+Số Tiền:           [Nhập số tiền]
+Mô Tả:             Lý do ghi chú (tuỳ chọn)</code></pre></div>
+<p><strong>Step 4:</strong> Kích <strong>Tạo Ghi Chú</strong></p>
+<h3 id="danh-sách-ghi-chú">Danh Sách Ghi Chú</h3>
+<ul>
+<li>Xem toàn bộ ghi chú hàng tuần</li>
+<li>Bộ lọc: Tuần, Nhân viên, Loại ghi chú</li>
+<li>Kích tên ghi chú → Sửa/Xóa (nếu cần)</li>
+</ul>
+<h3 id="cách-ghi-chú-ảnh-hưởng-lương">Cách Ghi Chú Ảnh Hưởng Lương</h3>
+<div class="code-block"><pre><code>Loại             | Ảnh Hưởng Lương
+────────────────────────────────────────
+Substitute       | Thêm vào Lương Thay Thế (= Số phiên × Tỷ giá)
+Bonus            | Thêm vào Lương Khác (Positive)
+Penalty          | Trừ vào Lương Khác (Negative = -Amount)
+Extra Job        | Thêm vào Lương Khác</code></pre></div>
+<hr/>
+<h2 id="-module-3-kpi-đánh-giá-trợ-giảng">🎯 Module 3: KPI (Đánh Giá Trợ Giảng)</h2>
+<h3 id="tổng-quan">Tổng Quan</h3>
+<ul>
+<li>Xem KPI trợ giảng theo tháng/năm</li>
+<li>Nếu Part A = Pass → Bonus = (Part B score) × 50,000 VND</li>
+<li>Nếu Part A = Fail → Bonus = 0 VND (dù Part B cao)</li>
+</ul>
+<h3 id="xem-kpi-trợ-giảng">Xem KPI Trợ Giảng</h3>
+<ol>
+<li>Kích <strong>KPI</strong></li>
+<li>Chọn <strong>Tháng/Năm</strong></li>
+<li>Danh sách trợ giảng → Kích tên → Chi tiết:</li>
+</ol>
+<div class="code-block"><pre><code>   Trần Thị Linh — KPI Tháng 3/2026
+   ─────────────────────────────
+   PART A (Yêu Cầu Cơ Bản):
+     ✓ Kiên trì đi làm
+     ✓ Tuân thủ quy định
+     ✓ Hoàn thành bài tập
+     ✓ Teamwork
+     → PASS ✓
+
+   PART B (Chất Lượng):
+     Kỹ năng giảng dạy:     8/10
+     Chuẩn bị bài tập:      7/10
+     Tương tác học sinh:    9/10
+     Đạt mục tiêu lớp:      8/10
+     Phát triển chuyên môn: 7/10
+     → TRUNG BÌNH: 7.8/10
+
+   BONUS: 7.8 × 50,000 = 390,000 VND</code></pre></div>
+<h3 id="kpi-lương">KPI & Lương</h3>
+<ul>
+<li>Bonus từ KPI được tính vào <strong>Lương Tháng Đó</strong></li>
+<li>Lương = (Sessions × 75k) + Substitute + <strong>KPI Bonus</strong> - Deductions</li>
+<li>Nếu Part A = Fail, Bonus = 0 → Lương giảm</li>
+</ul>
+<hr/>
+<h2 id="-module-4-nhân-viên-employees-xem-thôi">👥 Module 4: Nhân Viên (Employees) — Xem Thôi</h2>
+<h3 id="tổng-quan">Tổng Quan</h3>
+<ul>
+<li>Xem danh sách nhân viên (chỉ xem, không sửa)</li>
+<li>Tham khảo thông tin khi tính lương</li>
+</ul>
+<h3 id="xem-danh-sách">Xem Danh Sách</h3>
+<ol>
+<li>Kích <strong>Nhân Viên</strong></li>
+<li>Danh sách toàn bộ nhân viên</li>
+<li>Kích tên → Xem thông tin (CCCD, ngân hàng, etc.)</li>
+<li><strong>Lưu ý:</strong> Chỉnh sửa do Quản lý cơ sở hoặc Admin</li>
+</ol>
+<hr/>
+<h2 id="-xuất-báo-cáo-dữ-liệu">📊 Xuất Báo Cáo & Dữ Liệu</h2>
+<h3 id="xuất-bảng-lương-excel">Xuất Bảng Lương Excel</h3>
+<ol>
+<li><strong>Bảng Lương</strong> → Kỳ lương → <strong>Xuất Excel</strong></li>
+<li>File include:</li>
+</ol>
+<ul>
+<li>Tên nhân viên, chức vụ, sessions, lương cơ bản, phụ cấp, khấu trừ, thuế, lương ròng</li>
+<li>Có thể in trực tiếp hoặc sửa trong Excel</li>
+</ul>
+<h3 id="xuất-chứng-chỉ-lương-payslip">Xuất Chứng Chỉ Lương (Payslip)</h3>
+<ol>
+<li>Kích tên nhân viên → <strong>Xuất PDF</strong></li>
+<li>PDF chứa chi tiết lương chuẩn thức (có thể gửi cho nhân viên)</li>
+</ol>
+<h3 id="báo-cáo-thuế-tncn">Báo Cáo Thuế TNCN</h3>
+<ul>
+<li>Tính toán tự động theo 7 khung thuế Vietnam</li>
+<li>Xuất danh sách thuế TNCN hàng tháng cho báo cáo</li>
+</ul>
+<h3 id="báo-cáo-bhxh">Báo Cáo BHXH</h3>
+<ul>
+<li>Tính toán tự động (8% BHXH)</li>
+<li>Danh sách nhân viên có hợp đồng lao động</li>
+</ul>
+<hr/>
+<h2 id="-cài-đặt-phím-tắt">⚙️ Cài Đặt & Phím Tắt</h2>
+<h3 id="phím-tắt-lưới-bán-tự-động">Phím Tắt (Lưới Bán Tự Động)</h3>
+<div class="code-block"><pre><code>Tab              : Di chuyển ô tiếp theo
+Shift+Tab        : Di chuyển ô trước
+Ctrl+S           : Lưu tất cả thay đổi
+Ctrl+Z           : Hoàn tác
+↑↓               : Di chuyển hàng</code></pre></div>
+<hr/>
+<h2 id="-faq">❓ FAQ</h2>
+<h3 id="q-làm-sao-biết-lương-được-tính-đúng">Q: Làm sao biết lương được tính đúng?</h3>
+<p><strong>A:</strong> Kích <strong>So Sánh</strong> xem chi tiết trước/sau. Kiểm tra công thức:</p>
+<ul>
+<li>Sessions chính xác?</li>
+<li>Phụ cấp/khấu trừ đủ?</li>
+<li>Thuế TNCN đúng khung?</li>
+</ul>
+<h3 id="q-lương-bị-tính-sai-vì-chấm-công-bị-sửa">Q: Lương bị tính sai vì chấm công bị sửa?</h3>
+<p><strong>A:</strong> Quản lý cơ sở sửa chấm công → Kích <strong>Tính Lương</strong> trong Bảng Lương → Tự động cập nhật.</p>
+<h3 id="q-năm-vừa-qua-bao-nhiêu-trợ-giảng-nhận-bonus-kpi">Q: Năm vừa qua bao nhiêu trợ giảng nhận bonus KPI?</h3>
+<p><strong>A:</strong> KPI → Chọn tháng năm → Xem danh sách (Bonus > 0).</p>
+<h3 id="q-lương-thay-thế-được-tính-bao-giờ">Q: Lương thay thế được tính bao giờ?</h3>
+<p><strong>A:</strong> Quản lý cơ sở nhập <strong>Ghi Chú Hàng Tuần</strong> → Loại "Substitute" → Ghi số phiên & tỷ giá → Tự động tính vào lương.</p>
+<h3 id="q-nhân-viên-nào-chưa-có-tài-khoản-ngân-hàng">Q: Nhân viên nào chưa có tài khoản ngân hàng?</h3>
+<p><strong>A:</strong> Nhân Viên → Tìm nhân viên → Xem <strong>Số Tài Khoản</strong> (nếu trống = chưa).</p>
+<h3 id="q-cách-hoàn-tác-lương-nếu-duyệt-nhầm">Q: Cách hoàn tác lương nếu duyệt nhầm?</h3>
+<p><strong>A:</strong> Trong vòng 24 giờ: Kích <strong>Hoàn Tác Duyệt</strong> → Chỉnh sửa → Duyệt lại.</p>
+<h3 id="q-tax-brackets-7-khung-thuế-là-gì">Q: Tax brackets (7 khung thuế) là gì?</h3>
+<p><strong>A:</strong></p>
+<div class="code-block"><pre><code>0 - 5M VND       : 5%
+5M - 10M VND     : 10%
+10M - 20M VND    : 15%
+20M - 30M VND    : 20%
+30M - 40M VND    : 25%
+40M - 50M VND    : 30%
+&gt; 50M VND        : 35%
+(Áp dụng sau khoản trừ 11M/tháng)</code></pre></div>
+<hr/>
+<h2 id="-hỗ-trợ">📞 Hỗ Trợ</h2>
+<ul>
+<li><strong>Admin:</strong> <code>admin@luna-hrm.local</code></li>
+<li><strong>Quản Lý Cơ Sở:</strong> <code>bm.tanmai@luna-hrm.local</code> (Tân Mai), <code>bm.quan1@luna-hrm.local</code> (Quận 1)</li>
+<li><strong>Điều Hành:</strong> Công ty quản lý</li>
+</ul></article>
+    <div class="page-nav">
+      <a href="/helps/branch-manager.html">← Quản Lý Cơ Sở</a>
+      <a href="/helps/employee.html">Nhân Viên →</a>
+    </div>
+  
+  </div>
+  <footer class="footer">© 2026 Luna English — Luna HRM Help Center</footer>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hướng dẫn sử dụng — Luna HRM</title>
+  <meta name="description" content="Hướng dẫn sử dụng hệ thống quản lý nhân sự Luna HRM"/>
+  <style>
+:root {
+  --primary: #3E1A51;
+  --primary-light: #5a2d73;
+  --secondary: #4a7cc9;
+  --bg: #f8f7fc;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #6b6b8d;
+  --border: #e5e5ef;
+  --code-bg: #f3f1f9;
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #fff;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 12px rgba(62,26,81,0.2);
+}
+.header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none; color: #fff;
+}
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+}
+.logo h1 { font-size: 18px; font-weight: 700; }
+.logo small { font-size: 11px; opacity: 0.7; display: block; }
+.login-btn {
+  background: rgba(255,255,255,0.15);
+  color: #fff; text-decoration: none;
+  padding: 8px 18px; border-radius: 8px;
+  font-size: 14px; transition: background 0.2s;
+}
+.login-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Nav */
+.nav {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.nav-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; gap: 4px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.nav a {
+  padding: 10px 16px; font-size: 14px;
+  color: var(--text-muted); text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap; transition: all 0.2s;
+}
+.nav a:hover, .nav a.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Main */
+.main {
+  max-width: 860px; margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Guide Cards */
+.cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px; margin-top: 32px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-decoration: none; color: inherit;
+  transition: all 0.25s ease;
+  display: flex; gap: 16px;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(62,26,81,0.1);
+  border-color: var(--primary-light);
+}
+.card-icon { font-size: 40px; flex-shrink: 0; }
+.card h2 { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.card .role {
+  display: inline-block; font-size: 11px;
+  background: rgba(62,26,81,0.08); color: var(--primary);
+  padding: 2px 8px; border-radius: 99px; font-weight: 600;
+  margin-bottom: 8px;
+}
+.card p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.card .arrow { font-size: 14px; color: var(--primary); margin-top: 8px; font-weight: 500; }
+
+.hero { text-align: center; margin-bottom: 12px; }
+.hero h1 { font-size: 32px; color: var(--primary); margin-bottom: 8px; }
+.hero p { font-size: 17px; color: var(--text-muted); max-width: 560px; margin: 0 auto; }
+
+.tip-box {
+  margin-top: 40px; padding: 20px 24px;
+  background: var(--code-bg); border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.tip-box h3 { font-size: 15px; margin-bottom: 8px; }
+.tip-box li { font-size: 14px; color: var(--text-muted); margin: 4px 0; list-style: none; }
+
+/* Article Styles */
+.breadcrumb {
+  font-size: 14px; color: var(--text-muted); margin-bottom: 20px;
+}
+.breadcrumb a { color: var(--secondary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+.guide-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 32px; padding-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+.guide-header span { font-size: 32px; }
+.guide-header h1 { font-size: 26px; color: var(--primary); }
+
+article h1 { font-size: 28px; font-weight: 700; color: var(--primary); margin: 32px 0 16px; padding-bottom: 12px; border-bottom: 2px solid rgba(62,26,81,0.15); }
+article h2 { font-size: 22px; font-weight: 700; color: var(--primary); margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+article h3 { font-size: 18px; font-weight: 600; margin: 24px 0 8px; }
+article h4 { font-size: 16px; font-weight: 600; margin: 16px 0 6px; }
+article p { margin: 8px 0; color: var(--text); }
+article a { color: var(--secondary); }
+article strong { font-weight: 600; color: var(--text); }
+article code {
+  background: var(--code-bg); padding: 2px 6px;
+  border-radius: 4px; font-size: 0.9em;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  color: var(--primary);
+}
+article ul, article ol { margin: 10px 0; padding-left: 24px; }
+article li { margin: 4px 0; }
+article li.sub-item { margin-left: 24px; }
+article hr { margin: 32px 0; border: none; border-top: 1px solid var(--border); }
+
+.code-block {
+  margin: 16px 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.code-lang {
+  background: rgba(62,26,81,0.08); padding: 6px 16px;
+  font-size: 12px; color: var(--primary);
+  font-family: monospace; border-bottom: 1px solid var(--border);
+}
+.code-block pre {
+  background: var(--code-bg); padding: 16px;
+  overflow-x: auto; font-size: 13px; line-height: 1.6;
+}
+.code-block code { background: none; padding: 0; color: var(--text); }
+
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: rgba(62,26,81,0.06); text-align: left; font-weight: 600; color: var(--primary); }
+th, td { border: 1px solid var(--border); padding: 8px 12px; }
+tr:nth-child(even) { background: rgba(0,0,0,0.015); }
+
+.img-wrap { display: block; margin: 20px 0; }
+.img-wrap img {
+  max-width: 100%; border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+}
+.img-wrap figcaption {
+  font-size: 12px; color: var(--text-muted);
+  text-align: center; margin-top: 6px; font-style: italic;
+}
+
+.page-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 48px; padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.page-nav a {
+  color: var(--text-muted); text-decoration: none;
+  font-size: 14px; transition: color 0.2s;
+}
+.page-nav a:hover { color: var(--primary); }
+
+.footer {
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.02);
+  padding: 20px; text-align: center;
+  font-size: 13px; color: var(--text-muted);
+  margin-top: 40px;
+}
+
+@media (max-width: 640px) {
+  .cards { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 24px; }
+  article h1 { font-size: 22px; }
+  article h2 { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/helps/" class="logo">
+        <div class="logo-icon">L</div>
+        <div>
+          <h1>Luna HRM</h1>
+          <small>Trung tâm Hướng dẫn</small>
+        </div>
+      </a>
+      <a href="/login" class="login-btn">Đăng nhập</a>
+    </div>
+  </header>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/helps/" class="active">🏠 Trang chủ</a>
+      <a href="/helps/branch-manager-setup.html">Thiết Lập Hệ Thống</a>
+      <a href="/helps/branch-manager.html">Quản Lý Cơ Sở</a>
+      <a href="/helps/accountant.html">Kế Toán</a>
+      <a href="/helps/employee.html">Nhân Viên</a>
+    </div>
+  </nav>
+  <div class="main">
+    
+  <div class="hero">
+    <h1>📖 Trung tâm Hướng dẫn</h1>
+    <p>Chọn vai trò của bạn để xem hướng dẫn sử dụng chi tiết hệ thống Luna HRM</p>
+  </div>
+  <div class="cards">
+  <a href="/helps/branch-manager-setup.html" class="card">
+    <div class="card-icon">🏗️</div>
+    <div>
+      <h2>Thiết Lập Hệ Thống</h2>
+      <span class="role">Admin</span>
+      <p>Hướng dẫn Admin thiết lập chi nhánh, thêm nhân viên, tạo lịch lớp và chấm công.</p>
+      <div class="arrow">Xem hướng dẫn →</div>
+    </div>
+  </a>
+
+  <a href="/helps/branch-manager.html" class="card">
+    <div class="card-icon">📋</div>
+    <div>
+      <h2>Quản Lý Cơ Sở</h2>
+      <span class="role">Branch Manager</span>
+      <p>Quản lý lịch học, chấm công, phê duyệt lương, theo dõi KPI.</p>
+      <div class="arrow">Xem hướng dẫn →</div>
+    </div>
+  </a>
+
+  <a href="/helps/accountant.html" class="card">
+    <div class="card-icon">💰</div>
+    <div>
+      <h2>Kế Toán</h2>
+      <span class="role">Accountant</span>
+      <p>Tính lương, quản lý phụ cấp & khấu trừ, tính thuế TNCN, xuất báo cáo.</p>
+      <div class="arrow">Xem hướng dẫn →</div>
+    </div>
+  </a>
+
+  <a href="/helps/employee.html" class="card">
+    <div class="card-icon">👤</div>
+    <div>
+      <h2>Nhân Viên</h2>
+      <span class="role">Employee</span>
+      <p>Xem chấm công, bảng lương, hồ sơ cá nhân và KPI.</p>
+      <div class="arrow">Xem hướng dẫn →</div>
+    </div>
+  </a>
+</div>
+  <div class="tip-box">
+    <h3>💡 Lưu ý</h3>
+    <ul>
+      <li>• Mỗi hướng dẫn được thiết kế riêng cho từng vai trò trong hệ thống</li>
+      <li>• Bao gồm hình ảnh minh họa và ví dụ thực tế</li>
+      <li>• Nếu cần hỗ trợ thêm, liên hệ Admin qua email</li>
+    </ul>
+  </div>
+
+  </div>
+  <footer class="footer">© 2026 Luna English — Luna HRM Help Center</footer>
+</body>
+</html>

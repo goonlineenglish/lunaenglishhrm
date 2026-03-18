@@ -38,22 +38,36 @@ function stripEmpty<T extends Record<string, unknown>>(data: T): T {
 
 /** Shared input validation for class schedule create/update data */
 function validateScheduleInput(
-  data: { teacher_id?: string; assistant_id?: string; days_of_week?: number[] },
+  data: {
+    teacher_id?: string; assistant_id?: string; days_of_week?: number[]
+    class_code?: string; class_name?: string; shift_time?: string
+  },
   opts: { requireStaff: boolean }
 ): ActionResult | null {
   if (opts.requireStaff) {
-    // Create path: staff + days_of_week are all required
+    // Create path: core fields + staff + days_of_week are all required
+    if (!data.class_code?.trim()) return { success: false, error: 'Mã lớp là bắt buộc.' }
+    if (!data.class_name?.trim()) return { success: false, error: 'Tên lớp là bắt buộc.' }
+    if (!data.shift_time?.trim()) return { success: false, error: 'Ca học là bắt buộc.' }
     const uuidErr = validateUUIDs([
       { value: data.teacher_id, label: 'Giáo viên' },
       { value: data.assistant_id, label: 'Trợ giảng' },
     ])
     if (uuidErr) return uuidErr
-    // ISSUE-1 fix: days_of_week required on create
     if (!Array.isArray(data.days_of_week) || data.days_of_week.length === 0) {
       return { success: false, error: 'Phải chọn ít nhất một ngày học.' }
     }
   } else {
     // Update path: only validate fields if provided (non-empty after normalization)
+    if (data.class_code !== undefined && !data.class_code.trim()) {
+      return { success: false, error: 'Mã lớp không được để trống.' }
+    }
+    if (data.class_name !== undefined && !data.class_name.trim()) {
+      return { success: false, error: 'Tên lớp không được để trống.' }
+    }
+    if (data.shift_time !== undefined && !data.shift_time.trim()) {
+      return { success: false, error: 'Ca học không được để trống.' }
+    }
     if (data.teacher_id && !isValidUUID(data.teacher_id)) {
       return { success: false, error: 'Giáo viên không hợp lệ. Vui lòng chọn lại.' }
     }

@@ -6,10 +6,8 @@ import { getWeekDates, getWeekStart, parseIsoDateLocal, toISODate, isWeekLocked 
 import { hasAnyRole } from '@/lib/types/user'
 import {
   buildAttendanceGrid,
-  detectConflicts,
   calculateWeekSummary,
   type AttendanceGridRow,
-  type ScheduleConflict,
   type WeekSummary,
 } from '@/lib/services/attendance-grid-service'
 import type { AttendanceStatus } from '@/lib/types/database'
@@ -22,7 +20,6 @@ export interface ActionResult<T = void> {
 
 export interface AttendanceGridData {
   rows: AttendanceGridRow[]
-  conflicts: ScheduleConflict[]
   summary: WeekSummary[]
   isLocked: boolean
   /** 'auto' = auto-locked by time, 'manual' = BM/admin locked, null = not locked */
@@ -91,12 +88,11 @@ export async function getAttendanceGrid(
     const lockType: 'auto' | 'manual' | null = hasManualLock ? 'manual' : (autoLocked ? 'auto' : null)
 
     const rows = buildAttendanceGrid(schedules ?? [], existingRecords, weekDates)
-    const conflicts = detectConflicts(schedules ?? [])
     const summary = calculateWeekSummary(rows)
 
     return {
       success: true,
-      data: { rows, conflicts, summary, isLocked, lockType, hasOverride },
+      data: { rows, summary, isLocked, lockType, hasOverride },
     }
   } catch (err) {
     console.error('[getAttendanceGrid]', err)

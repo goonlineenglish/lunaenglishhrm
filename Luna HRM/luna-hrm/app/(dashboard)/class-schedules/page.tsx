@@ -16,11 +16,14 @@ import { BranchSelector } from '@/components/shared/branch-selector'
 import { ClassScheduleTable } from '@/components/class-schedules/class-schedule-table'
 import { ClassScheduleForm } from '@/components/class-schedules/class-schedule-form'
 import { ExcelImportDialog } from '@/components/class-schedules/excel-import-dialog'
+import { ScheduleConflictBanner } from '@/components/class-schedules/schedule-conflict-banner'
 import {
   getClassSchedules, deactivateClassSchedule, reactivateClassSchedule,
 } from '@/lib/actions/class-schedule-actions'
+import { getScheduleConflicts } from '@/lib/actions/schedule-conflict-actions'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import type { ClassSchedule } from '@/lib/types/database'
+import type { ScheduleConflict } from '@/lib/services/attendance-grid-helpers'
 
 export default function ClassSchedulesPage() {
   const [schedules, setSchedules] = useState<(ClassSchedule & { teacher_name: string; assistant_name: string })[]>([])
@@ -29,6 +32,8 @@ export default function ClassSchedulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editSchedule, setEditSchedule] = useState<ClassSchedule | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [conflicts, setConflicts] = useState<ScheduleConflict[]>([])
+  const [conflictError, setConflictError] = useState(false)
 
   // Admin branch selection state (same pattern as attendance/kpi/payroll pages)
   const [branchId, setBranchId] = useState('')
@@ -47,14 +52,26 @@ export default function ClassSchedulesPage() {
     // Admin must select branch before loading
     if (isAdmin && !branchId) {
       setSchedules([])
+      setConflicts([])
+      setConflictError(false)
       setLoading(false)
       return
     }
     setLoading(true)
     setError(null)
-    const result = await getClassSchedules(branchId || undefined)
+    const [result, conflictResult] = await Promise.all([
+      getClassSchedules(branchId || undefined),
+      getScheduleConflicts(branchId || undefined),
+    ])
     if (result.success) setSchedules(result.data ?? [])
     else setError(result.error ?? 'Lỗi tải dữ liệu.')
+    if (conflictResult.success) {
+      setConflicts(conflictResult.data ?? [])
+      setConflictError(false)
+    } else {
+      setConflicts([])
+      setConflictError(true)
+    }
     setLoading(false)
   }, [branchId, isAdmin])
 
@@ -99,7 +116,7 @@ export default function ClassSchedulesPage() {
           {isAdmin && (
             <BranchSelector
               value={branchId}
-              onChange={(id) => { setBranchId(id); setSchedules([]); setError(null) }}
+              onChange={(id) => { setBranchId(id); setSchedules([]); setConflicts([]); setConflictError(false); setError(null) }}
             />
           )}
           <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} disabled={isAdmin && !branchId}>
@@ -121,6 +138,11 @@ export default function ClassSchedulesPage() {
       )}
 
       {error && <Alert variant="destructive"><p>{error}</p></Alert>}
+
+      {/* Schedule conflict warnings (amber/informational) */}
+      {!loading && (conflicts.length > 0 || conflictError) && (
+        <ScheduleConflictBanner conflicts={conflicts} hasError={conflictError} />
+      )}
 
       {loading && (isAdmin ? !!branchId : true) && <LoadingSpinner />}
 

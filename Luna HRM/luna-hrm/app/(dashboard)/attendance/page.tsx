@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { ClipboardCheck, AlertTriangle } from 'lucide-react'
+import { ClipboardCheck } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
@@ -23,8 +23,6 @@ import { getAttendanceGrid, type AttendanceGridData } from '@/lib/actions/attend
 import { getAttendanceSummary } from '@/lib/actions/attendance-summary-actions'
 import { getWeeklyNotes, type NoteWithEmployee } from '@/lib/actions/weekly-notes-actions'
 import { getWeekStart, toISODate } from '@/lib/utils/date-helpers'
-import type { ScheduleConflict } from '@/lib/services/attendance-grid-service'
-import { getDayName } from '@/lib/utils/date-helpers'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import type { AttendanceSummaryItem } from '@/lib/types/attendance-summary-types'
 
@@ -134,11 +132,6 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Conflict warnings */}
-      {data?.conflicts && data.conflicts.length > 0 && (
-        <ConflictBanner conflicts={data.conflicts} />
-      )}
-
       <Tabs value={activeTab} onValueChange={(val) => {
         setActiveTab(val as 'grid' | 'summary')
       }}>
@@ -185,26 +178,5 @@ export default function AttendancePage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
-}
-
-function ConflictBanner({ conflicts }: { conflicts: ScheduleConflict[] }) {
-  return (
-    <Alert variant="destructive">
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="h-4 w-4 mt-0.5" />
-        <div>
-          <p className="font-medium text-sm">Xung đột lịch ({conflicts.length})</p>
-          <ul className="text-xs mt-1 space-y-0.5">
-            {conflicts.slice(0, 5).map((c, i) => (
-              <li key={i}>
-                {c.employeeCode} ({c.employeeName}) — {getDayName(c.day)} ca {c.shiftTime}: {c.classes.join(' & ')}
-              </li>
-            ))}
-            {conflicts.length > 5 && <li>... và {conflicts.length - 5} xung đột khác</li>}
-          </ul>
-        </div>
-      </div>
-    </Alert>
   )
 }

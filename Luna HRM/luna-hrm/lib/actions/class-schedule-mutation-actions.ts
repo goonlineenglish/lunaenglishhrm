@@ -72,6 +72,11 @@ export async function createClassSchedule(
     const isBM = user.roles.includes('branch_manager')
     const branchId = isBM ? user.branch_id! : data.branch_id
 
+    // Validate branchId is a valid UUID before DB call (prevents "invalid input syntax for type uuid")
+    if (!branchId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(branchId)) {
+      return { success: false, error: 'Vui lòng chọn chi nhánh trước khi tạo lịch lớp.' }
+    }
+
     const supabase = await createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any

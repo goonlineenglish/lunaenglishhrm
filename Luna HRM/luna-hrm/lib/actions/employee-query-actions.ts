@@ -127,3 +127,63 @@ export async function checkEmployeeClassAssignments(
     return { success: false, error: 'Không thể kiểm tra lịch lớp.' }
   }
 }
+
+// ─── Dashboard stats (count-only, no full objects) ────────────────────────────
+
+export interface EmployeeCountStats {
+  total: number
+  active: number
+}
+
+/**
+ * Count-only query for dashboard stats.
+ * Uses aggregate counts instead of fetching all employee rows.
+ * ~100x lighter than getEmployees() for dashboard use.
+ */
+export async function getEmployeeCountStats(
+  branchId?: string
+): Promise<ActionResult<EmployeeCountStats>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Chưa đăng nhập.' }
+
+    const canView = hasAnyRole(user, 'admin', 'branch_manager', 'accountant')
+    if (!canView) return { success: false, error: 'Bạn không có quyền xem thống kê.' }
+
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+
+    // Resolve effective branch scope
+    const effectiveBranchId = user.roles.includes('branch_manager') && user.branch_id
+      ? user.branch_id
+      : branchId
+
+    // Build base query with count-only (head: true = no row data returned)
+    const buildQuery = (isActiveFilter?: boolean) => {
+      let q = sb.from('employees').select('id', { count: 'exact', head: true })
+      if (effectiveBranchId) q = q.eq('branch_id', effectiveBranchId)
+      if (isActiveFilter !== undefined) q = q.eq('is_active', isActiveFilter)
+      return q
+    }
+
+    const [totalResult, activeResult] = await Promise.all([
+      buildQuery(),
+      buildQuery(true),
+    ])
+
+    if (totalResult.error) throw totalResult.error
+    if (activeResult.error) throw activeResult.error
+
+    return {
+      success: true,
+      data: {
+        total: totalResult.count ?? 0,
+        active: activeResult.count ?? 0,
+      },
+    }
+  } catch (err) {
+    console.error('[getEmployeeCountStats]', err)
+    return { success: false, error: 'Không thể tải thống kê nhân viên.' }
+  }
+}

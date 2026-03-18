@@ -7,7 +7,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth-actions'
 import { getBranches } from '@/lib/actions/branch-actions'
-import { getEmployees } from '@/lib/actions/employee-actions'
+import { getEmployeeCountStats } from '@/lib/actions/employee-actions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ROLE_LABELS } from '@/lib/constants/roles'
 import { Users, Building2, ClipboardCheck, DollarSign } from 'lucide-react'
@@ -23,15 +23,15 @@ export default async function DashboardPage() {
   const isPureEmployee = roles.length === 1 && roles.includes('employee')
   const canManage = isAdmin || isManager || isAccountant
 
-  // Fetch stats based on role
-  const [branchesResult, employeesResult] = await Promise.all([
+  // Fetch stats based on role — use count-only queries (no full row fetch)
+  const [branchesResult, employeeStatsResult] = await Promise.all([
     getBranches(),
-    getEmployees(),
+    getEmployeeCountStats(),
   ])
 
   const branchCount = branchesResult.data?.length ?? 0
-  const employeeCount = employeesResult.data?.length ?? 0
-  const activeCount = employeesResult.data?.filter((e) => e.is_active).length ?? 0
+  const employeeCount = employeeStatsResult.data?.total ?? 0
+  const activeCount = employeeStatsResult.data?.active ?? 0
 
   // Display label — show all roles if multi-role
   const roleLabel = roles.length > 1

@@ -73,15 +73,26 @@ describe('fetchPrefillData — return shape', () => {
 })
 
 describe('fetchPrefillData — KPI bonus', () => {
-  it('kpi_bonus from kpi_evaluations.bonus_amount', async () => {
+  it('kpi_bonus from kpi_evaluations.bonus_amount when base_pass=true', async () => {
     const sb = buildMockClient({
-      kpi_evaluations: { data: [], single: { bonus_amount: 300_000 } },
+      kpi_evaluations: { data: [], single: { bonus_amount: 300_000, base_pass: true } },
       salary_components: { data: [] },
       employee_weekly_notes: { data: [] },
     })
 
     const result = await fetchPrefillData(sb, EMP_ID, PERIOD_START, PERIOD_END)
     expect(result.kpi_bonus).toBe(300_000)
+  })
+
+  it('kpi_bonus = 0 when base_pass=false (even if bonus_amount is set)', async () => {
+    const sb = buildMockClient({
+      kpi_evaluations: { data: [], single: { bonus_amount: 300_000, base_pass: false } },
+      salary_components: { data: [] },
+      employee_weekly_notes: { data: [] },
+    })
+
+    const result = await fetchPrefillData(sb, EMP_ID, PERIOD_START, PERIOD_END)
+    expect(result.kpi_bonus).toBe(0)
   })
 
   it('kpi_bonus = 0 when no KPI evaluation exists', async () => {
@@ -103,7 +114,6 @@ describe('fetchPrefillData — salary_components aggregation', () => {
       const chain = {
         select: () => chain,
         eq: () => chain,
-        },
         in: () => chain,
         not: () => chain,
         gte: () => chain,

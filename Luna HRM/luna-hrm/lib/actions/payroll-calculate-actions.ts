@@ -13,7 +13,7 @@ import {
   calculateTeachingPay,
   calculateSubstitutePay,
 } from '@/lib/services/payroll-calculation-service'
-import { fetchPrefillData } from '@/lib/services/payroll-prefill-service'
+import { fetchPrefillData, fetchPrefillDataBatch } from '@/lib/services/payroll-prefill-service'
 import {
   countTeachingSessions,
   countOfficeDays,
@@ -197,7 +197,10 @@ export async function initializePayslips(
     let created = 0
     let skipped = 0
 
-    // Parallelize across employees (each employee's sub-queries already use Promise.all internally)
+    // Batch-fetch all prefill data upfront (3 queries for all employees vs N×5 per-employee)
+    const prefillMap = await fetchPrefillDataBatch(sb, employees.map(e => e.id), startDate, endDate)
+
+    // Parallelize across employees (prefill data already loaded in batch)
     const results = await Promise.all(employees.map(async (emp) => {
       const existing = existingMap.get(emp.id)
 
@@ -218,7 +221,8 @@ export async function initializePayslips(
 
       const [substituteSessions, prefill] = await Promise.all([
         getSubstituteSessions(sb, emp.id, startDate, endDate),
-        fetchPrefillData(sb, emp.id, startDate, endDate),
+        // Use batch-fetched prefill data (no per-employee query needed)
+        Promise.resolve(prefillMap.get(emp.id) ?? { kpi_bonus: 0, allowances: 0, deductions: 0, penalties: 0, other_pay: 0 }),
       ])
 
       if (isTeaching) {
@@ -366,6 +370,9 @@ export async function reinitializePayslips(
       existingMap.set(row.employee_id, row)
     }
 
+    // Batch-fetch all prefill data upfront (3 queries for all employees vs N×5 per-employee)
+    const prefillMap = await fetchPrefillDataBatch(sb, employees.map(e => e.id), startDate, endDate)
+
     // Parallelize across employees
     await Promise.all(employees.map(async (emp) => {
       const isOffice = emp.position === 'office' || emp.position === 'admin'
@@ -379,7 +386,8 @@ export async function reinitializePayslips(
 
       const [substituteSessions, prefill] = await Promise.all([
         getSubstituteSessions(sb, emp.id, startDate, endDate),
-        fetchPrefillData(sb, emp.id, startDate, endDate),
+        // Use batch-fetched prefill data (no per-employee query needed)
+        Promise.resolve(prefillMap.get(emp.id) ?? { kpi_bonus: 0, allowances: 0, deductions: 0, penalties: 0, other_pay: 0 }),
       ])
 
       if (isTeaching) {

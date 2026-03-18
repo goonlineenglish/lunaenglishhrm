@@ -108,7 +108,7 @@ export default function AttendancePage() {
   // No fetchSummary() call in onValueChange — avoids double-fetch (ISSUE-1 fix)
   useEffect(() => {
     if (activeTab === 'summary') fetchSummary()
-  }, [activeTab, fetchSummary]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, fetchSummary])  
 
   return (
     <div className="space-y-4">

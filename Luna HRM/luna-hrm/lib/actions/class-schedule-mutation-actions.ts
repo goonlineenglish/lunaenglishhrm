@@ -27,34 +27,48 @@ function validateUUIDs(
   return null
 }
 
+/** Normalize empty strings to undefined (prevents '' reaching PostgreSQL UUID columns) */
+function stripEmpty<T extends Record<string, unknown>>(data: T): T {
+  const result = { ...data }
+  for (const key of Object.keys(result)) {
+    if (result[key] === '') (result as Record<string, unknown>)[key] = undefined
+  }
+  return result
+}
+
 /** Shared input validation for class schedule create/update data */
 function validateScheduleInput(
   data: { teacher_id?: string; assistant_id?: string; days_of_week?: number[] },
   opts: { requireStaff: boolean }
 ): ActionResult | null {
   if (opts.requireStaff) {
+    // Create path: staff + days_of_week are all required
     const uuidErr = validateUUIDs([
       { value: data.teacher_id, label: 'Giáo viên' },
       { value: data.assistant_id, label: 'Trợ giảng' },
     ])
     if (uuidErr) return uuidErr
+    // ISSUE-1 fix: days_of_week required on create
+    if (!Array.isArray(data.days_of_week) || data.days_of_week.length === 0) {
+      return { success: false, error: 'Phải chọn ít nhất một ngày học.' }
+    }
   } else {
-    // Update path: only validate UUIDs if provided
+    // Update path: only validate fields if provided (non-empty after normalization)
     if (data.teacher_id && !isValidUUID(data.teacher_id)) {
       return { success: false, error: 'Giáo viên không hợp lệ. Vui lòng chọn lại.' }
     }
     if (data.assistant_id && !isValidUUID(data.assistant_id)) {
       return { success: false, error: 'Trợ giảng không hợp lệ. Vui lòng chọn lại.' }
     }
+    if (data.days_of_week !== undefined) {
+      if (!Array.isArray(data.days_of_week) || data.days_of_week.length === 0) {
+        return { success: false, error: 'Phải chọn ít nhất một ngày học.' }
+      }
+    }
   }
 
   if (data.teacher_id && data.assistant_id && data.teacher_id === data.assistant_id) {
     return { success: false, error: 'Giáo viên và trợ giảng phải là hai người khác nhau.' }
-  }
-  if (data.days_of_week !== undefined) {
-    if (!Array.isArray(data.days_of_week) || data.days_of_week.length === 0) {
-      return { success: false, error: 'Phải chọn ít nhất một ngày học.' }
-    }
   }
   return null
 }
@@ -171,15 +185,16 @@ export async function createClassSchedule(
 
 export async function updateClassSchedule(
   id: string,
-  data: ClassScheduleUpdate
+  rawData: ClassScheduleUpdate
 ): Promise<ActionResult<ClassSchedule>> {
   try {
-    // ISSUE-1 fix: validate schedule ID is UUID
     if (!isValidUUID(id)) {
       return { success: false, error: 'Lịch lớp không hợp lệ.' }
     }
 
-    // ISSUE-2 fix: validate input fields (UUIDs, teacher!=assistant, days)
+    // ISSUE-2 R2 fix: normalize empty strings to undefined before any validation/DB call
+    const data = stripEmpty(rawData)
+
     const inputErr = validateScheduleInput(data, { requireStaff: false })
     if (inputErr) return inputErr as ActionResult<ClassSchedule>
 

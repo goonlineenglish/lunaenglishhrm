@@ -22,14 +22,25 @@ Luna HRM là hệ thống quản lý nhân sự dành cho Trung tâm tiếng Anh
 - Phê duyệt bảng lương
 - Quản lý hồ sơ nhân viên
 
-📖 **Đọc:** [user-guide-branch-manager.md](./user-guide-branch-manager.md)
+📖 **Hướng dẫn:**
+- **[user-guide-branch-manager-setup.md](./user-guide-branch-manager-setup.md)** — 🔥 **BẮT ĐẦU ĐÂY** Setup cơ sở lần đầu + step-by-step từng tính năng (URLs + form fields + nút nhấn)
+  - Quy trình 1: Setup cơ sở
+  - Quy trình 2: Thêm nhân viên (thủ công + Excel)
+  - Quy trình 3: Tạo lịch học (thủ công + Excel)
+  - Quy trình 4: Chấm công hàng tuần (click-cycle, auto-fill, lock/unlock, export)
+  - Quy trình 5: VP Attendance
+  - Checklist & FAQ
+
+- [user-guide-branch-manager.md](./user-guide-branch-manager.md) — Tổng quan & ghi chú
 
 **Modules chính:**
-- ✅ Lịch Học (Class Schedules)
-- ✅ Chấm Công (Attendance)
-- ✅ Bảng Lương (Payroll) — xem thôi
+- ✅ Setup Chi Nhánh (`/dashboard/branches`)
+- ✅ Quản Lý Nhân Viên (`/dashboard/employees`)
+- ✅ Lịch Học (`/dashboard/class-schedules`)
+- ✅ Chấm Công (`/dashboard/attendance`)
+- ✅ Chấm Công VP (`/dashboard/office-attendance`)
+- ✅ Bảng Lương (`/dashboard/payroll`) — xem & duyệt thôi
 - ✅ KPI — xem thôi
-- ✅ Nhân Viên (Employees)
 
 ---
 

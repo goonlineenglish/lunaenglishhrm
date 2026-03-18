@@ -6,7 +6,7 @@ import { hasAnyRole } from '@/lib/types/user'
 import type { ClassSchedule, ClassScheduleInsert, ClassScheduleUpdate } from '@/lib/types/database'
 import type { ActionResult } from './class-schedule-query-actions'
 
-/** Validate teacher/assistant belong to branch AND have correct position */
+/** Validate teacher/assistant belong to branch AND have correct position AND are active */
 async function validateStaffAssignment(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sb: any,
@@ -14,17 +14,36 @@ async function validateStaffAssignment(
   checks: { id: string; requiredPosition: string; label: string }[]
 ): Promise<ActionResult | null> {
   for (const check of checks) {
+    // First check: is employee active?
     const { data: emp, error: empErr } = await sb
       .from('employees')
-      .select('id, position')
+      .select('id, position, is_active, full_name')
       .eq('id', check.id)
       .eq('branch_id', branchId)
-      .eq('is_active', true)
       .maybeSingle()
+
     if (empErr) throw empErr
-    if (!emp) return { success: false, error: `${check.label} không thuộc chi nhánh này.` }
+
+    if (!emp) {
+      // Employee doesn't exist in this branch at all
+      return {
+        success: false,
+        error: `${check.label} không tồn tại hoặc không thuộc chi nhánh này.`
+      }
+    }
+
+    if (!emp.is_active) {
+      return {
+        success: false,
+        error: `${check.label} "${emp.full_name}" đã bị vô hiệu hóa. Vui lòng chọn nhân viên khác.`
+      }
+    }
+
     if (emp.position !== check.requiredPosition) {
-      return { success: false, error: `${check.label} không có chức vụ phù hợp.` }
+      return {
+        success: false,
+        error: `${check.label} "${emp.full_name}" có chức vụ ${emp.position}, không phải ${check.requiredPosition}. Vui lòng chọn nhân viên phù hợp.`
+      }
     }
   }
   return null // all valid
@@ -34,6 +53,16 @@ export async function createClassSchedule(
   data: ClassScheduleInsert
 ): Promise<ActionResult<ClassSchedule>> {
   try {
+    // Validate input data structure before DB call
+    if (!data.teacher_id) return { success: false, error: 'Giáo viên là bắt buộc.' }
+    if (!data.assistant_id) return { success: false, error: 'Trợ giảng là bắt buộc.' }
+    if (data.teacher_id === data.assistant_id) {
+      return { success: false, error: 'Giáo viên và trợ giảng phải là hai người khác nhau.' }
+    }
+    if (!Array.isArray(data.days_of_week) || data.days_of_week.length === 0) {
+      return { success: false, error: 'Phải chọn ít nhất một ngày học.' }
+    }
+
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Chưa đăng nhập.' }
 
@@ -63,12 +92,32 @@ export async function createClassSchedule(
     if (error) throw error
     return { success: true, data: schedule as ClassSchedule }
   } catch (err: unknown) {
-    console.error('[createClassSchedule]', err)
-    const msg = err instanceof Error ? err.message : ''
-    if (msg.includes('unique') || msg.includes('duplicate')) {
-      return { success: false, error: 'Mã lớp đã tồn tại trong chi nhánh này.' }
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[createClassSchedule] Error:', { message: msg, data })
+
+    // Parse specific error patterns
+    if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('Duplicate')) {
+      return { success: false, error: 'Mã lớp đã tồn tại trong chi nhánh này. Vui lòng chọn mã lớp khác.' }
     }
-    return { success: false, error: 'Không thể tạo lịch lớp.' }
+    if (msg.includes('foreign key') || msg.includes('no rows returned')) {
+      return { success: false, error: 'Giáo viên hoặc trợ giảng không tồn tại. Vui lòng chọn nhân viên khác.' }
+    }
+    if (msg.includes('chk_teacher_ne_assistant') || msg.includes('teacher_ne_assistant')) {
+      return { success: false, error: 'Giáo viên và trợ giảng phải là hai người khác nhau.' }
+    }
+    if (msg.includes('chk_days_of_week') || msg.includes('days_of_week')) {
+      return { success: false, error: 'Ngày học không hợp lệ. Phải chọn từ Thứ 2 đến Chủ nhật.' }
+    }
+    if (msg.includes('permission denied') || msg.includes('policy violation') || msg.includes('new row violates')) {
+      return { success: false, error: 'Bạn không có quyền tạo lịch lớp cho chi nhánh này. Vui lòng liên hệ quản trị viên.' }
+    }
+    if (msg.includes('authentication') || msg.includes('jwt')) {
+      return { success: false, error: 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.' }
+    }
+
+    // Fallback: provide original message for debugging (limited length)
+    const details = msg.substring(0, 100)
+    return { success: false, error: `Không thể tạo lịch lớp. ${details}` }
   }
 }
 
@@ -136,9 +185,22 @@ export async function updateClassSchedule(
 
     if (error) throw error
     return { success: true, data: schedule as ClassSchedule }
-  } catch (err) {
-    console.error('[updateClassSchedule]', err)
-    return { success: false, error: 'Không thể cập nhật lịch lớp.' }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[updateClassSchedule] Error:', { message: msg, scheduleId: id })
+
+    // Parse specific error patterns
+    if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('Duplicate')) {
+      return { success: false, error: 'Mã lớp đã tồn tại trong chi nhánh này. Vui lòng chọn mã lớp khác.' }
+    }
+    if (msg.includes('chk_teacher_ne_assistant')) {
+      return { success: false, error: 'Giáo viên và trợ giảng phải là hai người khác nhau.' }
+    }
+    if (msg.includes('permission denied') || msg.includes('policy violation')) {
+      return { success: false, error: 'Bạn không có quyền sửa lịch lớp này.' }
+    }
+
+    return { success: false, error: 'Không thể cập nhật lịch lớp. Vui lòng kiểm tra dữ liệu và thử lại.' }
   }
 }
 

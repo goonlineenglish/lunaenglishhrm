@@ -95,11 +95,10 @@ function parseDbError(msg: string, context: 'create' | 'update'): string {
   if (msg.includes('authentication') || msg.includes('jwt')) {
     return 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.'
   }
-  // Fallback with truncated error for debugging
-  const details = msg.substring(0, 100)
+  // ISSUE-2 R3 fix: never expose raw DB errors to client
   return context === 'create'
-    ? `Không thể tạo lịch lớp. ${details}`
-    : `Không thể cập nhật lịch lớp. ${details}`
+    ? 'Không thể tạo lịch lớp. Vui lòng thử lại hoặc liên hệ quản trị viên.'
+    : 'Không thể cập nhật lịch lớp. Vui lòng thử lại hoặc liên hệ quản trị viên.'
 }
 
 // ─── Staff validation ───────────────────────────────────────────────────────
@@ -194,6 +193,10 @@ export async function updateClassSchedule(
 
     // ISSUE-2 R2 fix: normalize empty strings to undefined before any validation/DB call
     const data = stripEmpty(rawData)
+
+    // ISSUE-1 R3 fix: never allow branch reassignment via update
+    // Cross-branch moves are not supported — branch_id is immutable after creation
+    delete (data as Record<string, unknown>).branch_id
 
     const inputErr = validateScheduleInput(data, { requireStaff: false })
     if (inputErr) return inputErr as ActionResult<ClassSchedule>
